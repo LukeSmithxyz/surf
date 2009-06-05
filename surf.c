@@ -41,8 +41,6 @@ static gboolean keypress(GtkWidget* w, GdkEventKey *ev);
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, gpointer d);
 static void progresschange(WebKitWebView *view, gint p, gpointer d);
 static void loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d);
-static void loadstart(WebKitWebView *view, WebKitWebFrame *f, gpointer d);
-static void loadfinish(WebKitWebView *view, WebKitWebFrame *f, gpointer d);
 static void linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d);
 static gboolean newwindow(WebKitWebView *view, WebKitWebFrame *f,
 		WebKitNetworkRequest *r, WebKitWebNavigationAction *n,
@@ -90,7 +88,6 @@ loadfile(gchar *f) {
 	GString *uri = g_string_new(f);
 	gchar *line;
 
-	/* cannot use fileno in c99 - workaround*/
 	if(strcmp(f, "-") == 0) {
 		c = g_io_channel_unix_new(STDIN_FILENO);
 		if (c) {
@@ -99,6 +96,7 @@ loadfile(gchar *f) {
 				g_free(line);
 			}
 			webkit_web_view_load_html_string(view, code->str, NULL);
+			g_free(code);
 			g_io_channel_shutdown(c, FALSE, NULL);
 		}
 	}
