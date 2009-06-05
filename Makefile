@@ -3,10 +3,10 @@
 
 include config.mk
 
-SRC = surf.c
+SRC = surf.c tabbed.c
 OBJ = ${SRC:.c=.o}
 
-all: options surf
+all: options surf tabbed
 
 options:
 	@echo surf build options:
@@ -20,9 +20,11 @@ options:
 
 ${OBJ}: config.mk
 
-surf: ${OBJ}
+surf: surf.o
 	@echo CC -o $@
-	@${CC} -o $@ ${OBJ} ${LDFLAGS}
+	@${CC} -o $@ surf.o ${LDFLAGS}
+
+tabbed: tabbed.o
 
 clean:
 	@echo cleaning
