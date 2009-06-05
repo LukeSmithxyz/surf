@@ -87,20 +87,24 @@ loadfile(gchar *f) {
 	GIOChannel *c = NULL;
 	GError *e = NULL;
 	GString *code = g_string_new("");
+	GString *uri = g_string_new(f);
 	gchar *line;
 
 	/* cannot use fileno in c99 - workaround*/
-	if(strcmp(f, "-") == 0)
+	if(strcmp(f, "-") == 0) {
 		c = g_io_channel_unix_new(STDIN_FILENO);
-	else
-		c = g_io_channel_new_file(f, "r", NULL);
-	if (c) {
-		while(g_io_channel_read_line(c, &line, NULL, NULL, &e) == G_IO_STATUS_NORMAL) {
-			g_string_append(code, line);
-			g_free(line);
+		if (c) {
+			while(g_io_channel_read_line(c, &line, NULL, NULL, &e) == G_IO_STATUS_NORMAL) {
+				g_string_append(code, line);
+				g_free(line);
+			}
+			webkit_web_view_load_html_string(view, code->str, NULL);
+			g_io_channel_shutdown(c, FALSE, NULL);
 		}
-		webkit_web_view_load_html_string(view, code->str, NULL);
-		g_io_channel_shutdown(c, FALSE, NULL);
+	}
+	else {
+		g_string_prepend(uri, "file://");
+		loaduri(uri->str);
 	}
 	
 }
@@ -132,10 +136,6 @@ linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d) {
 }
 
 void
-loadstart(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
-}
-
-void
 loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
 	gchar *uri;
 
@@ -145,11 +145,6 @@ loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
 	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(win)->window), urlprop,
 			XA_STRING, 8, PropModeReplace, (unsigned char *)uri,
 			strlen(uri) + 1);
-}
-
-void
-loadfinish(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
-	/* ??? TODO */
 }
 
 void
@@ -208,8 +203,6 @@ void setup(void) {
 	g_signal_connect(G_OBJECT(view), "title-changed", G_CALLBACK(titlechange), view);
 	g_signal_connect(G_OBJECT(view), "load-progress-changed", G_CALLBACK(progresschange), view);
 	g_signal_connect(G_OBJECT(view), "load-committed", G_CALLBACK(loadcommit), view);
-	g_signal_connect(G_OBJECT(view), "load-started", G_CALLBACK(loadstart), view);
-	g_signal_connect(G_OBJECT(view), "load-finished", G_CALLBACK(loadfinish), view);
 	g_signal_connect(G_OBJECT(view), "hovering-over-link", G_CALLBACK(linkhover), view);
 	g_signal_connect(G_OBJECT(view), "new-window-policy-decision-requested", G_CALLBACK(newwindow), view);
 	g_signal_connect(G_OBJECT(view), "download-requested", G_CALLBACK(download), view);
