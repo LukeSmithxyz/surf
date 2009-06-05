@@ -1,4 +1,8 @@
+#include <X11/X.h>
+#include <X11/Xatom.h>
 #include <gtk/gtk.h>
+#include <gdk/gdkx.h>
+#include <gdk/gdk.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -18,12 +22,16 @@
 #define ARGCHR()	(*_a)
 #define ARGC()		_c
 
+Display *dpy;
+Atom urlprop;
 GtkWidget *win;
 GtkWidget *browser;
 WebKitWebView *view;
 gchar *title;
 gint progress = 100;
 gboolean embed = FALSE;
+gboolean showxid = FALSE;
+gboolean ignore_once = FALSE;
 
 static void setup(void);
 static void cleanup(void);
@@ -42,31 +50,36 @@ static gboolean newwindow(WebKitWebView *view, WebKitWebFrame *f,
 static gboolean download(WebKitWebView *view, GObject *o, gpointer d);
 static void loaduri(gchar *uri);
 static void loadfile(gchar *f);
-static void setupstdin();
-static gboolean readstdin(GIOChannel *c, GIOCondition con);
+static void setupx();
+GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer data);
 
-gboolean
-readstdin(GIOChannel *c, GIOCondition con) {
-	gchar *line, *p;
-	GIOStatus ret;
-
-	ret = g_io_channel_read_line(c, &line, NULL, NULL, NULL);
-	if(ret == G_IO_STATUS_ERROR || ret == G_IO_STATUS_EOF)
-		return FALSE;
-	for(p = line; *p && *p != '\n'; p++);
-	*p = '\0';
-	loaduri(line);
-	g_free(line);
-	return TRUE;
+GdkFilterReturn
+processx(GdkXEvent *e, GdkEvent *event, gpointer data) {
+	XPropertyEvent *ev;
+	Atom adummy;
+	int idummy;
+	unsigned long ldummy;
+	unsigned char *buf = NULL;
+	if(((XEvent *)e)->type == PropertyNotify) {
+		ev = &((XEvent *)e)->xproperty;
+		if(ignore_once == FALSE && ev->atom == urlprop && ev->state == PropertyNewValue) {
+			XGetWindowProperty(dpy, ev->window, urlprop, 0L, BUFSIZ, False, XA_STRING, 
+			&adummy, &idummy, &ldummy, &ldummy, &buf);
+			loaduri((gchar *)buf);
+			XFree(buf);
+			return GDK_FILTER_REMOVE;
+		}
+		ignore_once = FALSE;
+	}
+	return GDK_FILTER_CONTINUE;
 }
 
 void
-setupstdin() {
-	GIOChannel *c = NULL;
-
-	c = g_io_channel_unix_new(STDIN_FILENO);
-	if(c && !g_io_add_watch(c, G_IO_IN|G_IO_HUP, (GIOFunc) readstdin, NULL))
-			g_error("Stdin: could not add watch\n");
+setupx() {
+	dpy = GDK_WINDOW_XDISPLAY(GTK_WIDGET(win)->window);
+	urlprop = XInternAtom(dpy, "_SURF_URL", False);
+	gdk_window_add_filter(GTK_WIDGET(win)->window, processx, NULL);
+	gdk_window_set_events(GTK_WIDGET(win)->window, GDK_ALL_EVENTS_MASK);
 }
 
 void
@@ -89,6 +102,7 @@ loadfile(gchar *f) {
 		webkit_web_view_load_html_string(view, code->str, NULL);
 		g_io_channel_shutdown(c, FALSE, NULL);
 	}
+	
 }
 
 static void loaduri(gchar *uri) {
@@ -119,12 +133,18 @@ linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d) {
 
 void
 loadstart(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
-	/* ??? TODO */
 }
 
 void
 loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
-	/* ??? TODO */
+	gchar *uri;
+
+	if(!(uri = (gchar *)webkit_web_view_get_uri(view)))
+		uri = "(null)";
+	ignore_once = TRUE;
+	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(win)->window), urlprop,
+			XA_STRING, 8, PropModeReplace, (unsigned char *)uri,
+			strlen(uri) + 1);
 }
 
 void
@@ -141,7 +161,10 @@ progresschange(WebKitWebView* view, gint p, gpointer d) {
 void
 updatetitle() {
 	char t[512];
-	snprintf(t, LENGTH(t), "%s [%i%%]", title, progress);
+	if(progress == 100)
+		snprintf(t, LENGTH(t), "%s", title);
+	else
+		snprintf(t, LENGTH(t), "%s [%i%%]", title, progress);
 	gtk_window_set_title(GTK_WINDOW(win), t);
 }
 
@@ -165,9 +188,14 @@ keypress(GtkWidget* w, GdkEventKey *ev) {
 }
 
 void setup(void) {
-	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	if(embed) {
+		win = gtk_plug_new(0);
+	}
+	else {
+		win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+		gtk_window_set_wmclass(GTK_WINDOW(win), "surf", "surf");
+	}
 	gtk_window_set_default_size(GTK_WINDOW(win), 800, 600);
-	gtk_widget_set_name(win, "surf window");
 	browser = gtk_scrolled_window_new(NULL, NULL);
 	g_signal_connect (G_OBJECT(win), "destroy", G_CALLBACK(windestroy), NULL);
 	g_signal_connect (G_OBJECT(win), "key-press-event", G_CALLBACK(keypress), NULL);
@@ -190,6 +218,8 @@ void setup(void) {
 	gtk_container_add(GTK_CONTAINER(win), browser);
 	gtk_widget_grab_focus(GTK_WIDGET(view));
 	gtk_widget_show_all(win);
+	if(showxid)
+		printf("%u\n", (unsigned int)GDK_WINDOW_XID(GTK_WIDGET(win)->window));
 }
 
 void cleanup() {
@@ -199,7 +229,11 @@ int main(int argc, char *argv[]) {
 	gchar *uri = NULL, *file = NULL;
 
 	ARG {
+	case 'x':
+		showxid = TRUE;
+		break;
 	case 'e':
+		showxid = TRUE;
 		embed = TRUE;
 		break;
 	case 'u':
@@ -222,11 +256,11 @@ int main(int argc, char *argv[]) {
 	if (!g_thread_supported())
 		g_thread_init(NULL);
 	setup();
+	setupx();
 	if(uri)
 		loaduri(uri);
 	else if(file)
 		loadfile(file);
-	setupstdin();
 	updatetitle();
 	gtk_main();
 	cleanup();
