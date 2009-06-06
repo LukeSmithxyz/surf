@@ -59,112 +59,10 @@ static void showurl(Client *c);
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, gpointer d);
 static void updatetitle(Client *c);
 
-
-gchar *
-geturi(Client *c) {
-	gchar *uri;
-
-	if(!(uri = (gchar *)webkit_web_view_get_uri(c->view)))
-		uri = g_strdup("about:blank");
-	return uri;
-}
-
-void
-showurl(Client *c) {
-	gchar *uri;
-
-	hidesearch(c);
-	uri = geturi(c);
-	gtk_entry_set_text(GTK_ENTRY(c->urlbar), uri);
-	gtk_widget_show(c->urlbar);
-	gtk_widget_grab_focus(c->urlbar);
-}
-
-void
-hideurl(Client *c) {
-	gtk_widget_hide(c->urlbar);
-	gtk_widget_grab_focus(GTK_WIDGET(c->view));
-}
-
-void
-showsearch(Client *c) {
-	hideurl(c);
-	gtk_widget_show(c->searchbar);
-	gtk_widget_grab_focus(c->searchbar);
-}
-
-void
-hidesearch(Client *c) {
-	gtk_widget_hide(c->searchbar);
-	gtk_widget_grab_focus(GTK_WIDGET(c->view));
-}
-
 void
 cleanup(void) {
 	while(clients)
 		destroyclient(clients);
-}
-
-GdkFilterReturn
-processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
-	XPropertyEvent *ev;
-	Client *c = (Client *)d;
-	Atom adummy;
-	int idummy;
-	unsigned long ldummy;
-	unsigned char *buf = NULL;
-	if(((XEvent *)e)->type == PropertyNotify) {
-		ev = &((XEvent *)e)->xproperty;
-		if(ignore_once == FALSE && ev->atom == urlprop && ev->state == PropertyNewValue) {
-			XGetWindowProperty(dpy, ev->window, urlprop, 0L, BUFSIZ, False, XA_STRING, 
-				&adummy, &idummy, &ldummy, &ldummy, &buf);
-			loaduri(c, (gchar *)buf);
-			XFree(buf);
-			return GDK_FILTER_REMOVE;
-		}
-	}
-	return GDK_FILTER_CONTINUE;
-}
-
-void
-loadfile(const Client *c, const gchar *f) {
-	GIOChannel *chan = NULL;
-	GError *e = NULL;
-	GString *code = g_string_new("");
-	GString *uri = g_string_new(f);
-	gchar *line;
-
-	if(strcmp(f, "-") == 0) {
-		chan = g_io_channel_unix_new(STDIN_FILENO);
-		if (chan) {
-			while(g_io_channel_read_line(chan, &line, NULL, NULL, &e) == G_IO_STATUS_NORMAL) {
-				g_string_append(code, line);
-				g_free(line);
-			}
-			webkit_web_view_load_html_string(c->view, code->str, NULL);
-			g_io_channel_shutdown(chan, FALSE, NULL);
-		}
-	}
-	else {
-		g_string_prepend(uri, "file://");
-		loaduri(c, uri->str);
-	}
-	
-}
-
-void
-loaduri(const Client *c, const gchar *uri) {
-	GString* u = g_string_new(uri);
-	if(g_strrstr(u->str, ":") == NULL)
-		g_string_prepend(u, "http://");
-	webkit_web_view_load_uri(c->view, u->str);
-	g_string_free(u, TRUE);
-}
-
-gboolean
-download(WebKitWebView *view, GObject *o, gpointer d) {
-	/* TODO */
-	return FALSE;
 }
 
 gboolean
@@ -173,70 +71,6 @@ decidewindow(WebKitWebView *view, WebKitWebFrame *f,
 		WebKitWebPolicyDecision *p, gpointer d) {
 	/* TODO */
 	return TRUE;
-}
-
-WebKitWebView *
-newwindow(WebKitWebView  *v, WebKitWebFrame *f, gpointer d) {
-	/* TODO */
-	Client *c = newclient();
-	return c->view;
-}
-
-void
-linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d) {
-	Client *c = (Client *)d;
-
-	if(l)
-		gtk_window_set_title(GTK_WINDOW(c->win), l);
-	else
-		updatetitle(c);
-}
-
-void
-loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
-	Client *c = (Client *)d;
-	gchar *uri;
-
-	uri = geturi(c);
-	ignore_once = TRUE;
-	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), urlprop,
-			XA_STRING, 8, PropModeReplace, (unsigned char *)uri,
-			strlen(uri) + 1);
-}
-
-void
-progresschange(WebKitWebView* view, gint p, gpointer d) {
-	Client *c = (Client *)d;
-
-	c->progress = p;
-	updatetitle(c);
-}
-
-void
-updatetitle(Client *c) {
-	char t[512];
-	if(c->progress == 100)
-		snprintf(t, LENGTH(t), "%s", c->title);
-	else
-		snprintf(t, LENGTH(t), "%s [%i%%]", c->title, c->progress);
-	gtk_window_set_title(GTK_WINDOW(c->win), t);
-}
-
-void
-titlechange(WebKitWebView *v, WebKitWebFrame *f, const gchar *t, gpointer d) {
-	Client *c = (Client *)d;
-
-	if(c->title)
-		g_free(c->title);
-	c->title = g_strdup(t);
-	updatetitle(c);
-}
-
-void
-destroywin(GtkWidget* w, gpointer d) {
-	Client *c = (Client *)d;
-
-	destroyclient(c);
 }
 
 void
@@ -258,6 +92,45 @@ destroyclient(Client *c) {
 	free(c);
 	if(clients == NULL)
 		gtk_main_quit();
+}
+
+void
+destroywin(GtkWidget* w, gpointer d) {
+	Client *c = (Client *)d;
+
+	destroyclient(c);
+}
+
+void die(char *str) {
+	fputs(str, stderr);
+	exit(EXIT_FAILURE);
+}
+
+gboolean
+download(WebKitWebView *view, GObject *o, gpointer d) {
+	/* TODO */
+	return FALSE;
+}
+
+gchar *
+geturi(Client *c) {
+	gchar *uri;
+
+	if(!(uri = (gchar *)webkit_web_view_get_uri(c->view)))
+		uri = g_strdup("about:blank");
+	return uri;
+}
+
+void
+hidesearch(Client *c) {
+	gtk_widget_hide(c->searchbar);
+	gtk_widget_grab_focus(GTK_WIDGET(c->view));
+}
+
+void
+hideurl(Client *c) {
+	gtk_widget_hide(c->urlbar);
+	gtk_widget_grab_focus(GTK_WIDGET(c->view));
 }
 
 gboolean
@@ -327,14 +200,61 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 	return FALSE;
 }
 
-void setup(void) {
-	dpy = GDK_DISPLAY();
-	urlprop = XInternAtom(dpy, "_SURF_URL", False);
+void
+linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d) {
+	Client *c = (Client *)d;
+
+	if(l)
+		gtk_window_set_title(GTK_WINDOW(c->win), l);
+	else
+		updatetitle(c);
 }
 
-void die(char *str) {
-	fputs(str, stderr);
-	exit(EXIT_FAILURE);
+void
+loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
+	Client *c = (Client *)d;
+	gchar *uri;
+
+	uri = geturi(c);
+	ignore_once = TRUE;
+	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), urlprop,
+			XA_STRING, 8, PropModeReplace, (unsigned char *)uri,
+			strlen(uri) + 1);
+}
+
+void
+loadfile(const Client *c, const gchar *f) {
+	GIOChannel *chan = NULL;
+	GError *e = NULL;
+	GString *code = g_string_new("");
+	GString *uri = g_string_new(f);
+	gchar *line;
+
+	if(strcmp(f, "-") == 0) {
+		chan = g_io_channel_unix_new(STDIN_FILENO);
+		if (chan) {
+			while(g_io_channel_read_line(chan, &line, NULL, NULL, &e) == G_IO_STATUS_NORMAL) {
+				g_string_append(code, line);
+				g_free(line);
+			}
+			webkit_web_view_load_html_string(c->view, code->str, NULL);
+			g_io_channel_shutdown(chan, FALSE, NULL);
+		}
+	}
+	else {
+		g_string_prepend(uri, "file://");
+		loaduri(c, uri->str);
+	}
+	
+}
+
+void
+loaduri(const Client *c, const gchar *uri) {
+	GString* u = g_string_new(uri);
+	if(g_strrstr(u->str, ":") == NULL)
+		g_string_prepend(u, "http://");
+	webkit_web_view_load_uri(c->view, u->str);
+	g_string_free(u, TRUE);
 }
 
 Client *
@@ -405,6 +325,85 @@ newclient(void) {
 	if(showxid)
 		printf("%u\n", (unsigned int)GDK_WINDOW_XID(GTK_WIDGET(c->win)->window));
 	return c;
+}
+
+WebKitWebView *
+newwindow(WebKitWebView  *v, WebKitWebFrame *f, gpointer d) {
+	/* TODO */
+	Client *c = newclient();
+	return c->view;
+}
+
+void
+progresschange(WebKitWebView* view, gint p, gpointer d) {
+	Client *c = (Client *)d;
+
+	c->progress = p;
+	updatetitle(c);
+}
+
+GdkFilterReturn
+processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
+	XPropertyEvent *ev;
+	Client *c = (Client *)d;
+	Atom adummy;
+	int idummy;
+	unsigned long ldummy;
+	unsigned char *buf = NULL;
+	if(((XEvent *)e)->type == PropertyNotify) {
+		ev = &((XEvent *)e)->xproperty;
+		if(ignore_once == FALSE && ev->atom == urlprop && ev->state == PropertyNewValue) {
+			XGetWindowProperty(dpy, ev->window, urlprop, 0L, BUFSIZ, False, XA_STRING, 
+				&adummy, &idummy, &ldummy, &ldummy, &buf);
+			loaduri(c, (gchar *)buf);
+			XFree(buf);
+			return GDK_FILTER_REMOVE;
+		}
+	}
+	return GDK_FILTER_CONTINUE;
+}
+
+void setup(void) {
+	dpy = GDK_DISPLAY();
+	urlprop = XInternAtom(dpy, "_SURF_URL", False);
+}
+
+void
+showsearch(Client *c) {
+	hideurl(c);
+	gtk_widget_show(c->searchbar);
+	gtk_widget_grab_focus(c->searchbar);
+}
+
+void
+showurl(Client *c) {
+	gchar *uri;
+
+	hidesearch(c);
+	uri = geturi(c);
+	gtk_entry_set_text(GTK_ENTRY(c->urlbar), uri);
+	gtk_widget_show(c->urlbar);
+	gtk_widget_grab_focus(c->urlbar);
+}
+
+void
+titlechange(WebKitWebView *v, WebKitWebFrame *f, const gchar *t, gpointer d) {
+	Client *c = (Client *)d;
+
+	if(c->title)
+		g_free(c->title);
+	c->title = g_strdup(t);
+	updatetitle(c);
+}
+
+void
+updatetitle(Client *c) {
+	char t[512];
+	if(c->progress == 100)
+		snprintf(t, LENGTH(t), "%s", c->title);
+	else
+		snprintf(t, LENGTH(t), "%s [%i%%]", c->title, c->progress);
+	gtk_window_set_title(GTK_WINDOW(c->win), t);
 }
 
 int main(int argc, char *argv[]) {
