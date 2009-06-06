@@ -225,7 +225,7 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 			else
 				 webkit_web_view_reload(c->view);
 			return TRUE;
-		case GDK_go:
+		case GDK_g:
 			/* TODO */
 			return TRUE;
 		case GDK_slash:
