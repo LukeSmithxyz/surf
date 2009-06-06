@@ -154,6 +154,7 @@ loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
 	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), urlprop,
 			XA_STRING, 8, PropModeReplace, (unsigned char *)uri,
 			strlen(uri) + 1);
+	gtk_entry_set_text(GTK_ENTRY(c->urlbar), uri);
 }
 
 void
@@ -215,8 +216,9 @@ gboolean
 keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 	Client *c = (Client *)d;
 
-	if(ev->type == GDK_KEY_PRESS && (ev->state == GDK_CONTROL_MASK
-			|| ev->state == (GDK_CONTROL_MASK | GDK_SHIFT_MASK))) {
+	if(ev->type != GDK_KEY_PRESS)
+		return FALSE;
+	if(ev->state == GDK_CONTROL_MASK || ev->state == (GDK_CONTROL_MASK | GDK_SHIFT_MASK)) {
 		switch(ev->keyval) {
 		case GDK_r:
 		case GDK_R:
@@ -230,10 +232,12 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 		case GDK_g:
 			gtk_widget_hide(c->searchbar);
 			gtk_widget_show(c->urlbar);
+			gtk_widget_grab_focus(c->urlbar);
 			return TRUE;
 		case GDK_slash:
 			gtk_widget_hide(c->urlbar);
 			gtk_widget_show(c->searchbar);
+			gtk_widget_grab_focus(c->searchbar);
 			return TRUE;
 		case GDK_Left:
 			webkit_web_view_go_back(c->view);
@@ -243,10 +247,30 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 			return TRUE;
 		}
 	}
-	else if(ev->type == GDK_KEY_PRESS && ev->keyval == GDK_Escape) {
-		gtk_widget_hide(c->urlbar);
-		gtk_widget_hide(c->searchbar);
-		return TRUE;
+	else {
+		switch(ev->keyval) {
+		case GDK_Escape:
+			if(!GTK_WIDGET_HAS_FOCUS(c->searchbar) && !GTK_WIDGET_HAS_FOCUS(c->urlbar))
+				return FALSE;
+			gtk_widget_hide(c->urlbar);
+			gtk_widget_hide(c->searchbar);
+			gtk_widget_grab_focus(GTK_WIDGET(c->view));
+			return TRUE;
+		case GDK_Return:
+			if(GTK_WIDGET_HAS_FOCUS(c->urlbar)) {
+				loaduri(c, gtk_entry_get_text(GTK_ENTRY(c->urlbar)));
+				gtk_widget_hide(c->urlbar);
+				gtk_widget_grab_focus(GTK_WIDGET(c->view));
+				return TRUE;
+			}
+			else if(GTK_WIDGET_HAS_FOCUS(c->searchbar)) {
+				webkit_web_view_search_text(c->view,
+						gtk_entry_get_text(GTK_ENTRY(c->searchbar)),
+						FALSE,
+						!(ev->state & GDK_SHIFT_MASK),
+						TRUE);
+			}
+		}
 	}
 	return FALSE;
 }
@@ -288,7 +312,6 @@ newclient(void) {
 
 	/* webview */
 	c->view = WEBKIT_WEB_VIEW(webkit_web_view_new());
-
 	g_signal_connect(G_OBJECT(c->view), "title-changed", G_CALLBACK(titlechange), c);
 	g_signal_connect(G_OBJECT(c->view), "load-progress-changed", G_CALLBACK(progresschange), c);
 	g_signal_connect(G_OBJECT(c->view), "load-committed", G_CALLBACK(loadcommit), c);
@@ -306,8 +329,8 @@ newclient(void) {
 
 	/* Arranging */
 	gtk_container_add(GTK_CONTAINER(c->scroll), GTK_WIDGET(c->view));
-	gtk_container_add(GTK_CONTAINER(c->vbox), c->scroll);
 	gtk_container_add(GTK_CONTAINER(c->win), c->vbox);
+	gtk_container_add(GTK_CONTAINER(c->vbox), c->scroll);
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->searchbar);
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->urlbar);
 
