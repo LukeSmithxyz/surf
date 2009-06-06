@@ -45,7 +45,8 @@ static void progresschange(WebKitWebView *view, gint p, gpointer d);
 static void loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d);
 static void linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d);
 static void destroyclient(Client *c);
-static gboolean newwindow(WebKitWebView *view, WebKitWebFrame *f,
+WebKitWebView newwindow(WebKitWebView  *v, WebKitWebFrame *f, gpointer d);
+static gboolean decidewindow(WebKitWebView *view, WebKitWebFrame *f,
 		WebKitNetworkRequest *r, WebKitWebNavigationAction *n,
 		WebKitWebPolicyDecision *p, gpointer d);
 static gboolean download(WebKitWebView *view, GObject *o, gpointer d);
@@ -123,14 +124,17 @@ download(WebKitWebView *view, GObject *o, gpointer d) {
 }
 
 gboolean
-newwindow(WebKitWebView *view, WebKitWebFrame *f,
+decidewindow(WebKitWebView *view, WebKitWebFrame *f,
 		WebKitNetworkRequest *r, WebKitWebNavigationAction *n,
 		WebKitWebPolicyDecision *p, gpointer d) {
 	/* TODO */
-	puts("new");
-	Client *c = newclient();
-	webkit_web_view_load_request(c->view, r);
 	return TRUE;
+}
+
+WebKitWebView newwindow(WebKitWebView  *v, WebKitWebFrame *f, gpointer d) {
+	/* TODO */
+	Client *c = newclient();
+	return *c->view;
 }
 
 void
@@ -316,7 +320,8 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "load-progress-changed", G_CALLBACK(progresschange), c);
 	g_signal_connect(G_OBJECT(c->view), "load-committed", G_CALLBACK(loadcommit), c);
 	g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
-	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(newwindow), c);
+	g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(newwindow), c);
+	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(decidewindow), c);
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(download), c);
 
 	/* urlbar */
