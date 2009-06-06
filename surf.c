@@ -7,6 +7,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
 #include <gdk/gdk.h>
+#include <gdk/gdkkeysyms.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -46,8 +47,8 @@ static void die(char *str);
 static void setup(void);
 static void cleanup(void);
 static void updatetitle(Client *c);
-static void windestroy(GtkWidget* w, gpointer d);
-static gboolean keypress(GtkWidget* w, GdkEventKey *ev);
+static void destroywin(GtkWidget* w, gpointer d);
+static gboolean keypress(GtkWidget* w, GdkEventKey *ev, gpointer d);
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, gpointer d);
 static void progresschange(WebKitWebView *view, gint p, gpointer d);
 static void loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d);
@@ -63,7 +64,8 @@ GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer data);
 
 void
 cleanup(void) {
-
+	while(clients)
+		destroyclient(clients);
 }
 
 GdkFilterReturn
@@ -132,13 +134,19 @@ gboolean
 newwindow(WebKitWebView *view, WebKitWebFrame *f,
 		WebKitNetworkRequest *r, WebKitWebNavigationAction *n,
 		WebKitWebPolicyDecision *p, gpointer d) {
+	puts("new");
 	Client *c = newclient();
 	webkit_web_view_load_request(c->view, r);
 	return TRUE;
 }
 void
 linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d) {
-	/* TODO */
+	Client *c = (Client *)d;
+
+	if(l)
+		gtk_window_set_title(GTK_WINDOW(c->win), l);
+	else
+		updatetitle(c);
 }
 
 void
@@ -183,7 +191,7 @@ titlechange(WebKitWebView *v, WebKitWebFrame *f, const gchar *t, gpointer d) {
 }
 
 void
-windestroy(GtkWidget* w, gpointer d) {
+destroywin(GtkWidget* w, gpointer d) {
 	Client *c = (Client *)d;
 
 	destroyclient(c);
@@ -204,8 +212,33 @@ destroyclient(Client *c) {
 }
 
 gboolean
-keypress(GtkWidget* w, GdkEventKey *ev) {
-	/* TODO */
+keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
+	Client *c = (Client *)d;
+
+	if(ev->type == GDK_KEY_PRESS && (ev->state == GDK_CONTROL_MASK
+			|| ev->state == (GDK_CONTROL_MASK | GDK_SHIFT_MASK))) {
+		switch(ev->keyval) {
+		case GDK_r:
+		case GDK_R:
+			if((ev->state & GDK_SHIFT_MASK))
+				 webkit_web_view_reload_bypass_cache(c->view);
+			else
+				 webkit_web_view_reload(c->view);
+			return TRUE;
+		case GDK_go:
+			/* TODO */
+			return TRUE;
+		case GDK_slash:
+			/* TODO */
+			return TRUE;
+		case GDK_Left:
+			webkit_web_view_go_back(c->view);
+			return TRUE;
+		case GDK_Right:
+			webkit_web_view_go_forward(c->view);
+			return TRUE;
+		}
+	}
 	return FALSE;
 }
 
@@ -233,8 +266,8 @@ newclient(void) {
 	}
 	gtk_window_set_default_size(GTK_WINDOW(c->win), 800, 600);
 	c->browser = gtk_scrolled_window_new(NULL, NULL);
-	g_signal_connect (G_OBJECT(c->win), "destroy", G_CALLBACK(windestroy), c);
-	g_signal_connect (G_OBJECT(c->win), "key-press-event", G_CALLBACK(keypress), NULL);
+	g_signal_connect (G_OBJECT(c->win), "destroy", G_CALLBACK(destroywin), c);
+	g_signal_connect (G_OBJECT(c->win), "key-press-event", G_CALLBACK(keypress), c);
 
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(c->browser),
 			GTK_POLICY_NEVER, GTK_POLICY_NEVER);
@@ -245,9 +278,8 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "load-progress-changed", G_CALLBACK(progresschange), c);
 	g_signal_connect(G_OBJECT(c->view), "load-committed", G_CALLBACK(loadcommit), c);
 	g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
-	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(newwindow), c);
+	g_signal_connect(G_OBJECT(c->view), "new-window", G_CALLBACK(newwindow), c);
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(download), c);
-	/* g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(createwebview), c); */
 
 	gtk_container_add(GTK_CONTAINER(c->win), c->browser);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
@@ -265,6 +297,10 @@ int main(int argc, char *argv[]) {
 	gchar *uri = NULL, *file = NULL;
 	Client *c;
 
+	gtk_init(NULL, NULL);
+	if (!g_thread_supported())
+		g_thread_init(NULL);
+	setup();
 	ARG {
 	case 'x':
 		showxid = TRUE;
@@ -276,29 +312,27 @@ int main(int argc, char *argv[]) {
 	case 'u':
 		if(!(uri = ARGVAL()))
 			goto argerr;
+		c = newclient();
+		loaduri(c, uri);
+		updatetitle(c);
 		break;
 	case 'f':
 		if(!(file = ARGVAL()))
 			goto argerr;
+		c = newclient();
+		loadfile(c, file);
+		updatetitle(c);
 		break;
 	argerr:
 	default:
 		puts("surf - simple browser");
-		printf("usage: %s [-e] [-u uri] [-f file]", argv[0]);
+		printf("usage: %s [-e] [-x] [-u uri] [-f file]\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 	if(argc != ARGC())
 		goto argerr;
-	gtk_init(NULL, NULL);
-	if (!g_thread_supported())
-		g_thread_init(NULL);
-	setup();
-	c = newclient();
-	if(uri)
-		loaduri(c, uri);
-	else if(file)
-		loadfile(c, file);
-	updatetitle(c);
+	if(!clients)
+		newclient();
 	gtk_main();
 	cleanup();
 	return EXIT_SUCCESS;
