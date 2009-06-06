@@ -159,7 +159,6 @@ loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
 	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), urlprop,
 			XA_STRING, 8, PropModeReplace, (unsigned char *)uri,
 			strlen(uri) + 1);
-	gtk_entry_set_text(GTK_ENTRY(c->urlbar), uri);
 }
 
 void
@@ -201,25 +200,27 @@ void
 destroyclient(Client *c) {
 	Client *p;
 
-	gtk_widget_destroy(c->win);
+	gtk_widget_destroy(GTK_WIDGET(webkit_web_view_new()));
 	gtk_widget_destroy(c->scroll);
-	gtk_widget_destroy(c->vbox);
 	gtk_widget_destroy(c->urlbar);
-/*	gtk_widget_destroy(c->urllist);*/
+	gtk_widget_destroy(c->urllist);
 	gtk_widget_destroy(c->searchbar);
-	if(clients == c && c->next == NULL)
-		gtk_main_quit();
+	gtk_widget_destroy(c->vbox);
+	gtk_widget_destroy(c->win);
 	for(p = clients; p && p->next != c; p = p->next);
 	if(p)
 		p->next = c->next;
 	else
 		clients = c->next;
 	free(c);
+	if(clients == NULL)
+		gtk_main_quit();
 }
 
 gboolean
 keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 	Client *c = (Client *)d;
+	gchar *uri;
 
 	if(ev->type != GDK_KEY_PRESS)
 		return FALSE;
@@ -236,6 +237,9 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 			return TRUE;
 		case GDK_g:
 			gtk_widget_hide(c->searchbar);
+			if(!(uri = (gchar *)webkit_web_view_get_uri(c->view)))
+				uri = "(null)";
+			gtk_entry_set_text(GTK_ENTRY(c->urlbar), uri);
 			gtk_widget_show(c->urlbar);
 			gtk_widget_grab_focus(c->urlbar);
 			return TRUE;
