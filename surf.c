@@ -40,7 +40,7 @@ static gboolean decidewindow(WebKitWebView *view, WebKitWebFrame *f,
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, gpointer d);
 static void die(char *str);
-static gboolean download(WebKitWebView *view, GObject *o, gpointer d);
+static gboolean download(WebKitWebView *view, WebKitDownload *o, gpointer d);
 static gchar *geturi(Client *c);
 static void hidesearch(Client *c);
 static void hideurl(Client *c);
@@ -107,9 +107,20 @@ void die(char *str) {
 }
 
 gboolean
-download(WebKitWebView *view, GObject *o, gpointer d) {
+download(WebKitWebView *view, WebKitDownload *o, gpointer d) {
 	/* TODO */
-	return FALSE;
+	const gchar *home;
+	gchar *uri, *filename;
+
+	home = g_get_home_dir();
+	filename = g_build_filename(home, "Desktop", 
+			webkit_download_get_suggested_filename(o), NULL);
+	uri = g_strconcat("file://", filename, NULL);
+	webkit_download_set_destination_uri(o, uri);
+	g_free(filename);
+	g_free(uri);
+	webkit_download_start(o);
+	return TRUE;
 }
 
 gchar *
