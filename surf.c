@@ -45,7 +45,7 @@ static void progresschange(WebKitWebView *view, gint p, gpointer d);
 static void loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d);
 static void linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d);
 static void destroyclient(Client *c);
-WebKitWebView newwindow(WebKitWebView  *v, WebKitWebFrame *f, gpointer d);
+static WebKitWebView *newwindow(WebKitWebView  *v, WebKitWebFrame *f, gpointer d);
 static gboolean decidewindow(WebKitWebView *view, WebKitWebFrame *f,
 		WebKitNetworkRequest *r, WebKitWebNavigationAction *n,
 		WebKitWebPolicyDecision *p, gpointer d);
@@ -131,10 +131,11 @@ decidewindow(WebKitWebView *view, WebKitWebFrame *f,
 	return TRUE;
 }
 
-WebKitWebView newwindow(WebKitWebView  *v, WebKitWebFrame *f, gpointer d) {
+WebKitWebView *
+newwindow(WebKitWebView  *v, WebKitWebFrame *f, gpointer d) {
 	/* TODO */
 	Client *c = newclient();
-	return *c->view;
+	return c->view;
 }
 
 void
@@ -204,7 +205,7 @@ destroyclient(Client *c) {
 	gtk_widget_destroy(c->scroll);
 	gtk_widget_destroy(c->vbox);
 	gtk_widget_destroy(c->urlbar);
-	gtk_widget_destroy(c->urllist);
+/*	gtk_widget_destroy(c->urllist);*/
 	gtk_widget_destroy(c->searchbar);
 	if(clients == c && c->next == NULL)
 		gtk_main_quit();
