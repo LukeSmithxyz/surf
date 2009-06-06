@@ -278,7 +278,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "load-progress-changed", G_CALLBACK(progresschange), c);
 	g_signal_connect(G_OBJECT(c->view), "load-committed", G_CALLBACK(loadcommit), c);
 	g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
-	g_signal_connect(G_OBJECT(c->view), "new-window", G_CALLBACK(newwindow), c);
+	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(newwindow), c);
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(download), c);
 
 	gtk_container_add(GTK_CONTAINER(c->win), c->browser);
