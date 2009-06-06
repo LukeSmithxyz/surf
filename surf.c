@@ -10,28 +10,17 @@
 #include <gdk/gdkkeysyms.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <webkit/webkit.h>
 
 #define LENGTH(x) (sizeof x / sizeof x[0])
-/* Plan9-style Argument parsing */
-/* Vars: _c -> count; _b -> break; _a -> argument */
-#define ARG int _c, _b; char *_a; \
-	for(_c = 1; _c < argc && argv[_c][0] == '-' && argv[_c][1] && \
-			(strcmp(argv[_c], "--") != 0); _c++) \
-		for(_a = &argv[_c][1], _b = 0; !_b && *_a; _a++ ) \
-			switch(*_a)
-#define ARGVAL()	(!_b && _a[1] && (_b = 1) ? &_a[1] : _c + 1 == argc ? \
-		0 : argv[++_c])
-#define ARGCHR()	(*_a)
-#define ARGC()		_c
 
 Display *dpy;
 Atom urlprop;
 typedef struct Client {
-	GtkWidget *win;
-	GtkWidget *browser;
+	GtkWidget *win, *scroll, *vbox, *urlbar, *urllist, *searchbar;
 	WebKitWebView *view;
 	gchar *title;
 	gint progress;
@@ -41,6 +30,8 @@ Client *clients = NULL;
 gboolean embed = FALSE;
 gboolean showxid = FALSE;
 gboolean ignore_once = FALSE;
+extern char *optarg;
+extern int optind;
 
 static Client *newclient();
 static void die(char *str);
@@ -116,7 +107,8 @@ loadfile(const Client *c, const gchar *f) {
 	
 }
 
-static void loaduri(const Client *c, const gchar *uri) {
+void
+loaduri(const Client *c, const gchar *uri) {
 	GString* u = g_string_new(uri);
 	if(g_strrstr(u->str, ":") == NULL)
 		g_string_prepend(u, "http://");
@@ -134,11 +126,13 @@ gboolean
 newwindow(WebKitWebView *view, WebKitWebFrame *f,
 		WebKitNetworkRequest *r, WebKitWebNavigationAction *n,
 		WebKitWebPolicyDecision *p, gpointer d) {
+	/* TODO */
 	puts("new");
 	Client *c = newclient();
 	webkit_web_view_load_request(c->view, r);
 	return TRUE;
 }
+
 void
 linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d) {
 	Client *c = (Client *)d;
@@ -200,7 +194,13 @@ destroywin(GtkWidget* w, gpointer d) {
 void
 destroyclient(Client *c) {
 	Client *p;
+
 	gtk_widget_destroy(c->win);
+	gtk_widget_destroy(c->scroll);
+	gtk_widget_destroy(c->vbox);
+	gtk_widget_destroy(c->urlbar);
+	gtk_widget_destroy(c->urllist);
+	gtk_widget_destroy(c->searchbar);
 	if(clients == c && c->next == NULL)
 		gtk_main_quit();
 	for(p = clients; p && p->next != c; p = p->next);
@@ -225,11 +225,15 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 			else
 				 webkit_web_view_reload(c->view);
 			return TRUE;
+		case GDK_b:
+			return TRUE;
 		case GDK_g:
-			/* TODO */
+			gtk_widget_hide(c->searchbar);
+			gtk_widget_show(c->urlbar);
 			return TRUE;
 		case GDK_slash:
-			/* TODO */
+			gtk_widget_hide(c->urlbar);
+			gtk_widget_show(c->searchbar);
 			return TRUE;
 		case GDK_Left:
 			webkit_web_view_go_back(c->view);
@@ -238,6 +242,11 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 			webkit_web_view_go_forward(c->view);
 			return TRUE;
 		}
+	}
+	else if(ev->type == GDK_KEY_PRESS && ev->keyval == GDK_Escape) {
+		gtk_widget_hide(c->urlbar);
+		gtk_widget_hide(c->searchbar);
+		return TRUE;
 	}
 	return FALSE;
 }
@@ -257,6 +266,7 @@ newclient(void) {
 	Client *c;
 	if(!(c = calloc(1, sizeof(Client))))
 		die("Cannot malloc!\n");
+	/* Window */
 	if(embed) {
 		c->win = gtk_plug_new(0);
 	}
@@ -265,14 +275,19 @@ newclient(void) {
 		gtk_window_set_wmclass(GTK_WINDOW(c->win), "surf", "surf");
 	}
 	gtk_window_set_default_size(GTK_WINDOW(c->win), 800, 600);
-	c->browser = gtk_scrolled_window_new(NULL, NULL);
-	g_signal_connect (G_OBJECT(c->win), "destroy", G_CALLBACK(destroywin), c);
-	g_signal_connect (G_OBJECT(c->win), "key-press-event", G_CALLBACK(keypress), c);
+	g_signal_connect(G_OBJECT(c->win), "destroy", G_CALLBACK(destroywin), c);
+	g_signal_connect(G_OBJECT(c->win), "key-press-event", G_CALLBACK(keypress), c);
 
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(c->browser),
+	/* VBox */
+	c->vbox = gtk_vbox_new(FALSE, 0);
+
+	/* scrolled window */
+	c->scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(c->scroll),
 			GTK_POLICY_NEVER, GTK_POLICY_NEVER);
+
+	/* webview */
 	c->view = WEBKIT_WEB_VIEW(webkit_web_view_new());
-	gtk_container_add(GTK_CONTAINER(c->browser), GTK_WIDGET(c->view));
 
 	g_signal_connect(G_OBJECT(c->view), "title-changed", G_CALLBACK(titlechange), c);
 	g_signal_connect(G_OBJECT(c->view), "load-progress-changed", G_CALLBACK(progresschange), c);
@@ -281,55 +296,83 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(newwindow), c);
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(download), c);
 
-	gtk_container_add(GTK_CONTAINER(c->win), c->browser);
+	/* urlbar */
+	c->urlbar = gtk_entry_new();
+	gtk_entry_set_has_frame(GTK_ENTRY(c->urlbar), FALSE);
+
+	/* searchbar */
+	c->searchbar = gtk_entry_new();
+	gtk_entry_set_has_frame(GTK_ENTRY(c->searchbar), FALSE);
+
+	/* Arranging */
+	gtk_container_add(GTK_CONTAINER(c->scroll), GTK_WIDGET(c->view));
+	gtk_container_add(GTK_CONTAINER(c->vbox), c->scroll);
+	gtk_container_add(GTK_CONTAINER(c->win), c->vbox);
+	gtk_container_add(GTK_CONTAINER(c->vbox), c->searchbar);
+	gtk_container_add(GTK_CONTAINER(c->vbox), c->urlbar);
+
+	/* Setup */
+	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->urlbar, FALSE, FALSE, 0, GTK_PACK_START);
+	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->searchbar, FALSE, FALSE, 0, GTK_PACK_START);
+	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->scroll, TRUE, TRUE, 0, GTK_PACK_START);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
-	gtk_widget_show_all(c->win);
-	if(showxid)
-		printf("%u\n", (unsigned int)GDK_WINDOW_XID(GTK_WIDGET(c->win)->window));
-	c->next = clients;
-	clients = c;
+	gtk_widget_hide_all(c->searchbar);
+	gtk_widget_hide_all(c->urlbar);
+	gtk_widget_show(c->vbox);
+	gtk_widget_show(c->scroll);
+	gtk_widget_show(GTK_WIDGET(c->view));
+	gtk_widget_show(c->win);
 	gdk_window_set_events(GTK_WIDGET(c->win)->window, GDK_ALL_EVENTS_MASK);
 	gdk_window_add_filter(GTK_WIDGET(c->win)->window, processx, c);
+	c->next = clients;
+	clients = c;
+	if(showxid)
+		printf("%u\n", (unsigned int)GDK_WINDOW_XID(GTK_WIDGET(c->win)->window));
 	return c;
 }
 
 int main(int argc, char *argv[]) {
 	gchar *uri = NULL, *file = NULL;
 	Client *c;
+	int o;
 
 	gtk_init(NULL, NULL);
 	if (!g_thread_supported())
 		g_thread_init(NULL);
 	setup();
-	ARG {
-	case 'x':
-		showxid = TRUE;
-		break;
-	case 'e':
-		showxid = TRUE;
-		embed = TRUE;
-		break;
-	case 'u':
-		if(!(uri = ARGVAL()))
-			goto argerr;
-		c = newclient();
-		loaduri(c, uri);
-		updatetitle(c);
-		break;
-	case 'f':
-		if(!(file = ARGVAL()))
-			goto argerr;
-		c = newclient();
-		loadfile(c, file);
-		updatetitle(c);
-		break;
-	argerr:
-	default:
-		puts("surf - simple browser");
-		printf("usage: %s [-e] [-x] [-u uri] [-f file]\n", argv[0]);
-		return EXIT_FAILURE;
-	}
-	if(argc != ARGC())
+	while((o = getopt(argc, argv, "vhxeu:f:")) != -1)
+		switch(o) {
+		case 'x':
+			showxid = TRUE;
+			break;
+		case 'e':
+			showxid = TRUE;
+			embed = TRUE;
+			break;
+		case 'u':
+			if(!(uri = optarg))
+				goto argerr;
+			c = newclient();
+			loaduri(c, uri);
+			updatetitle(c);
+			break;
+		case 'f':
+			if(!(file = optarg))
+				goto argerr;
+			c = newclient();
+			loadfile(c, file);
+			updatetitle(c);
+			break;
+		case 'v':
+			die("surf-"VERSION", © 2009 surf engineers, see LICENSE for details\n");
+			break;
+		argerr:
+		default:
+			puts("surf - simple browser");
+			die("usage: surf [-e] [-x] [-u uri] [-f file]\n");
+			return EXIT_FAILURE;
+		}
+	if(optind != argc)
 		goto argerr;
 	if(!clients)
 		newclient();
