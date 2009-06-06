@@ -33,26 +33,71 @@ gboolean ignore_once = FALSE;
 extern char *optarg;
 extern int optind;
 
-static Client *newclient();
-static void die(char *str);
-static void setup(void);
 static void cleanup(void);
-static void updatetitle(Client *c);
-static void destroywin(GtkWidget* w, gpointer d);
-static gboolean keypress(GtkWidget* w, GdkEventKey *ev, gpointer d);
-static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, gpointer d);
-static void progresschange(WebKitWebView *view, gint p, gpointer d);
-static void loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d);
-static void linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d);
-static void destroyclient(Client *c);
-static WebKitWebView *newwindow(WebKitWebView  *v, WebKitWebFrame *f, gpointer d);
 static gboolean decidewindow(WebKitWebView *view, WebKitWebFrame *f,
 		WebKitNetworkRequest *r, WebKitWebNavigationAction *n,
 		WebKitWebPolicyDecision *p, gpointer d);
+static void destroyclient(Client *c);
+static void destroywin(GtkWidget* w, gpointer d);
+static void die(char *str);
 static gboolean download(WebKitWebView *view, GObject *o, gpointer d);
-static void loaduri(const Client *c, const gchar *uri);
+static gchar *geturi(Client *c);
+static void hidesearch(Client *c);
+static void hideurl(Client *c);
+static gboolean keypress(GtkWidget* w, GdkEventKey *ev, gpointer d);
+static void linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d);
+static void loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d);
 static void loadfile(const Client *c, const gchar *f);
-GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer data);
+static void loaduri(const Client *c, const gchar *uri);
+static Client *newclient();
+static WebKitWebView *newwindow(WebKitWebView  *v, WebKitWebFrame *f, gpointer d);
+static void progresschange(WebKitWebView *view, gint p, gpointer d);
+static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer data);
+static void setup(void);
+static void showsearch(Client *c);
+static void showurl(Client *c);
+static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, gpointer d);
+static void updatetitle(Client *c);
+
+
+gchar *
+geturi(Client *c) {
+	gchar *uri;
+
+	if(!(uri = (gchar *)webkit_web_view_get_uri(c->view)))
+		uri = g_strdup("about:blank");
+	return uri;
+}
+
+void
+showurl(Client *c) {
+	gchar *uri;
+
+	hidesearch(c);
+	uri = geturi(c);
+	gtk_entry_set_text(GTK_ENTRY(c->urlbar), uri);
+	gtk_widget_show(c->urlbar);
+	gtk_widget_grab_focus(c->urlbar);
+}
+
+void
+hideurl(Client *c) {
+	gtk_widget_hide(c->urlbar);
+	gtk_widget_grab_focus(GTK_WIDGET(c->view));
+}
+
+void
+showsearch(Client *c) {
+	hideurl(c);
+	gtk_widget_show(c->searchbar);
+	gtk_widget_grab_focus(c->searchbar);
+}
+
+void
+hidesearch(Client *c) {
+	gtk_widget_hide(c->searchbar);
+	gtk_widget_grab_focus(GTK_WIDGET(c->view));
+}
 
 void
 cleanup(void) {
@@ -77,7 +122,6 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 			XFree(buf);
 			return GDK_FILTER_REMOVE;
 		}
-		ignore_once = FALSE;
 	}
 	return GDK_FILTER_CONTINUE;
 }
@@ -153,8 +197,7 @@ loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
 	Client *c = (Client *)d;
 	gchar *uri;
 
-	if(!(uri = (gchar *)webkit_web_view_get_uri(view)))
-		uri = "(null)";
+	uri = geturi(c);
 	ignore_once = TRUE;
 	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), urlprop,
 			XA_STRING, 8, PropModeReplace, (unsigned char *)uri,
@@ -220,10 +263,42 @@ destroyclient(Client *c) {
 gboolean
 keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 	Client *c = (Client *)d;
-	gchar *uri;
 
 	if(ev->type != GDK_KEY_PRESS)
 		return FALSE;
+	if(GTK_WIDGET_HAS_FOCUS(c->searchbar)) {
+		switch(ev->keyval) {
+		case GDK_Escape:
+			hidesearch(c);
+			return TRUE;
+		case GDK_Return:
+			webkit_web_view_search_text(c->view,
+					gtk_entry_get_text(GTK_ENTRY(c->searchbar)),
+					FALSE,
+					!(ev->state & GDK_SHIFT_MASK),
+					TRUE);
+			return TRUE;
+		case GDK_Left:
+		case GDK_Right:
+		case GDK_r:
+			return FALSE;
+		}
+	}
+	else if(GTK_WIDGET_HAS_FOCUS(c->urlbar)) {
+		switch(ev->keyval) {
+		case GDK_Escape:
+			hideurl(c);
+			return TRUE;
+		case GDK_Return:
+			loaduri(c, gtk_entry_get_text(GTK_ENTRY(c->urlbar)));
+			hideurl(c);
+			return TRUE;
+		case GDK_Left:
+		case GDK_Right:
+		case GDK_r:
+			return FALSE;
+		}
+	}
 	if(ev->state == GDK_CONTROL_MASK || ev->state == (GDK_CONTROL_MASK | GDK_SHIFT_MASK)) {
 		switch(ev->keyval) {
 		case GDK_r:
@@ -236,17 +311,10 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 		case GDK_b:
 			return TRUE;
 		case GDK_g:
-			gtk_widget_hide(c->searchbar);
-			if(!(uri = (gchar *)webkit_web_view_get_uri(c->view)))
-				uri = "(null)";
-			gtk_entry_set_text(GTK_ENTRY(c->urlbar), uri);
-			gtk_widget_show(c->urlbar);
-			gtk_widget_grab_focus(c->urlbar);
+			showurl(c);
 			return TRUE;
 		case GDK_slash:
-			gtk_widget_hide(c->urlbar);
-			gtk_widget_show(c->searchbar);
-			gtk_widget_grab_focus(c->searchbar);
+			showsearch(c);
 			return TRUE;
 		case GDK_Left:
 			webkit_web_view_go_back(c->view);
@@ -254,31 +322,6 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 		case GDK_Right:
 			webkit_web_view_go_forward(c->view);
 			return TRUE;
-		}
-	}
-	else {
-		switch(ev->keyval) {
-		case GDK_Escape:
-			if(!GTK_WIDGET_HAS_FOCUS(c->searchbar) && !GTK_WIDGET_HAS_FOCUS(c->urlbar))
-				return FALSE;
-			gtk_widget_hide(c->urlbar);
-			gtk_widget_hide(c->searchbar);
-			gtk_widget_grab_focus(GTK_WIDGET(c->view));
-			return TRUE;
-		case GDK_Return:
-			if(GTK_WIDGET_HAS_FOCUS(c->urlbar)) {
-				loaduri(c, gtk_entry_get_text(GTK_ENTRY(c->urlbar)));
-				gtk_widget_hide(c->urlbar);
-				gtk_widget_grab_focus(GTK_WIDGET(c->view));
-				return TRUE;
-			}
-			else if(GTK_WIDGET_HAS_FOCUS(c->searchbar)) {
-				webkit_web_view_search_text(c->view,
-						gtk_entry_get_text(GTK_ENTRY(c->searchbar)),
-						FALSE,
-						!(ev->state & GDK_SHIFT_MASK),
-						TRUE);
-			}
 		}
 	}
 	return FALSE;
