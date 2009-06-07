@@ -113,7 +113,7 @@ download(WebKitWebView *view, WebKitDownload *o, gpointer d) {
 	gchar *uri, *filename;
 
 	home = g_get_home_dir();
-	filename = g_build_filename(home, "Desktop", 
+	filename = g_build_filename(home, "Desktop",
 			webkit_download_get_suggested_filename(o), NULL);
 	uri = g_strconcat("file://", filename, NULL);
 	webkit_download_set_destination_uri(o, uri);
@@ -256,7 +256,7 @@ loadfile(const Client *c, const gchar *f) {
 		g_string_prepend(uri, "file://");
 		loaduri(c, uri->str);
 	}
-	
+
 }
 
 void
@@ -364,7 +364,7 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 	if(((XEvent *)e)->type == PropertyNotify) {
 		ev = &((XEvent *)e)->xproperty;
 		if(ignore_once == FALSE && ev->atom == urlprop && ev->state == PropertyNewValue) {
-			XGetWindowProperty(dpy, ev->window, urlprop, 0L, BUFSIZ, False, XA_STRING, 
+			XGetWindowProperty(dpy, ev->window, urlprop, 0L, BUFSIZ, False, XA_STRING,
 				&adummy, &idummy, &ldummy, &ldummy, &buf);
 			loaduri(c, (gchar *)buf);
 			XFree(buf);
