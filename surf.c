@@ -20,7 +20,7 @@
 Display *dpy;
 Atom urlprop;
 typedef struct Client {
-	GtkWidget *win, *scroll, *vbox, *urlbar, *urllist, *searchbar;
+	GtkWidget *win, *scroll, *vbox, *urlbar, *searchbar;
 	WebKitWebView *view;
 	gchar *title;
 	gint progress;
@@ -80,7 +80,6 @@ destroyclient(Client *c) {
 	gtk_widget_destroy(GTK_WIDGET(webkit_web_view_new()));
 	gtk_widget_destroy(c->scroll);
 	gtk_widget_destroy(c->urlbar);
-	gtk_widget_destroy(c->urllist);
 	gtk_widget_destroy(c->searchbar);
 	gtk_widget_destroy(c->vbox);
 	gtk_widget_destroy(c->win);
