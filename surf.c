@@ -183,7 +183,7 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 			return FALSE;
 		}
 	}
-	if(ev->state == GDK_CONTROL_MASK || ev->state == (GDK_CONTROL_MASK | GDK_SHIFT_MASK)) {
+        else if(ev->state == GDK_CONTROL_MASK || ev->state == (GDK_CONTROL_MASK | GDK_SHIFT_MASK)) {
 		switch(ev->keyval) {
 		case GDK_r:
 		case GDK_R:
@@ -208,6 +208,16 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 			return TRUE;
 		}
 	}
+        else {
+                switch(ev->keyval) {
+                case GDK_k:
+                        webkit_web_view_move_cursor(c->view, GTK_MOVEMENT_DISPLAY_LINES, -1);
+                        return TRUE;
+                case GDK_j:
+                        webkit_web_view_move_cursor(c->view, GTK_MOVEMENT_DISPLAY_LINES, 1);
+                        return TRUE;
+                }
+        }
 	return FALSE;
 }
 
