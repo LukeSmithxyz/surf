@@ -272,8 +272,8 @@ loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
 	Client *c = (Client *)d;
 	gchar *uri;
 
-	uri = geturi(c);
 	ignore_once = TRUE;
+	uri = geturi(c);
 	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), urlprop,
 			XA_STRING, 8, PropModeReplace, (unsigned char *)uri,
 			strlen(uri) + 1);
@@ -425,12 +425,16 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 	unsigned char *buf = NULL;
 	if(((XEvent *)e)->type == PropertyNotify) {
 		ev = &((XEvent *)e)->xproperty;
-		if(ignore_once == FALSE && ev->atom == urlprop && ev->state == PropertyNewValue) {
-			XGetWindowProperty(dpy, ev->window, urlprop, 0L, BUFSIZ, False, XA_STRING,
-				&adummy, &idummy, &ldummy, &ldummy, &buf);
-			loaduri(c, (gchar *)buf);
-			XFree(buf);
-			return GDK_FILTER_REMOVE;
+		if(ev->atom == urlprop && ev->state == PropertyNewValue) {
+			if(ignore_once)
+			       ignore_once = FALSE;
+			else {
+				XGetWindowProperty(dpy, ev->window, urlprop, 0L, BUFSIZ, False, XA_STRING,
+					&adummy, &idummy, &ldummy, &ldummy, &buf);
+				loaduri(c, (gchar *)buf);
+				XFree(buf);
+				return GDK_FILTER_REMOVE;
+			}
 		}
 	}
 	return GDK_FILTER_CONTINUE;
