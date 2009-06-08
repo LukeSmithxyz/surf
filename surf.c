@@ -220,6 +220,16 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 		case GDK_slash:
 			showsearch(c);
 			return TRUE;
+		case GDK_plus:
+		case GDK_equal:
+			webkit_web_view_zoom_in(c->view);
+			return TRUE;
+		case GDK_minus:
+			webkit_web_view_zoom_out(c->view);
+			return TRUE;
+		case GDK_0:
+			webkit_web_view_set_zoom_level(c->view, 1.0);
+			return TRUE;
 		case GDK_n:
 		case GDK_N:
 			webkit_web_view_search_text(c->view,
@@ -331,7 +341,6 @@ newclient(void) {
 	gtk_window_set_default_size(GTK_WINDOW(c->win), 800, 600);
 	g_signal_connect(G_OBJECT(c->win), "destroy", G_CALLBACK(destroywin), c);
 	g_signal_connect(G_OBJECT(c->win), "key-press-event", G_CALLBACK(keypress), c);
-	c->download = NULL;
 
 	/* VBox */
 	c->vbox = gtk_vbox_new(FALSE, 0);
@@ -381,6 +390,8 @@ newclient(void) {
 	gtk_widget_show(c->win);
 	gdk_window_set_events(GTK_WIDGET(c->win)->window, GDK_ALL_EVENTS_MASK);
 	gdk_window_add_filter(GTK_WIDGET(c->win)->window, processx, c);
+	c->download = NULL;
+	c->title = NULL;
 	c->next = clients;
 	clients = c;
 	if(showxid)
