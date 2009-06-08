@@ -16,11 +16,11 @@ INCS = -I. -I/usr/include ${GTKINC}
 LIBS = -L/usr/lib -lc ${GTKLIB}
 
 # flags
-CPPFLAGS = -DVERSION=\"${VERSION}\" ${XINERAMAFLAGS}
-#CFLAGS = -std=c99 -pedantic -Wall -Os ${INCS} ${CPPFLAGS}
-CFLAGS = -std=c99 -pedantic -Wall -O0 ${INCS} ${CPPFLAGS}
-#LDFLAGS = -s ${LIBS}
-LDFLAGS = ${LIBS}
+CPPFLAGS = -DVERSION=\"${VERSION}\"
+CFLAGS = -std=c99 -pedantic -Wall -Os ${INCS} ${CPPFLAGS}
+#CFLAGS = -std=c99 -pedantic -Wall -O0 ${INCS} ${CPPFLAGS}
+LDFLAGS = -s ${LIBS}
+#LDFLAGS = ${LIBS}
 
 # Solaris
 #CFLAGS = -fast ${INCS} -DVERSION=\"${VERSION}\"

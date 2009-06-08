@@ -31,7 +31,7 @@ clean:
 dist: clean
 	@echo creating dist tarball
 	@mkdir -p surf-${VERSION}
-	@cp -R LICENSE Makefile README config.def.h config.mk \
+	@cp -R LICENSE Makefile README config.mk \
 		surf.1 ${SRC} surf-${VERSION}
 	@tar -cf surf-${VERSION}.tar surf-${VERSION}
 	@gzip surf-${VERSION}.tar

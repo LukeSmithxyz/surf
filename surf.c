@@ -21,15 +21,15 @@
 Display *dpy;
 Atom urlprop;
 typedef struct Client {
-	GtkWidget *win, *scroll, *vbox, *urlbar, *searchbar;
+	GtkWidget *win, *scroll, *vbox, *pbar, *urlbar, *searchbar;
 	WebKitWebView *view;
-	WebKitDownload * dl;
 	gchar *title;
 	gint progress;
 	struct Client *next;
 } Client;
 SoupCookieJar *cookiejar;
 Client *clients = NULL;
+GSList *downloads = NULL;
 gboolean embed = FALSE;
 gboolean showxid = FALSE;
 gboolean ignore_once = FALSE;
@@ -37,12 +37,10 @@ extern char *optarg;
 extern int optind;
 
 static void cleanup(void);
-static gboolean decidewindow(WebKitWebView *view, WebKitWebFrame *f,
-		WebKitNetworkRequest *r, WebKitWebNavigationAction *n,
-		WebKitWebPolicyDecision *p, gpointer d);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, gpointer d);
 static void die(char *str);
+static void downloadcb(WebKitDownload *o, GParamSpec *pspec, gpointer d);
 static gboolean download(WebKitWebView *view, WebKitDownload *o, gpointer d);
 static gchar *geturi(Client *c);
 static void hidesearch(Client *c);
@@ -66,14 +64,7 @@ void
 cleanup(void) {
 	while(clients)
 		destroyclient(clients);
-}
-
-gboolean
-decidewindow(WebKitWebView *view, WebKitWebFrame *f,
-		WebKitNetworkRequest *r, WebKitWebNavigationAction *n,
-		WebKitWebPolicyDecision *p, gpointer d) {
-	/* TODO */
-	return TRUE;
+	g_slist_free(downloads);
 }
 
 void
@@ -83,6 +74,7 @@ destroyclient(Client *c) {
 	gtk_widget_destroy(GTK_WIDGET(webkit_web_view_new()));
 	gtk_widget_destroy(c->scroll);
 	gtk_widget_destroy(c->urlbar);
+	gtk_widget_destroy(c->pbar);
 	gtk_widget_destroy(c->searchbar);
 	gtk_widget_destroy(c->vbox);
 	gtk_widget_destroy(c->win);
@@ -108,20 +100,52 @@ void die(char *str) {
 	exit(EXIT_FAILURE);
 }
 
+void
+downloadcb(WebKitDownload *o, GParamSpec *pspec, gpointer d) {
+	Client *c = (Client *) d;
+	GSList *i;
+	WebKitDownload *dl;
+	GString *text;
+	
+	text = g_string_new("");
+	for (i = downloads; i != NULL; i = i->next) {
+		dl = i->data;
+		if (webkit_download_get_status(dl) == WEBKIT_DOWNLOAD_STATUS_STARTED
+		|| webkit_download_get_status(dl) == WEBKIT_DOWNLOAD_STATUS_CREATED) {
+			g_string_append_printf(text, "%s[%.0f%%] ",
+			webkit_download_get_suggested_filename(dl),
+			webkit_download_get_progress(dl)*100);
+		} else {
+			downloads = g_slist_remove(downloads, dl);
+		}
+	}
+	if (downloads == NULL) {
+		gtk_label_set_text((GtkLabel *) c->pbar, "");
+		gtk_widget_hide(c->pbar);
+	} else {
+		gtk_label_set_text((GtkLabel *) c->pbar, text->str);
+	}
+	g_string_free(text, TRUE);
+}
+
 gboolean
 download(WebKitWebView *view, WebKitDownload *o, gpointer d) {
 	/* TODO */
+	Client *c = (Client *) d;
 	const gchar *home;
 	gchar *uri, *filename;
 
 	home = g_get_home_dir();
 	filename = g_build_filename(home, ".surf", "dl", 
 			webkit_download_get_suggested_filename(o), NULL);
-	g_mkdir(g_path_get_dirname(filename), 0755);
 	uri = g_strconcat("file://", filename, NULL);
 	webkit_download_set_destination_uri(o, uri);
 	g_free(filename);
 	g_free(uri);
+	downloads = g_slist_append(downloads, o);
+	gtk_widget_show(c->pbar);
+	g_signal_connect(o, "notify::progress", G_CALLBACK(downloadcb), d);
+	g_signal_connect(o, "notify::status", G_CALLBACK(downloadcb), d);
 	webkit_download_start(o);
 	return TRUE;
 }
@@ -305,7 +329,6 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "load-committed", G_CALLBACK(loadcommit), c);
 	g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
 	g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(newwindow), c);
-	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(decidewindow), c);
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(download), c);
 
 	/* urlbar */
@@ -316,20 +339,26 @@ newclient(void) {
 	c->searchbar = gtk_entry_new();
 	gtk_entry_set_has_frame(GTK_ENTRY(c->searchbar), FALSE);
 
+	/* downloadbar */
+	c->pbar = gtk_label_new("");
+
 	/* Arranging */
 	gtk_container_add(GTK_CONTAINER(c->scroll), GTK_WIDGET(c->view));
 	gtk_container_add(GTK_CONTAINER(c->win), c->vbox);
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->scroll);
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->searchbar);
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->urlbar);
+	gtk_container_add(GTK_CONTAINER(c->vbox), c->pbar);
 
 	/* Setup */
 	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->urlbar, FALSE, FALSE, 0, GTK_PACK_START);
 	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->searchbar, FALSE, FALSE, 0, GTK_PACK_START);
+	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->pbar, FALSE, FALSE, 0, GTK_PACK_START);
 	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->scroll, TRUE, TRUE, 0, GTK_PACK_START);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
 	gtk_widget_hide_all(c->searchbar);
 	gtk_widget_hide_all(c->urlbar);
+	gtk_widget_hide_all(c->pbar);
 	gtk_widget_show(c->vbox);
 	gtk_widget_show(c->scroll);
 	gtk_widget_show(GTK_WIDGET(c->view));
@@ -469,11 +498,16 @@ int main(int argc, char *argv[]) {
 	if(!clients)
 		newclient();
 
+	/* make dirs */
+	home = g_get_home_dir();
+	filename = g_build_filename(home, ".surf", NULL);
+	g_mkdir_with_parents(filename, 0711);
+	filename = g_build_filename(home, ".surf", "dl", NULL);
+	g_mkdir_with_parents(filename, 0755);
+
 	/* cookie persistance */
 	s = webkit_get_default_session();
-	home = g_get_home_dir();
 	filename = g_build_filename(home, ".surf", "cookies", NULL);
-	g_mkdir(g_path_get_dirname(filename), 0755);
 	cookiejar = soup_cookie_jar_text_new(filename, FALSE);
 	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar));
 
