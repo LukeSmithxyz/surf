@@ -433,8 +433,8 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 					&adummy, &idummy, &ldummy, &ldummy, &buf);
 				loaduri(c, (gchar *)buf);
 				XFree(buf);
-				return GDK_FILTER_REMOVE;
 			}
+			return GDK_FILTER_REMOVE;
 		}
 	}
 	return GDK_FILTER_CONTINUE;
