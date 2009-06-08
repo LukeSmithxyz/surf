@@ -472,7 +472,8 @@ int main(int argc, char *argv[]) {
 	/* cookie persistance */
 	s = webkit_get_default_session();
 	home = g_get_home_dir();
-	filename = g_build_filename(home, ".surf-cookies", NULL);
+	filename = g_build_filename(home, ".surf", "cookies", NULL);
+	g_mkdir(g_path_get_dirname(filename), 0755);
 	cookiejar = soup_cookie_jar_text_new(filename, FALSE);
 	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar));
 
