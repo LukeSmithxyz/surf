@@ -28,6 +28,7 @@ typedef struct Client {
 	gint progress;
 	struct Client *next;
 } Client;
+SoupCookieJar *cookiejar;
 Client *clients = NULL;
 gboolean embed = FALSE;
 gboolean showxid = FALSE;
@@ -185,7 +186,7 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 			return FALSE;
 		}
 	}
-	if(ev->state == GDK_CONTROL_MASK || ev->state == (GDK_CONTROL_MASK | GDK_SHIFT_MASK)) {
+        else if(ev->state == GDK_CONTROL_MASK || ev->state == (GDK_CONTROL_MASK | GDK_SHIFT_MASK)) {
 		switch(ev->keyval) {
 		case GDK_r:
 		case GDK_R:
@@ -210,6 +211,16 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 			return TRUE;
 		}
 	}
+        else {
+                switch(ev->keyval) {
+                case GDK_k:
+                        webkit_web_view_move_cursor(c->view, GTK_MOVEMENT_DISPLAY_LINES, -1);
+                        return TRUE;
+                case GDK_j:
+                        webkit_web_view_move_cursor(c->view, GTK_MOVEMENT_DISPLAY_LINES, 1);
+                        return TRUE;
+                }
+        }
 	return FALSE;
 }
 
@@ -260,7 +271,7 @@ loadfile(const Client *c, const gchar *f) {
 		g_string_prepend(uri, "file://");
 		loaduri(c, uri->str);
 	}
-	
+
 }
 
 void
@@ -367,7 +378,7 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 	if(((XEvent *)e)->type == PropertyNotify) {
 		ev = &((XEvent *)e)->xproperty;
 		if(ignore_once == FALSE && ev->atom == urlprop && ev->state == PropertyNewValue) {
-			XGetWindowProperty(dpy, ev->window, urlprop, 0L, BUFSIZ, False, XA_STRING, 
+			XGetWindowProperty(dpy, ev->window, urlprop, 0L, BUFSIZ, False, XA_STRING,
 				&adummy, &idummy, &ldummy, &ldummy, &buf);
 			loaduri(c, (gchar *)buf);
 			XFree(buf);
@@ -422,8 +433,10 @@ updatetitle(Client *c) {
 
 int main(int argc, char *argv[]) {
 	gchar *uri = NULL, *file = NULL;
+        SoupSession *s;
 	Client *c;
 	int o;
+        const gchar *home, *filename;
 
 	gtk_init(NULL, NULL);
 	if (!g_thread_supported())
@@ -465,6 +478,14 @@ int main(int argc, char *argv[]) {
 		goto argerr;
 	if(!clients)
 		newclient();
+
+        /* cookie persistance */
+        s = webkit_get_default_session();
+        home = g_get_home_dir();
+        filename = g_build_filename(home, ".surf-cookies", NULL);
+        cookiejar = soup_cookie_jar_text_new(filename, FALSE);
+        soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar));
+
 	gtk_main();
 	cleanup();
 	return EXIT_SUCCESS;
