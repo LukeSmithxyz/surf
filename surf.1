@@ -1,0 +1,58 @@
+.TH SURF 1 surf\-VERSION
+.SH NAME
+surf \- simple webkit based browser
+.SH SYNOPSIS
+.B surf
+.RB [ \-ehvx ]
+.RB [ \-f " FILE"]
+.RB [ \-u " URI"]
+.SH DESCRIPTION
+surf is a simple webbrowser which is based on webkit/gtk+. It is able
+to display websites and follow links. It supports the Xembedded protocol
+which makes it possible to embed it into another application. Furthermore
+one can point surf to another URI by setting it's XProperties.
+.SH OPTIONS
+.TP
+.B \-e
+prints xid to standard output and waits until some application reparent the
+window.
+.TP
+.B \-f FILE
+Sets the browsers URI to FILE. Also it's possible to read from stdin.
+.TP
+.B \-h
+prints usage information to standard output, then exits.
+.TP
+.B \-u URI
+Sets the browsers URI.
+.TP
+.B \-v
+prints version information to standard output, then exits.
+.TP
+.B \-x
+prints xid to standard output. This can be used to script the browser by using
+xprop
+.SH USAGE
+.TP
+.B Ctrl\-Left
+Walks back the history.
+.TP
+.B Ctrl\-Right
+Walks forward the history.
+.TP
+.B Ctrl\-/
+Opens the search-bar.
+.TP
+.B Ctrl\-g
+Opens the URL-bar.
+.TP
+.B Ctrl\-r
+Reloads the website.
+.TP
+.B Ctrl\-Shift\-r
+Reloads the website without using cache.
+.SH SEE ALSO
+.BR dmenu (1)
+.BR xprop (1)
+.SH BUGS
+Please report them!
