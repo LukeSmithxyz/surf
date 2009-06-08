@@ -423,10 +423,10 @@ updatetitle(Client *c) {
 
 int main(int argc, char *argv[]) {
 	gchar *uri = NULL, *file = NULL;
-        SoupSession *s;
+	SoupSession *s;
 	Client *c;
 	int o;
-        const gchar *home, *filename;
+	const gchar *home, *filename;
 
 	gtk_init(NULL, NULL);
 	if (!g_thread_supported())
@@ -469,12 +469,12 @@ int main(int argc, char *argv[]) {
 	if(!clients)
 		newclient();
 
-        /* cookie persistance */
-        s = webkit_get_default_session();
-        home = g_get_home_dir();
-        filename = g_build_filename(home, ".surf-cookies", NULL);
-        cookiejar = soup_cookie_jar_text_new(filename, FALSE);
-        soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar));
+	/* cookie persistance */
+	s = webkit_get_default_session();
+	home = g_get_home_dir();
+	filename = g_build_filename(home, ".surf-cookies", NULL);
+	cookiejar = soup_cookie_jar_text_new(filename, FALSE);
+	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar));
 
 	gtk_main();
 	cleanup();
