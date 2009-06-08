@@ -95,7 +95,8 @@ destroywin(GtkWidget* w, gpointer d) {
 	destroyclient(c);
 }
 
-void die(char *str) {
+void
+die(char *str) {
 	fputs(str, stderr);
 	exit(EXIT_FAILURE);
 }
@@ -270,7 +271,6 @@ loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
 void
 loadstart(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
 	Client *c = (Client *)d;
-	gchar *uri;
 
 	if(c->download)
 		stop(c);
