@@ -40,8 +40,8 @@ static void cleanup(void);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, gpointer d);
 static void die(char *str);
-static void downloadcb(WebKitDownload *o, GParamSpec *pspec, gpointer d);
-static gboolean download(WebKitWebView *view, WebKitDownload *o, gpointer d);
+static void download(WebKitDownload *o, GParamSpec *pspec, gpointer d);
+static gboolean initdownload(WebKitWebView *view, WebKitDownload *o, gpointer d);
 static gchar *geturi(Client *c);
 static void hidesearch(Client *c);
 static void hideurl(Client *c);
@@ -101,7 +101,7 @@ void die(char *str) {
 }
 
 void
-downloadcb(WebKitDownload *o, GParamSpec *pspec, gpointer d) {
+download(WebKitDownload *o, GParamSpec *pspec, gpointer d) {
 	Client *c = (Client *) d;
 	GSList *i;
 	WebKitDownload *dl;
@@ -129,7 +129,7 @@ downloadcb(WebKitDownload *o, GParamSpec *pspec, gpointer d) {
 }
 
 gboolean
-download(WebKitWebView *view, WebKitDownload *o, gpointer d) {
+initdownload(WebKitWebView *view, WebKitDownload *o, gpointer d) {
 	/* TODO */
 	Client *c = (Client *) d;
 	const gchar *home;
@@ -144,8 +144,8 @@ download(WebKitWebView *view, WebKitDownload *o, gpointer d) {
 	g_free(uri);
 	downloads = g_slist_append(downloads, o);
 	gtk_widget_show(c->pbar);
-	g_signal_connect(o, "notify::progress", G_CALLBACK(downloadcb), d);
-	g_signal_connect(o, "notify::status", G_CALLBACK(downloadcb), d);
+	g_signal_connect(o, "notify::progress", G_CALLBACK(download), d);
+	g_signal_connect(o, "notify::status", G_CALLBACK(download), d);
 	webkit_download_start(o);
 	return TRUE;
 }
@@ -329,7 +329,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "load-committed", G_CALLBACK(loadcommit), c);
 	g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
 	g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(newwindow), c);
-	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(download), c);
+	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
 
 	/* urlbar */
 	c->urlbar = gtk_entry_new();
