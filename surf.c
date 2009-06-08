@@ -204,7 +204,7 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 			return FALSE;
 		}
 	}
-	if(ev->state == GDK_CONTROL_MASK || ev->state == (GDK_CONTROL_MASK | GDK_SHIFT_MASK)) {
+	if((ev->state & ~(GDK_SHIFT_MASK|GDK_LOCK_MASK)) == GDK_CONTROL_MASK) {
 		switch(ev->keyval) {
 		case GDK_r:
 		case GDK_R:
