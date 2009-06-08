@@ -60,6 +60,7 @@ static void showsearch(Client *c);
 static void showurl(Client *c);
 static void stop(Client *c);
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, gpointer d);
+static void usage();
 static void updatetitle(Client *c, const gchar *title);
 
 void
@@ -390,6 +391,7 @@ newclient(void) {
 	gtk_widget_show(c->win);
 	gdk_window_set_events(GTK_WIDGET(c->win)->window, GDK_ALL_EVENTS_MASK);
 	gdk_window_add_filter(GTK_WIDGET(c->win)->window, processx, c);
+	webkit_web_view_set_full_content_zoom(c->view, TRUE);
 	c->download = NULL;
 	c->title = NULL;
 	c->next = clients;
@@ -474,6 +476,12 @@ titlechange(WebKitWebView *v, WebKitWebFrame *f, const gchar *t, gpointer d) {
 }
 
 void
+usage() {
+	fputs("surf - simple browser\n", stderr);
+	die("usage: surf [-e] [-x] [-u uri] [-f file]\n");
+}
+
+void
 updatetitle(Client *c, const char *title) {
 	char t[512];
 
@@ -490,7 +498,6 @@ updatetitle(Client *c, const char *title) {
 }
 
 int main(int argc, char *argv[]) {
-	gchar *uri = NULL, *file = NULL;
 	SoupSession *s;
 	Client *c;
 	int o;
@@ -510,28 +517,21 @@ int main(int argc, char *argv[]) {
 			embed = TRUE;
 			break;
 		case 'u':
-			if(!(uri = optarg))
-				goto argerr;
 			c = newclient();
-			loaduri(c, uri);
+			loaduri(c, optarg);
 			break;
 		case 'f':
-			if(!(file = optarg))
-				goto argerr;
 			c = newclient();
-			loadfile(c, file);
+			loadfile(c, optarg);
 			break;
 		case 'v':
 			die("surf-"VERSION", © 2009 surf engineers, see LICENSE for details\n");
 			break;
-		argerr:
 		default:
-			puts("surf - simple browser");
-			die("usage: surf [-e] [-x] [-u uri] [-f file]\n");
-			return EXIT_FAILURE;
+			usage();
 		}
 	if(optind != argc)
-		goto argerr;
+		usage();
 	if(!clients)
 		newclient();
 
