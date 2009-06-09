@@ -38,28 +38,28 @@ extern int optind;
 
 static void cleanup(void);
 static void destroyclient(Client *c);
-static void destroywin(GtkWidget* w, gpointer d);
+static void destroywin(GtkWidget* w, Client *c);
 static void die(char *str);
-static void download(WebKitDownload *o, GParamSpec *pspec, gpointer d);
-static gboolean initdownload(WebKitWebView *view, WebKitDownload *o, gpointer d);
+static void download(WebKitDownload *o, GParamSpec *pspec, Client *c);
+static gboolean initdownload(WebKitWebView *view, WebKitDownload *o, Client *c);
 static gchar *geturi(Client *c);
 static void hidesearch(Client *c);
 static void hideurl(Client *c);
-static gboolean keypress(GtkWidget* w, GdkEventKey *ev, gpointer d);
-static void linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d);
-static void loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d);
-static void loadstart(WebKitWebView *view, WebKitWebFrame *f, gpointer d);
+static gboolean keypress(GtkWidget* w, GdkEventKey *ev, Client *c);
+static void linkhover(WebKitWebView* page, const gchar* t, const gchar* l, Client *c);
+static void loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c);
+static void loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c);
 static void loadfile(Client *c, const gchar *f);
 static void loaduri(Client *c, const gchar *uri);
 static Client *newclient();
-static WebKitWebView *newwindow(WebKitWebView  *v, WebKitWebFrame *f, gpointer d);
-static void progresschange(WebKitWebView *view, gint p, gpointer d);
-static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer data);
+static WebKitWebView *newwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c);
+static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
+static void progresschange(WebKitWebView *view, gint p, Client *c);
 static void setup(void);
 static void showsearch(Client *c);
 static void showurl(Client *c);
 static void stop(Client *c);
-static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, gpointer d);
+static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, Client *c);
 static void usage();
 static void updatetitle(Client *c, const gchar *title);
 
@@ -90,9 +90,7 @@ destroyclient(Client *c) {
 }
 
 void
-destroywin(GtkWidget* w, gpointer d) {
-	Client *c = (Client *)d;
-
+destroywin(GtkWidget* w, Client *c) {
 	destroyclient(c);
 }
 
@@ -103,8 +101,7 @@ die(char *str) {
 }
 
 void
-download(WebKitDownload *o, GParamSpec *pspec, gpointer d) {
-	Client *c = (Client *) d;
+download(WebKitDownload *o, GParamSpec *pspec, Client *c) {
 	WebKitDownloadStatus status;
 
 	status = webkit_download_get_status(c->download);
@@ -118,11 +115,9 @@ download(WebKitDownload *o, GParamSpec *pspec, gpointer d) {
 }
 
 gboolean
-initdownload(WebKitWebView *view, WebKitDownload *o, gpointer d) {
-	Client *c = (Client *) d;
+initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	const gchar *home, *filename;
-	gchar *uri, *path;
-	GString *html = g_string_new("");
+	gchar *uri, *path, *html;
 
 	stop(c);
 	c->download = o;
@@ -134,15 +129,14 @@ initdownload(WebKitWebView *view, WebKitDownload *o, gpointer d) {
 	webkit_download_set_destination_uri(c->download, uri);
 	c->progress = 0;
 	g_free(uri);
-	html = g_string_append(html, "Downloading <b>");
-	html = g_string_append(html, filename);
-	html = g_string_append(html, "</b>...");
-	webkit_web_view_load_html_string(c->view, html->str,
+	html = g_strdup_printf("Download <b>%s</b>...", filename);
+	webkit_web_view_load_html_string(c->view, html,
 			webkit_download_get_uri(c->download));
 	g_signal_connect(c->download, "notify::progress", G_CALLBACK(download), c);
 	g_signal_connect(c->download, "notify::status", G_CALLBACK(download), c);
 	webkit_download_start(c->download);
 	updatetitle(c, filename);
+	g_free(html);
 	return TRUE;
 }
 
@@ -168,9 +162,7 @@ hideurl(Client *c) {
 }
 
 gboolean
-keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
-	Client *c = (Client *)d;
-
+keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 	if(ev->type != GDK_KEY_PRESS)
 		return FALSE;
 	if(GTK_WIDGET_HAS_FOCUS(c->searchbar)) {
@@ -258,9 +250,7 @@ keypress(GtkWidget* w, GdkEventKey *ev, gpointer d) {
 }
 
 void
-linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d) {
-	Client *c = (Client *)d;
-
+linkhover(WebKitWebView* page, const gchar* t, const gchar* l, Client *c) {
 	if(l)
 		gtk_window_set_title(GTK_WINDOW(c->win), l);
 	else
@@ -268,8 +258,7 @@ linkhover(WebKitWebView* page, const gchar* t, const gchar* l, gpointer d) {
 }
 
 void
-loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
-	Client *c = (Client *)d;
+loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
 	gchar *uri;
 
 	ignore_once = TRUE;
@@ -280,24 +269,24 @@ loadcommit(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
 }
 
 void
-loadstart(WebKitWebView *view, WebKitWebFrame *f, gpointer d) {
-	Client *c = (Client *)d;
-
+loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
 	if(c->download)
 		stop(c);
+	c->progress = 0;
+	updatetitle(c, NULL);
 }
 
 void
 loadfile(Client *c, const gchar *f) {
 	GIOChannel *chan = NULL;
 	GError *e = NULL;
-	GString *code = g_string_new("");
-	GString *uri = g_string_new(f);
-	gchar *line;
+	GString *code;
+	gchar *line, *uri;
 
 	if(strcmp(f, "-") == 0) {
 		chan = g_io_channel_unix_new(STDIN_FILENO);
 		if (chan) {
+			code = g_string_new("");
 			while(g_io_channel_read_line(chan, &line, NULL, NULL,
 						&e) == G_IO_STATUS_NORMAL) {
 				g_string_append(code, line);
@@ -306,24 +295,27 @@ loadfile(Client *c, const gchar *f) {
 			webkit_web_view_load_html_string(c->view, code->str,
 					"file://.");
 			g_io_channel_shutdown(chan, FALSE, NULL);
+			g_string_free(code, TRUE);
 		}
+		uri = g_strdup("stdin");
 	}
 	else {
-		g_string_prepend(uri, "file://");
-		loaduri(c, uri->str);
+		uri = g_strdup_printf("file://%s", f);
+		loaduri(c, uri);
 	}
-	updatetitle(c, uri->str);
+	updatetitle(c, uri);
+	g_free(uri);
 }
 
 void
 loaduri(Client *c, const gchar *uri) {
-	GString* u = g_string_new(uri);
-	if(g_strrstr(u->str, ":") == NULL)
-		g_string_prepend(u, "http://");
-	webkit_web_view_load_uri(c->view, u->str);
+	gchar *u;
+	u = g_strrstr(uri, ":") ? g_strdup(uri)
+		: g_strdup_printf("http://%s", uri);
+	webkit_web_view_load_uri(c->view, u);
 	c->progress = 0;
-	updatetitle(c, u->str);
-	g_string_free(u, TRUE);
+	updatetitle(c, u);
+	g_free(u);
 }
 
 Client *
@@ -402,23 +394,15 @@ newclient(void) {
 }
 
 WebKitWebView *
-newwindow(WebKitWebView  *v, WebKitWebFrame *f, gpointer d) {
-	Client *c = newclient();
-	return c->view;
-}
-
-void
-progresschange(WebKitWebView* view, gint p, gpointer d) {
-	Client *c = (Client *)d;
-
-	c->progress = p;
-	updatetitle(c, NULL);
+newwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c) {
+	Client *n = newclient();
+	return n->view;
 }
 
 GdkFilterReturn
 processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
-	XPropertyEvent *ev;
 	Client *c = (Client *)d;
+	XPropertyEvent *ev;
 	Atom adummy;
 	int idummy;
 	unsigned long ldummy;
@@ -438,6 +422,12 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 		}
 	}
 	return GDK_FILTER_CONTINUE;
+}
+
+void
+progresschange(WebKitWebView* view, gint p, Client *c) {
+	c->progress = p;
+	updatetitle(c, NULL);
 }
 
 void setup(void) {
@@ -473,9 +463,7 @@ stop(Client *c) {
 }
 
 void
-titlechange(WebKitWebView *v, WebKitWebFrame *f, const gchar *t, gpointer d) {
-	Client *c = (Client *)d;
-
+titlechange(WebKitWebView *v, WebKitWebFrame *f, const gchar *t, Client *c) {
 	updatetitle(c, t);
 }
 
@@ -487,7 +475,7 @@ usage() {
 
 void
 updatetitle(Client *c, const char *title) {
-	char t[512];
+	gchar *t;
 
 	if(title) {
 		if(c->title)
@@ -495,10 +483,12 @@ updatetitle(Client *c, const char *title) {
 		c->title = g_strdup(title);
 	}
 	if(c->progress == 100)
-		snprintf(t, LENGTH(t), "%s", c->title);
+		t = g_strdup(c->title);
 	else
-		snprintf(t, LENGTH(t), "%s [%i%%]", c->title, c->progress);
+		t = g_strdup_printf("%s [%i%%]", c->title, c->progress);
 	gtk_window_set_title(GTK_WINDOW(c->win), t);
+	g_free(t);
+
 }
 
 int main(int argc, char *argv[]) {
