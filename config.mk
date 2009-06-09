@@ -18,7 +18,7 @@ LIBS = -L/usr/lib -lc ${GTKLIB}
 # flags
 CPPFLAGS = -DVERSION=\"${VERSION}\"
 #CFLAGS = -std=c99 -pedantic -Wall -Os ${INCS} ${CPPFLAGS}
-CFLAGS = -std=c99 -pedantic -Wall -O0 ${INCS} ${CPPFLAGS}
+CFLAGS = -std=c99 -pedantic -Wall -Werror -O0 ${INCS} ${CPPFLAGS}
 #LDFLAGS = -s ${LIBS}
 LDFLAGS = ${LIBS}
 
