@@ -109,9 +109,6 @@ download(WebKitDownload *o, GParamSpec *pspec, Client *c) {
 	if(status == WEBKIT_DOWNLOAD_STATUS_STARTED || status == WEBKIT_DOWNLOAD_STATUS_CREATED) {
 		c->progress = (int)(webkit_download_get_progress(c->download)*100);
 	}
-	else {
-		stop(c);
-	}
 	updatetitle(c, NULL);
 }
 
@@ -277,8 +274,6 @@ loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
 
 void
 loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
-	if(c->download)
-		stop(c);
 	c->progress = 0;
 	updatetitle(c, NULL);
 }
@@ -409,8 +404,8 @@ newwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c) {
  
 void
 pasteurl(GtkClipboard *clipboard, const gchar *text, gpointer d) {
-	if(text!=NULL)
-		loaduri((Client *)d, text);
+	if(text != NULL)
+		loaduri((Client *) d, text);
 }
 
 GdkFilterReturn
