@@ -13,7 +13,7 @@ GTKLIB=$(shell pkg-config --libs gtk+-2.0 webkit-1.0)
 
 # includes and libs
 INCS = -I. -I/usr/include ${GTKINC}
-LIBS = -L/usr/lib -lc ${GTKLIB}
+LIBS = -L/usr/lib -lc ${GTKLIB} -lgthread-2.0
 
 # flags
 CPPFLAGS = -DVERSION=\"${VERSION}\"
