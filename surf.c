@@ -109,9 +109,6 @@ download(WebKitDownload *o, GParamSpec *pspec, Client *c) {
 	if(status == WEBKIT_DOWNLOAD_STATUS_STARTED || status == WEBKIT_DOWNLOAD_STATUS_CREATED) {
 		c->progress = (int)(webkit_download_get_progress(c->download)*100);
 	}
-	else {
-		stop(c);
-	}
 	updatetitle(c, NULL);
 }
 
@@ -277,8 +274,6 @@ loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
 
 void
 loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
-	if(c->download)
-		stop(c);
 	c->progress = 0;
 	updatetitle(c, NULL);
 }
@@ -317,7 +312,7 @@ loadfile(Client *c, const gchar *f) {
 void
 loaduri(Client *c, const gchar *uri) {
 	gchar *u;
-	u = g_strrstr(uri, ":") ? g_strdup(uri)
+	u = g_strrstr(uri, "://") ? g_strdup(uri)
 		: g_strdup_printf("http://%s", uri);
 	webkit_web_view_load_uri(c->view, u);
 	c->progress = 0;
@@ -409,8 +404,8 @@ newwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c) {
  
 void
 pasteurl(GtkClipboard *clipboard, const gchar *text, gpointer d) {
-	if(text!=NULL)
-		loaduri((Client *)d, text);
+	if(text != NULL)
+		loaduri((Client *) d, text);
 }
 
 GdkFilterReturn
@@ -421,6 +416,7 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 	int idummy;
 	unsigned long ldummy;
 	unsigned char *buf = NULL;
+
 	if(((XEvent *)e)->type == PropertyNotify) {
 		ev = &((XEvent *)e)->xproperty;
 		if(ev->atom == urlprop && ev->state == PropertyNewValue) {
