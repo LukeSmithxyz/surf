@@ -236,10 +236,10 @@ keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 					!(ev->state & GDK_SHIFT_MASK),
 					TRUE);
 			return TRUE;
-		case GDK_Left:
+		case GDK_h:
 			webkit_web_view_go_back(c->view);
 			return TRUE;
-		case GDK_Right:
+		case GDK_l:
 			webkit_web_view_go_forward(c->view);
 			return TRUE;
 		}
