@@ -196,23 +196,19 @@ keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 	}
 	if(ev->state & GDK_CONTROL_MASK) {
 		switch(ev->keyval) {
-		case GDK_p:
 		case GDK_P:
-			if((ev->state & GDK_SHIFT_MASK))
-				webkit_web_frame_print(webkit_web_view_get_main_frame(c->view));
-			else
-				gtk_clipboard_request_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), pasteurl, c);
+			webkit_web_frame_print(webkit_web_view_get_main_frame(c->view));
 			return TRUE;
-
+		case GDK_p:
+			gtk_clipboard_request_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), pasteurl, c);
 		case GDK_y:
 			gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), webkit_web_view_get_uri(c->view), -1);
 			return TRUE;
 		case GDK_r:
+			webkit_web_view_reload(c->view);
+			return TRUE;
 		case GDK_R:
-			if((ev->state & GDK_SHIFT_MASK))
-				 webkit_web_view_reload_bypass_cache(c->view);
-			else
-				 webkit_web_view_reload(c->view);
+			webkit_web_view_reload_bypass_cache(c->view);
 			return TRUE;
 		case GDK_b:
 			return TRUE;
