@@ -524,7 +524,7 @@ titlechange(WebKitWebView *v, WebKitWebFrame *f, const gchar *t, Client *c) {
 void
 usage() {
 	fputs("surf - simple browser\n", stderr);
-	die("usage: surf [-e] [-x] [-u uri] [-f file]\n");
+	die("usage: surf [-e] [-x] [uri]\n");
 }
 
 void
@@ -564,21 +564,21 @@ int main(int argc, char *argv[]) {
 			showxid = TRUE;
 			embed = TRUE;
 			break;
-		case 'u':
-			c = newclient();
-			loaduri(c, optarg);
-			break;
-		case 'f':
-			c = newclient();
-			loadfile(c, optarg);
-			break;
 		case 'v':
 			die("surf-"VERSION", © 2009 surf engineers, see LICENSE for details\n");
 			break;
 		default:
 			usage();
 		}
-	if(optind != argc)
+	if(optind + 1 == argc) {
+		c = newclient();
+		if(strchr("./", argv[optind][0]) || strcmp("-", argv[optind]) == 0)
+			loadfile(c, argv[optind]);
+		else
+			loaduri(c, argv[optind]);
+
+	}
+	else if(optind != argc)
 		usage();
 	if(!clients)
 		newclient();
