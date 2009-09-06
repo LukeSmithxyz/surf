@@ -20,6 +20,15 @@
 
 Display *dpy;
 Atom urlprop;
+typedef union Arg Arg;
+union Arg {
+	const gboolean b;
+	const int i;
+	const unsigned int ui;
+	const float f;
+	const void *v;
+} ;
+
 typedef struct Client {
 	GtkWidget *win, *scroll, *vbox, *urlbar, *searchbar;
 	WebKitWebView *view;
@@ -37,6 +46,26 @@ typedef struct Cookie {
 	struct Cookie *next;
 } Cookie;
 
+typedef struct {
+	guint mod;
+	guint keyval;
+	void (*func)(Client *c, const Arg *arg);
+	const Arg arg;
+	gboolean stop; /* do not propagate keypress event/stop matching keys */
+} Key;
+
+typedef enum {
+    NONE,
+    SEARCHBAR,
+    URLBAR,
+} Keypressmode;
+
+typedef struct {
+	Key *keys;
+	unsigned int numkeys;
+	Keypressmode mode;
+} KeySet;
+
 SoupCookieJar *cookiejar;
 SoupSession *session;
 Client *clients = NULL;
@@ -49,20 +78,22 @@ extern int optind;
 
 static void cleanup(void);
 static void proccookies(SoupMessage *m, Client *c);
+static void clipboard(Client *c, const Arg *arg);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 static void die(char *str);
 static void download(WebKitDownload *o, GParamSpec *pspec, Client *c);
 static gboolean initdownload(WebKitWebView *view, WebKitDownload *o, Client *c);
 static gchar *geturi(Client *c);
-static void hidesearch(Client *c);
-static void hideurl(Client *c);
+static void hidesearch(Client *c, const Arg *arg);
+static void hideurl(Client *c, const Arg *arg);
 static gboolean keypress(GtkWidget* w, GdkEventKey *ev, Client *c);
 static void linkhover(WebKitWebView* page, const gchar* t, const gchar* l, Client *c);
 static void loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c);
 static void loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c);
 static void loadfile(Client *c, const gchar *f);
-static void loaduri(Client *c, const gchar *uri);
+static void loaduri(Client *c, const Arg *arg);
+static void navigate(Client *c, const Arg *arg);
 static Client *newclient();
 static WebKitWebView *newwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c);
 static void pasteurl(GtkClipboard *clipboard, const gchar *text, gpointer d);
@@ -70,14 +101,20 @@ static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
 static void progresschange(WebKitWebView *view, gint p, Client *c);
 static void request(SoupSession *s, SoupMessage *m, Client *c);
 static void setcookie(char *name, char *val, char *dom, char *path, long exp);
+static void reload(Client *c, const Arg *arg);
 static void setup(void);
-static void showsearch(Client *c);
-static void showurl(Client *c);
-static void stop(Client *c);
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame,
 		const gchar* title, Client *c);
+static void searchtext(Client *c, const Arg *arg);
+static void showsearch(Client *c, const Arg *arg);
+static void showurl(Client *c, const Arg *arg);
+static void stop(Client *c, const Arg *arg);
+static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, Client *c);
 static void usage();
 static void updatetitle(Client *c, const gchar *title);
+static void zoompage(Client *c, const Arg *arg);
+
+#include "config.h"
 
 void
 cleanup(void) {
@@ -97,6 +134,15 @@ proccookies(SoupMessage *m, Client *c) {
 		setcookie(co->name, co->value, co->domain, co->value, t);
 	}
 	g_slist_free(l);
+}
+
+void
+clipboard(Client *c, const Arg *arg) {
+	gboolean paste = *(gboolean *)arg;
+	if(paste)
+		gtk_clipboard_request_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), pasteurl, c);
+	else
+		gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), webkit_web_view_get_uri(c->view), -1);
 }
 
 void
@@ -146,7 +192,7 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	const gchar *home, *filename;
 	gchar *uri, *path, *html;
 
-	stop(c);
+	stop(c, NULL);
 	c->download = o;
 	home = g_get_home_dir();
 	filename = webkit_download_get_suggested_filename(o);
@@ -177,107 +223,52 @@ geturi(Client *c) {
 }
 
 void
-hidesearch(Client *c) {
+hidesearch(Client *c, const Arg *arg) {
 	gtk_widget_hide(c->searchbar);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
 }
 
 void
-hideurl(Client *c) {
+hideurl(Client *c, const Arg *arg) {
 	gtk_widget_hide(c->urlbar);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
 }
 
 gboolean
 keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
+	unsigned int n, m;
+
 	if(ev->type != GDK_KEY_PRESS)
 		return FALSE;
-	if(GTK_WIDGET_HAS_FOCUS(c->searchbar)) {
-		switch(ev->keyval) {
-		case GDK_Escape:
-			hidesearch(c);
-			return TRUE;
-		case GDK_Return:
-			webkit_web_view_search_text(c->view,
-					gtk_entry_get_text(GTK_ENTRY(c->searchbar)),
-					FALSE,
-					!(ev->state & GDK_SHIFT_MASK),
-					TRUE);
-			return TRUE;
-		case GDK_Left:
-		case GDK_Right:
-			return FALSE;
+
+	for(n = 0; n < LENGTH(keysets); n++)
+		switch(keysets[n].mode) {
+		case SEARCHBAR:
+			if(GTK_WIDGET_HAS_FOCUS(c->searchbar))
+				goto matchkeys;
+			break;
+		case URLBAR:
+			if(GTK_WIDGET_HAS_FOCUS(c->urlbar))
+				goto matchkeys;
+			break;
+		case NONE:
+			goto matchkeys;
+		default:
+			fprintf(stderr, "keypress(): Unknown Keypressmode\n");
+			break;
 		}
-	}
-	else if(GTK_WIDGET_HAS_FOCUS(c->urlbar)) {
-		switch(ev->keyval) {
-		case GDK_Escape:
-			hideurl(c);
-			return TRUE;
-		case GDK_Return:
-			loaduri(c, gtk_entry_get_text(GTK_ENTRY(c->urlbar)));
-			hideurl(c);
-			return TRUE;
-		case GDK_Left:
-		case GDK_Right:
-			return FALSE;
-		}
-	}
-	if(ev->state & GDK_CONTROL_MASK) {
-		switch(ev->keyval) {
-		case GDK_P:
-			webkit_web_frame_print(webkit_web_view_get_main_frame(c->view));
-			return TRUE;
-		case GDK_p:
-			gtk_clipboard_request_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), pasteurl, c);
-		case GDK_y:
-			gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), webkit_web_view_get_uri(c->view), -1);
-			return TRUE;
-		case GDK_r:
-			webkit_web_view_reload(c->view);
-			return TRUE;
-		case GDK_R:
-			webkit_web_view_reload_bypass_cache(c->view);
-			return TRUE;
-		case GDK_b:
-			return TRUE;
-		case GDK_g:
-			showurl(c);
-			return TRUE;
-		case GDK_slash:
-			showsearch(c);
-			return TRUE;
-		case GDK_plus:
-		case GDK_equal:
-			webkit_web_view_zoom_in(c->view);
-			return TRUE;
-		case GDK_minus:
-			webkit_web_view_zoom_out(c->view);
-			return TRUE;
-		case GDK_0:
-			webkit_web_view_set_zoom_level(c->view, 1.0);
-			return TRUE;
-		case GDK_n:
-		case GDK_N:
-			webkit_web_view_search_text(c->view,
-					gtk_entry_get_text(GTK_ENTRY(c->searchbar)),
-					FALSE,
-					!(ev->state & GDK_SHIFT_MASK),
-					TRUE);
-			return TRUE;
-		case GDK_h:
-			webkit_web_view_go_back(c->view);
-			return TRUE;
-		case GDK_l:
-			webkit_web_view_go_forward(c->view);
-			return TRUE;
-		}
-	}
-	else {
-		switch(ev->keyval) {
-		case GDK_Escape:
-			stop(c);
-			return TRUE;
+	if(n < LENGTH(keysets)) {
+matchkeys:
+		for(m = 0; m < keysets[n].numkeys; m++) {
+			Key *keys = keysets[n].keys;
+			if(ev->keyval == keys[m].keyval
+			   && (ev->state == keys[m].mod
+			       || (ev->state & keys[m].mod))
+			   && keys[m].func) {
+				keys[m].func(c, &(keys[m].arg));
+				if(keys[m].stop)
+					return TRUE;
+			}
 		}
 	}
 	return FALSE;
@@ -314,6 +305,7 @@ loadfile(Client *c, const gchar *f) {
 	GError *e = NULL;
 	GString *code;
 	gchar *line, *uri;
+	Arg arg;
 
 	if(strcmp(f, "-") == 0) {
 		chan = g_io_channel_unix_new(STDIN_FILENO);
@@ -329,25 +321,37 @@ loadfile(Client *c, const gchar *f) {
 			g_io_channel_shutdown(chan, FALSE, NULL);
 			g_string_free(code, TRUE);
 		}
-		uri = g_strdup("stdin");
+		arg.v = uri = g_strdup("stdin");
 	}
 	else {
-		uri = g_strdup_printf("file://%s", f);
-		loaduri(c, uri);
+		arg.v = uri = g_strdup_printf("file://%s", f);
+		loaduri(c, &arg);
 	}
 	updatetitle(c, uri);
 	g_free(uri);
 }
 
 void
-loaduri(Client *c, const gchar *uri) {
+loaduri(Client *c, const Arg *arg) {
 	gchar *u;
+	const gchar *uri = (gchar *)arg->v;
+	if(!uri)
+		uri = gtk_entry_get_text(GTK_ENTRY(c->urlbar));
 	u = g_strrstr(uri, "://") ? g_strdup(uri)
 		: g_strdup_printf("http://%s", uri);
 	webkit_web_view_load_uri(c->view, u);
 	c->progress = 0;
 	updatetitle(c, u);
 	g_free(u);
+}
+
+void
+navigate(Client *c, const Arg *arg) {
+	gboolean forward = *(gboolean *)arg;
+	if(forward)
+		webkit_web_view_go_forward(c->view);
+	else
+		webkit_web_view_go_back(c->view);
 }
 
 Client *
@@ -435,8 +439,9 @@ newwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c) {
  
 void
 pasteurl(GtkClipboard *clipboard, const gchar *text, gpointer d) {
+	Arg arg = {.v = text };
 	if(text != NULL)
-		loaduri((Client *) d, text);
+		loaduri((Client *) d, &arg);
 }
 
 GdkFilterReturn
@@ -447,6 +452,7 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 	int idummy;
 	unsigned long ldummy;
 	unsigned char *buf = NULL;
+	Arg arg;
 
 	if(((XEvent *)e)->type == PropertyNotify) {
 		ev = &((XEvent *)e)->xproperty;
@@ -456,7 +462,8 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 			else {
 				XGetWindowProperty(dpy, ev->window, urlprop, 0L, BUFSIZ, False, XA_STRING,
 					&adummy, &idummy, &ldummy, &ldummy, &buf);
-				loaduri(c, (gchar *)buf);
+				arg.v = buf;
+				loaduri(c, &arg);
 				XFree(buf);
 			}
 			return GDK_FILTER_REMOVE;
@@ -478,29 +485,48 @@ request(SoupSession *s, SoupMessage *m, Client *c) {
 }
 
 void
+reload(Client *c, const Arg *arg) {
+	gboolean nocache = *(gboolean *)arg;
+	if(nocache)
+		 webkit_web_view_reload_bypass_cache(c->view);
+	else
+		 webkit_web_view_reload(c->view);
+}
+
+void
 setcookie(char *name, char *val, char *dom, char *path, long exp) {
 	printf("%s %s %s %s %li\n", name, val, dom, path, exp);
 }
 
 void
-setup(void) {
+setup() {
 	dpy = GDK_DISPLAY();
 	session = webkit_get_default_session();
 	urlprop = XInternAtom(dpy, "_SURF_URL", False);
 }
 
 void
-showsearch(Client *c) {
-	hideurl(c);
+showsearch(Client *c, const Arg *arg) {
+	hideurl(c, NULL);
 	gtk_widget_show(c->searchbar);
 	gtk_widget_grab_focus(c->searchbar);
 }
 
 void
-showurl(Client *c) {
+searchtext(Client *c, const Arg *arg) {
+	gboolean forward = *(gboolean *)arg;
+	webkit_web_view_search_text(c->view,
+			gtk_entry_get_text(GTK_ENTRY(c->searchbar)),
+			FALSE,
+			forward,
+			TRUE);
+}
+
+void
+showurl(Client *c, const Arg *arg) {
 	gchar *uri;
 
-	hidesearch(c);
+	hidesearch(c, NULL);
 	uri = geturi(c);
 	gtk_entry_set_text(GTK_ENTRY(c->urlbar), uri);
 	gtk_widget_show(c->urlbar);
@@ -508,7 +534,7 @@ showurl(Client *c) {
 }
 
 void
-stop(Client *c) {
+stop(Client *c, const Arg *arg) {
 	if(c->download)
 		webkit_download_cancel(c->download);
 	else
@@ -545,11 +571,22 @@ updatetitle(Client *c, const char *title) {
 
 }
 
+void
+zoompage(Client *c, const Arg *arg) {
+	if(*(float *)arg < 0)		/* zoom out */
+		webkit_web_view_zoom_out(c->view);
+	else if(*(float *)arg == 0)	/* zoom in */
+		webkit_web_view_zoom_in(c->view);
+	else				/* absolute level */
+		webkit_web_view_set_zoom_level(c->view, *(float *)arg);
+}
+
 int main(int argc, char *argv[]) {
 	SoupSession *s;
 	Client *c;
 	int o;
 	const gchar *home, *filename;
+	Arg arg;
 
 	gtk_init(NULL, NULL);
 	if (!g_thread_supported())
@@ -572,10 +609,11 @@ int main(int argc, char *argv[]) {
 		}
 	if(optind + 1 == argc) {
 		c = newclient();
+		arg.v = argv[optind];
 		if(strchr("./", argv[optind][0]) || strcmp("-", argv[optind]) == 0)
 			loadfile(c, argv[optind]);
 		else
-			loaduri(c, argv[optind]);
+			loaduri(c, &arg);
 
 	}
 	else if(optind != argc)
