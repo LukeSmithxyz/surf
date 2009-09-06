@@ -28,8 +28,19 @@ typedef struct Client {
 	gint progress;
 	struct Client *next;
 } Client;
+
+typedef struct Cookie {
+	char *name;
+	char *value;
+	char *domain;
+	char *path;
+	struct Cookie *next;
+} Cookie;
+
 SoupCookieJar *cookiejar;
+SoupSession *session;
 Client *clients = NULL;
+Cookie *cookies = NULL;
 gboolean embed = FALSE;
 gboolean showxid = FALSE;
 gboolean ignore_once = FALSE;
@@ -37,6 +48,7 @@ extern char *optarg;
 extern int optind;
 
 static void cleanup(void);
+static void proccookies(SoupMessage *m, Client *c);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 static void die(char *str);
@@ -56,11 +68,14 @@ static WebKitWebView *newwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c)
 static void pasteurl(GtkClipboard *clipboard, const gchar *text, gpointer d);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
 static void progresschange(WebKitWebView *view, gint p, Client *c);
+static void request(SoupSession *s, SoupMessage *m, Client *c);
+static void setcookie(char *name, char *val, char *dom, char *path, long exp);
 static void setup(void);
 static void showsearch(Client *c);
 static void showurl(Client *c);
 static void stop(Client *c);
-static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, Client *c);
+static void titlechange(WebKitWebView* view, WebKitWebFrame* frame,
+		const gchar* title, Client *c);
 static void usage();
 static void updatetitle(Client *c, const gchar *title);
 
@@ -68,6 +83,20 @@ void
 cleanup(void) {
 	while(clients)
 		destroyclient(clients);
+}
+
+void
+proccookies(SoupMessage *m, Client *c) {
+	GSList *l;
+	SoupCookie *co;
+	long t;
+
+	for (l = soup_cookies_from_response(m); l; l = l->next){
+		co = (SoupCookie *)l->data;
+		t = co->expires ?  soup_date_to_time_t(co->expires) : 0;
+		setcookie(co->name, co->value, co->domain, co->value, t);
+	}
+	g_slist_free(l);
 }
 
 void
@@ -355,6 +384,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
 	g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(newwindow), c);
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
+	g_signal_connect_after(session, "request-started", G_CALLBACK(request), c);
 
 	/* urlbar */
 	c->urlbar = gtk_entry_new();
@@ -441,8 +471,21 @@ progresschange(WebKitWebView* view, gint p, Client *c) {
 	updatetitle(c, NULL);
 }
 
-void setup(void) {
+void
+request(SoupSession *s, SoupMessage *m, Client *c) {
+	soup_message_add_header_handler(m, "got-headers", "Set-Cookie",
+			G_CALLBACK(proccookies), c);
+}
+
+void
+setcookie(char *name, char *val, char *dom, char *path, long exp) {
+	printf("%s %s %s %s %li\n", name, val, dom, path, exp);
+}
+
+void
+setup(void) {
 	dpy = GDK_DISPLAY();
+	session = webkit_get_default_session();
 	urlprop = XInternAtom(dpy, "_SURF_URL", False);
 }
 
