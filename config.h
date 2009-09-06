@@ -20,6 +20,7 @@ static Key urlbar_keys[] = {
 
 static Key general_keys[] = {
     /* modifier	            keyval      function        arg         stop event */
+    { GDK_CONTROL_MASK,     GDK_P,      print,          {0},            TRUE },
     { GDK_CONTROL_MASK,     GDK_p,      clipboard,      {.b = TRUE },   TRUE },
     { GDK_CONTROL_MASK,     GDK_y,      clipboard,      {.b = FALSE},   TRUE },
     { GDK_CONTROL_MASK,     GDK_R,      reload,         {.b = TRUE},    TRUE },
@@ -32,8 +33,8 @@ static Key general_keys[] = {
     { GDK_CONTROL_MASK,     GDK_0,      zoompage,       {.f = +1.0 },   TRUE },
     { GDK_CONTROL_MASK,     GDK_n,      searchtext,     {.b = TRUE},    TRUE },
     { GDK_CONTROL_MASK,     GDK_N,      searchtext,     {.b = FALSE},   TRUE },
-    { GDK_CONTROL_MASK,     GDK_Right,  navigate,       {.b = TRUE},    TRUE },
-    { GDK_CONTROL_MASK,     GDK_Left,   navigate,       {.b = FALSE},   TRUE },
+    { GDK_CONTROL_MASK,     GDK_h,      navigate,       {.b = TRUE},    TRUE },
+    { GDK_CONTROL_MASK,     GDK_l,      navigate,       {.b = FALSE},   TRUE },
     { 0,                    GDK_Escape, stop,           {0},            TRUE },
 };
 

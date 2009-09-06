@@ -98,11 +98,12 @@ static Client *newclient();
 static WebKitWebView *newwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c);
 static void pasteurl(GtkClipboard *clipboard, const gchar *text, gpointer d);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
+static void print(Client *c, const Arg *arg);
 static void progresschange(WebKitWebView *view, gint p, Client *c);
 static void request(SoupSession *s, SoupMessage *m, Client *c);
 static void setcookie(char *name, char *val, char *dom, char *path, long exp);
 static void reload(Client *c, const Arg *arg);
-static void setup(void);
+static void setup();
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame,
 		const gchar* title, Client *c);
 static void searchtext(Client *c, const Arg *arg);
@@ -470,6 +471,11 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 		}
 	}
 	return GDK_FILTER_CONTINUE;
+}
+
+void
+print(Client *c, const Arg *arg) {
+	webkit_web_frame_print(webkit_web_view_get_main_frame(c->view));
 }
 
 void
