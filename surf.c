@@ -348,11 +348,8 @@ loaduri(Client *c, const Arg *arg) {
 
 void
 navigate(Client *c, const Arg *arg) {
-	gboolean forward = *(gboolean *)arg;
-	if(forward)
-		webkit_web_view_go_forward(c->view);
-	else
-		webkit_web_view_go_back(c->view);
+	gint steps = *(gint *)arg;
+	webkit_web_view_can_go_back_or_forward(WebKitWebView *web_view, steps);
 }
 
 Client *
