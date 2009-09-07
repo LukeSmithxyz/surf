@@ -180,8 +180,6 @@ drawindicator(Client *c) {
 	GtkWidget *w;
 	gint width;
 	GdkGC *gc;
-	GdkColor red = { 65535,65535,0,0 };
-	GdkColor green = { 65535,0,65535,0 };
 	gchar *uri;
 
 
@@ -192,9 +190,9 @@ drawindicator(Client *c) {
 	gc = gdk_gc_new(w->window);
 
 	if(strstr(uri, "https://") == uri)
-		gdk_gc_set_rgb_fg_color(gc, &green);
+		gdk_gc_set_rgb_fg_color(gc, &progress_trust);
 	else
-		gdk_gc_set_rgb_fg_color(gc, &red);
+		gdk_gc_set_rgb_fg_color(gc, &progress);
 	gdk_draw_rectangle(w->window,
 			w->style->bg_gc[GTK_WIDGET_STATE(w)],
 			TRUE,

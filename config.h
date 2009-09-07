@@ -1,4 +1,6 @@
 /* modifier 0 means no modifier */
+static GdkColor progress       = { 65535,65535,0,0 };
+static GdkColor progress_trust = { 65535,0,65535,0 };
 static Key keys[] = {
     /* modifier	            keyval      function        arg             Focus */
     { 0,                    GDK_Escape, hidesearch,     {0},            ALWAYS },
@@ -25,3 +27,4 @@ static Key keys[] = {
     { GDK_CONTROL_MASK,     GDK_h,      navigate,       {.i = -1},      BROWSER },
     { 0,                    GDK_Escape, stop,           {0},            BROWSER },
 };
+
