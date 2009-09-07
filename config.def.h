@@ -1,6 +1,6 @@
 /* modifier 0 means no modifier */
-static GdkColor progress       = { 65535,65535,0,0 };
-static GdkColor progress_trust = { 65535,0,65535,0 };
+static gchar *progress       = "#FF0000";
+static gchar *progress_trust = "#00FF00";
 #define MODKEY GDK_CONTROL_MASK
 static Key keys[] = {
     /* modifier	            keyval      function        arg             Focus */
