@@ -23,8 +23,7 @@ Atom urlprop;
 typedef union Arg Arg;
 union Arg {
 	const gboolean b;
-	const int i;
-	const unsigned int ui;
+	const gint i;
 	const void *v;
 } ;
 
@@ -68,7 +67,7 @@ gboolean embed = FALSE;
 gboolean showxid = FALSE;
 gboolean ignore_once = FALSE;
 extern char *optarg;
-extern int optind;
+extern gint optind;
 
 static void cleanup(void);
 static void proccookies(SoupMessage *m, Client *c);
@@ -177,30 +176,24 @@ die(char *str) {
 
 void
 drawindicator(Client *c) {
-	GtkWidget *w;
 	gint width;
-	GdkGC *gc;
 	gchar *uri;
+	GtkWidget *w;
+	GdkGC *gc;
 	GdkColor fg;
-
 
 	uri = geturi(c);
 	w = c->indicator;
 	width = c->progress * w->allocation.width / 100;
-
 	gc = gdk_gc_new(w->window);
-
 	gdk_color_parse(strstr(uri, "https://") == uri ?
 			progress_trust : progress, &fg);
 	gdk_gc_set_rgb_fg_color(gc, &fg);
 	gdk_draw_rectangle(w->window,
 			w->style->bg_gc[GTK_WIDGET_STATE(w)],
-			TRUE,
-			0, 0, w->allocation.width, w->allocation.height);
-	gdk_draw_rectangle(w->window,
-			gc,
-			TRUE,
-			0, 0, width, w->allocation.height);
+			TRUE, 0, 0, w->allocation.width, w->allocation.height);
+	gdk_draw_rectangle(w->window, gc, TRUE, 0, 0, width,
+			w->allocation.height);
 	g_object_unref(gc);/*g_free(gc);*/
 }
 
@@ -216,7 +209,7 @@ download(WebKitDownload *o, GParamSpec *pspec, Client *c) {
 
 	status = webkit_download_get_status(c->download);
 	if(status == WEBKIT_DOWNLOAD_STATUS_STARTED || status == WEBKIT_DOWNLOAD_STATUS_CREATED) {
-		c->progress = (int)(webkit_download_get_progress(c->download)*100);
+		c->progress = (gint)(webkit_download_get_progress(c->download)*100);
 	}
 	update(c, NULL);
 }
@@ -270,7 +263,7 @@ hideurl(Client *c, const Arg *arg) {
 
 gboolean
 keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
-	unsigned int i, focus;
+	guint i, focus;
 	gboolean processed = FALSE;
 
 	if(ev->type != GDK_KEY_PRESS)
@@ -450,7 +443,7 @@ newclient(void) {
 	c->next = clients;
 	clients = c;
 	if(showxid)
-		printf("%u\n", (unsigned int)GDK_WINDOW_XID(GTK_WIDGET(c->win)->window));
+		printf("%u\n", (guint)GDK_WINDOW_XID(GTK_WIDGET(c->win)->window));
 	return c;
 }
 
@@ -473,7 +466,7 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 	Client *c = (Client *)d;
 	XPropertyEvent *ev;
 	Atom adummy;
-	int idummy;
+	gint idummy;
 	unsigned long ldummy;
 	unsigned char *buf = NULL;
 	Arg arg;
@@ -622,7 +615,7 @@ zoom(Client *c, const Arg *arg) {
 int main(int argc, char *argv[]) {
 	SoupSession *s;
 	Client *c;
-	int o;
+	gint o;
 	const gchar *home, *filename;
 	Arg arg;
 
