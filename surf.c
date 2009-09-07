@@ -29,7 +29,7 @@ union Arg {
 } ;
 
 typedef struct Client {
-	GtkWidget *win, *scroll, *vbox, *urlbar, *searchbar;
+	GtkWidget *win, *scroll, *vbox, *urlbar, *searchbar, *indicator;
 	WebKitWebView *view;
 	WebKitDownload *download;
 	gchar *title;
@@ -77,6 +77,8 @@ static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 static void die(char *str);
 static void download(WebKitDownload *o, GParamSpec *pspec, Client *c);
+static void drawindicator(Client *c);
+static gboolean exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c);
 static gboolean initdownload(WebKitWebView *view, WebKitDownload *o, Client *c);
 static gchar *geturi(Client *c);
 static void hidesearch(Client *c, const Arg *arg);
@@ -107,7 +109,7 @@ static void showurl(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, Client *c);
 static void usage();
-static void updatetitle(Client *c, const gchar *title);
+static void update(Client *c, const gchar *title);
 static void zoom(Client *c, const Arg *arg);
 
 #include "config.h"
@@ -174,6 +176,29 @@ die(char *str) {
 }
 
 void
+drawindicator(Client *c) {
+	GtkWidget *w;
+	gint width;
+
+	w = c->indicator;
+	width = c->progress * w->allocation.width / 100;
+	gdk_draw_rectangle(w->window,
+			w->style->fg_gc[GTK_WIDGET_STATE(w)],
+			TRUE,
+			0, 0, w->allocation.width, w->allocation.height);
+	gdk_draw_rectangle(w->window,
+			w->style->bg_gc[GTK_WIDGET_STATE(w)],
+			TRUE,
+			0, 0, width, w->allocation.height);
+}
+
+gboolean
+exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c) {
+	drawindicator(c);
+	return TRUE;
+}
+
+void
 download(WebKitDownload *o, GParamSpec *pspec, Client *c) {
 	WebKitDownloadStatus status;
 
@@ -181,7 +206,7 @@ download(WebKitDownload *o, GParamSpec *pspec, Client *c) {
 	if(status == WEBKIT_DOWNLOAD_STATUS_STARTED || status == WEBKIT_DOWNLOAD_STATUS_CREATED) {
 		c->progress = (int)(webkit_download_get_progress(c->download)*100);
 	}
-	updatetitle(c, NULL);
+	update(c, NULL);
 }
 
 gboolean
@@ -205,7 +230,7 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	g_signal_connect(c->download, "notify::progress", G_CALLBACK(download), c);
 	g_signal_connect(c->download, "notify::status", G_CALLBACK(download), c);
 	webkit_download_start(c->download);
-	updatetitle(c, filename);
+	update(c, filename);
 	g_free(html);
 	return TRUE;
 }
@@ -260,7 +285,7 @@ linkhover(WebKitWebView* page, const gchar* t, const gchar* l, Client *c) {
 	if(l)
 		gtk_window_set_title(GTK_WINDOW(c->win), l);
 	else
-		updatetitle(c, NULL);
+		update(c, NULL);
 }
 
 void
@@ -277,7 +302,7 @@ loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
 void
 loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
 	c->progress = 0;
-	updatetitle(c, NULL);
+	update(c, NULL);
 }
 
 void
@@ -308,7 +333,7 @@ loadfile(Client *c, const gchar *f) {
 		arg.v = uri = g_strdup_printf("file://%s", f);
 		loaduri(c, &arg);
 	}
-	updatetitle(c, uri);
+	update(c, uri);
 	g_free(uri);
 }
 
@@ -322,7 +347,7 @@ loaduri(Client *c, const Arg *arg) {
 		: g_strdup_printf("http://%s", uri);
 	webkit_web_view_load_uri(c->view, u);
 	c->progress = 0;
-	updatetitle(c, u);
+	update(c, u);
 	g_free(u);
 }
 
@@ -376,6 +401,12 @@ newclient(void) {
 	c->searchbar = gtk_entry_new();
 	gtk_entry_set_has_frame(GTK_ENTRY(c->searchbar), FALSE);
 
+	/* indicator */
+	c->indicator = gtk_drawing_area_new();
+	gtk_widget_set_size_request(c->indicator, 800, 5);
+	g_signal_connect (G_OBJECT (c->indicator), "expose_event",
+			G_CALLBACK (exposeindicator), c);
+
 	/* downloadbar */
 
 	/* Arranging */
@@ -384,15 +415,18 @@ newclient(void) {
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->scroll);
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->searchbar);
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->urlbar);
+	gtk_container_add(GTK_CONTAINER(c->vbox), c->indicator);
 
 	/* Setup */
 	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->urlbar, FALSE, FALSE, 0, GTK_PACK_START);
 	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->searchbar, FALSE, FALSE, 0, GTK_PACK_START);
+	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->indicator, FALSE, FALSE, 0, GTK_PACK_START);
 	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->scroll, TRUE, TRUE, 0, GTK_PACK_START);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
 	gtk_widget_hide_all(c->searchbar);
 	gtk_widget_hide_all(c->urlbar);
 	gtk_widget_show(c->vbox);
+	gtk_widget_show(c->indicator);
 	gtk_widget_show(c->scroll);
 	gtk_widget_show(GTK_WIDGET(c->view));
 	gtk_widget_show(c->win);
@@ -458,7 +492,7 @@ print(Client *c, const Arg *arg) {
 void
 progresschange(WebKitWebView* view, gint p, Client *c) {
 	c->progress = p;
-	updatetitle(c, NULL);
+	update(c, NULL);
 }
 
 void
@@ -535,7 +569,7 @@ stop(Client *c, const Arg *arg) {
 
 void
 titlechange(WebKitWebView *v, WebKitWebFrame *f, const gchar *t, Client *c) {
-	updatetitle(c, t);
+	update(c, t);
 }
 
 void
@@ -545,7 +579,7 @@ usage() {
 }
 
 void
-updatetitle(Client *c, const char *title) {
+update(Client *c, const char *title) {
 	gchar *t;
 
 	if(title) {
@@ -557,6 +591,7 @@ updatetitle(Client *c, const char *title) {
 		t = g_strdup(c->title);
 	else
 		t = g_strdup_printf("%s [%i%%]", c->title, c->progress);
+	drawindicator(c);
 	gtk_window_set_title(GTK_WINDOW(c->win), t);
 	g_free(t);
 
