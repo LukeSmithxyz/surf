@@ -108,7 +108,7 @@ static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, Client *c);
 static void usage();
 static void updatetitle(Client *c, const gchar *title);
-static void zoompage(Client *c, const Arg *arg);
+static void zoom(Client *c, const Arg *arg);
 
 #include "config.h"
 
@@ -563,7 +563,7 @@ updatetitle(Client *c, const char *title) {
 }
 
 void
-zoompage(Client *c, const Arg *arg) {
+zoom(Client *c, const Arg *arg) {
 	if(arg->i < 0)		/* zoom out */
 		webkit_web_view_zoom_out(c->view);
 	else if(arg->i > 0)	/* zoom in */
