@@ -17,6 +17,7 @@
 #include <glib/gstdio.h>
 
 #define LENGTH(x) (sizeof x / sizeof x[0])
+#define CLEANMASK(mask)         (mask & ~(GDK_MOD2_MASK))
 
 Display *dpy;
 Atom urlprop;
@@ -276,7 +277,8 @@ keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 		focus = BROWSER;
 	for(i = 0; i < LENGTH(keys); i++) {
 		if(focus & keys[i].focus && ev->keyval == keys[i].keyval &&
-				(ev->state == keys[i].mod || ev->state & keys[i].mod)
+				(CLEANMASK(ev->state) == keys[i].mod ||
+				 CLEANMASK(ev->state) & keys[i].mod)
 				&& keys[i].func) {
 			keys[i].func(c, &(keys[i].arg));
 			processed = TRUE;
