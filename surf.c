@@ -444,8 +444,10 @@ newclient(void) {
 	c->title = NULL;
 	c->next = clients;
 	clients = c;
-	if(showxid)
+	if(showxid) {
 		printf("%u\n", (guint)GDK_WINDOW_XID(GTK_WIDGET(c->win)->window));
+		fflush(NULL);
+	}
 	return c;
 }
 
