@@ -415,7 +415,7 @@ newclient(void) {
 
 	/* indicator */
 	c->indicator = gtk_drawing_area_new();
-	gtk_widget_set_size_request(c->indicator, 800, 2);
+	gtk_widget_set_size_request(c->indicator, 0, 2);
 	g_signal_connect (G_OBJECT (c->indicator), "expose_event",
 			G_CALLBACK (exposeindicator), c);
 
