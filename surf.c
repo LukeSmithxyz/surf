@@ -179,17 +179,31 @@ void
 drawindicator(Client *c) {
 	GtkWidget *w;
 	gint width;
+	GdkGC *gc;
+	GdkColor red = { 65535,65535,0,0 };
+	GdkColor green = { 65535,0,65535,0 };
+	gchar *uri;
 
+
+	uri = geturi(c);
 	w = c->indicator;
 	width = c->progress * w->allocation.width / 100;
+
+	gc = gdk_gc_new(w->window);
+
+	if(strstr(uri, "https://") == uri)
+		gdk_gc_set_rgb_fg_color(gc, &green);
+	else
+		gdk_gc_set_rgb_fg_color(gc, &red);
 	gdk_draw_rectangle(w->window,
 			w->style->bg_gc[GTK_WIDGET_STATE(w)],
 			TRUE,
 			0, 0, w->allocation.width, w->allocation.height);
 	gdk_draw_rectangle(w->window,
-			w->style->fg_gc[GTK_WIDGET_STATE(w)],
+			gc,
 			TRUE,
 			0, 0, width, w->allocation.height);
+	g_object_unref(gc);/*g_free(gc);*/
 }
 
 gboolean
