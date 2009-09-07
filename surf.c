@@ -25,7 +25,6 @@ union Arg {
 	const gboolean b;
 	const int i;
 	const unsigned int ui;
-	const float f;
 	const void *v;
 } ;
 
@@ -46,25 +45,20 @@ typedef struct Cookie {
 	struct Cookie *next;
 } Cookie;
 
+typedef enum {
+    BROWSER = 0x0001,
+    SEARCHBAR = 0x0010,
+    URLBAR = 0x0100,
+    ALWAYS = ~0,
+} KeyFocus;
+
 typedef struct {
 	guint mod;
 	guint keyval;
 	void (*func)(Client *c, const Arg *arg);
 	const Arg arg;
-	gboolean stop; /* do not propagate keypress event/stop matching keys */
+	KeyFocus focus;
 } Key;
-
-typedef enum {
-    NONE,
-    SEARCHBAR,
-    URLBAR,
-} Keypressmode;
-
-typedef struct {
-	Key *keys;
-	unsigned int numkeys;
-	Keypressmode mode;
-} KeySet;
 
 SoupCookieJar *cookiejar;
 SoupSession *session;
@@ -101,8 +95,9 @@ static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
 static void print(Client *c, const Arg *arg);
 static void progresschange(WebKitWebView *view, gint p, Client *c);
 static void request(SoupSession *s, SoupMessage *m, Client *c);
-static void setcookie(char *name, char *val, char *dom, char *path, long exp);
 static void reload(Client *c, const Arg *arg);
+static void rereadcookies();
+static void setcookie(char *name, char *val, char *dom, char *path, long exp);
 static void setup();
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame,
 		const gchar* title, Client *c);
@@ -129,6 +124,7 @@ proccookies(SoupMessage *m, Client *c) {
 	SoupCookie *co;
 	long t;
 
+	rereadcookies();
 	for (l = soup_cookies_from_response(m); l; l = l->next){
 		co = (SoupCookie *)l->data;
 		t = co->expires ?  soup_date_to_time_t(co->expires) : 0;
@@ -237,42 +233,26 @@ hideurl(Client *c, const Arg *arg) {
 
 gboolean
 keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
-	unsigned int n, m;
+	unsigned int i, focus;
+	gboolean processed = FALSE;
 
 	if(ev->type != GDK_KEY_PRESS)
 		return FALSE;
-
-	for(n = 0; n < LENGTH(keysets); n++)
-		switch(keysets[n].mode) {
-		case SEARCHBAR:
-			if(GTK_WIDGET_HAS_FOCUS(c->searchbar))
-				goto matchkeys;
-			break;
-		case URLBAR:
-			if(GTK_WIDGET_HAS_FOCUS(c->urlbar))
-				goto matchkeys;
-			break;
-		case NONE:
-			goto matchkeys;
-		default:
-			fprintf(stderr, "keypress(): Unknown Keypressmode\n");
-			break;
-		}
-	if(n < LENGTH(keysets)) {
-matchkeys:
-		for(m = 0; m < keysets[n].numkeys; m++) {
-			Key *keys = keysets[n].keys;
-			if(ev->keyval == keys[m].keyval
-			   && (ev->state == keys[m].mod
-			       || (ev->state & keys[m].mod))
-			   && keys[m].func) {
-				keys[m].func(c, &(keys[m].arg));
-				if(keys[m].stop)
-					return TRUE;
-			}
+	if(GTK_WIDGET_HAS_FOCUS(c->searchbar))
+		focus = SEARCHBAR;
+	else if(GTK_WIDGET_HAS_FOCUS(c->urlbar))
+		focus = URLBAR;
+	else
+		focus = BROWSER;
+	for(i = 0; i < LENGTH(keys); i++) {
+		if(focus & keys[i].focus && ev->keyval == keys[i].keyval &&
+				(ev->state == keys[i].mod || ev->state & keys[i].mod)
+				&& keys[i].func) {
+			keys[i].func(c, &(keys[i].arg));
+			processed = TRUE;
 		}
 	}
-	return FALSE;
+	return processed;
 }
 
 void
@@ -497,8 +477,16 @@ reload(Client *c, const Arg *arg) {
 }
 
 void
+rereadcookies() {
+	const gchar *filename, *home;
+
+	home = g_get_home_dir();
+	filename = g_build_filename(home, ".surf", "cookies", NULL);
+}
+
+void
 setcookie(char *name, char *val, char *dom, char *path, long exp) {
-	printf("%s %s %s %s %li\n", name, val, dom, path, exp);
+
 }
 
 void
@@ -576,12 +564,12 @@ updatetitle(Client *c, const char *title) {
 
 void
 zoompage(Client *c, const Arg *arg) {
-	if(*(float *)arg < 0)		/* zoom out */
+	if(arg->i < 0)		/* zoom out */
 		webkit_web_view_zoom_out(c->view);
-	else if(*(float *)arg == 0)	/* zoom in */
+	else if(arg->i > 0)	/* zoom in */
 		webkit_web_view_zoom_in(c->view);
 	else				/* absolute level */
-		webkit_web_view_set_zoom_level(c->view, *(float *)arg);
+		webkit_web_view_set_zoom_level(c->view, 1.0);
 }
 
 int main(int argc, char *argv[]) {
@@ -633,7 +621,7 @@ int main(int argc, char *argv[]) {
 
 	/* cookie persistance */
 	s = webkit_get_default_session();
-	filename = g_build_filename(home, ".surf", "cookies", NULL);
+	filename = g_build_filename(home, ".surf", "cookies.jar", NULL);
 	cookiejar = soup_cookie_jar_text_new(filename, FALSE);
 	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar));
 
