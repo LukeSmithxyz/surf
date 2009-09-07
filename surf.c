@@ -183,11 +183,11 @@ drawindicator(Client *c) {
 	w = c->indicator;
 	width = c->progress * w->allocation.width / 100;
 	gdk_draw_rectangle(w->window,
-			w->style->fg_gc[GTK_WIDGET_STATE(w)],
+			w->style->bg_gc[GTK_WIDGET_STATE(w)],
 			TRUE,
 			0, 0, w->allocation.width, w->allocation.height);
 	gdk_draw_rectangle(w->window,
-			w->style->bg_gc[GTK_WIDGET_STATE(w)],
+			w->style->fg_gc[GTK_WIDGET_STATE(w)],
 			TRUE,
 			0, 0, width, w->allocation.height);
 }
