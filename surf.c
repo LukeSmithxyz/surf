@@ -263,8 +263,9 @@ keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 	else
 		focus = BROWSER;
 	for(i = 0; i < LENGTH(keys); i++) {
-		if(focus & keys[i].focus && ev->keyval == keys[i].keyval &&
-				CLEANMASK(ev->state) == keys[i].mod
+		if(focus & keys[i].focus
+				&& gdk_keyval_to_lower(ev->keyval) == keys[i].keyval
+				&& CLEANMASK(ev->state) == keys[i].mod
 				&& keys[i].func) {
 			keys[i].func(c, &(keys[i].arg));
 			processed = TRUE;
