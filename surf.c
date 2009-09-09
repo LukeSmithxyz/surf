@@ -445,6 +445,7 @@ newclient(void) {
 	c->next = clients;
 	clients = c;
 	if(showxid) {
+		gdk_display_sync(gtk_widget_get_display(c->win));
 		printf("%u\n", (guint)GDK_WINDOW_XID(GTK_WIDGET(c->win)->window));
 		fflush(NULL);
 	}
