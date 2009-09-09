@@ -532,16 +532,13 @@ rereadcookies() {
 void
 scroll(Client *c, const Arg *arg) {
 	gdouble v;
-	int h, d;
 	GtkAdjustment *a;
 
-	gdk_window_get_geometry(GTK_WIDGET(c->view)->window, &d, &d, &d, &h, &d);
 	a = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(c->scroll));
 	v = gtk_adjustment_get_value(a);
 	v += gtk_adjustment_get_step_increment(a) * arg->i;
 	v = MAX(v, 0.0);
-	v = MIN(v, (double)h);
-	printf("%f %i\n", v, h);
+	v = MIN(v, gtk_adjustment_get_upper(a) - gtk_adjustment_get_page_size(a));
 	gtk_adjustment_set_value (a, v);
 }
 
