@@ -104,6 +104,7 @@ static void setup();
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame,
 		const gchar* title, Client *c);
 static void searchtext(Client *c, const Arg *arg);
+static void source(Client *c, const Arg *arg);
 static void showsearch(Client *c, const Arg *arg);
 static void showurl(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
@@ -545,6 +546,16 @@ showsearch(Client *c, const Arg *arg) {
 	hideurl(c, NULL);
 	gtk_widget_show(c->searchbar);
 	gtk_widget_grab_focus(c->searchbar);
+}
+
+void
+source(Client *c, const Arg *arg) {
+	Arg a = { .b = FALSE };
+	/*gboolean s;
+
+	s = webkit_web_view_get_view_source_mode(c->view);
+	webkit_web_view_set_view_source_mode(c->view, c->source);*/
+	reload(c, &a);
 }
 
 void

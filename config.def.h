@@ -19,6 +19,7 @@ static Key keys[] = {
     { MODKEY,               GDK_l,      navigate,   { .i = +1 },    BROWSER },
     { MODKEY,               GDK_h,      navigate,   { .i = -1 },    BROWSER },
     { 0,                    GDK_Escape, stop,       { 0 },          BROWSER },
+    { MODKEY,               GDK_o,      source,     { 0 },          BROWSER },
     { MODKEY,               GDK_n,      searchtext, { .b = TRUE },  BROWSER|SEARCHBAR },
     { MODKEY,               GDK_N,      searchtext, { .b = FALSE }, BROWSER|SEARCHBAR },
     { 0,                    GDK_Return, searchtext, { .b = TRUE },  SEARCHBAR },
