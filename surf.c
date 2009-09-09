@@ -539,7 +539,7 @@ scroll(Client *c, const Arg *arg) {
 	v += gtk_adjustment_get_step_increment(a) * arg->i;
 	v = MAX(v, 0.0);
 	v = MIN(v, gtk_adjustment_get_upper(a) - gtk_adjustment_get_page_size(a));
-	gtk_adjustment_set_value (a, v);
+	gtk_adjustment_set_value(a, v);
 }
 
 void
