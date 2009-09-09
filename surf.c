@@ -263,8 +263,7 @@ keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 		focus = BROWSER;
 	for(i = 0; i < LENGTH(keys); i++) {
 		if(focus & keys[i].focus && ev->keyval == keys[i].keyval &&
-				(CLEANMASK(ev->state) == keys[i].mod ||
-				 CLEANMASK(ev->state) & keys[i].mod)
+				CLEANMASK(ev->state) == keys[i].mod
 				&& keys[i].func) {
 			keys[i].func(c, &(keys[i].arg));
 			processed = TRUE;
