@@ -659,8 +659,6 @@ int main(int argc, char *argv[]) {
 
 	/* make dirs */
 	home = g_get_home_dir();
-	filename = g_build_filename(home, ".surf", NULL);
-	g_mkdir_with_parents(filename, 0711);
 	filename = g_build_filename(home, ".surf", "dl", NULL);
 	g_mkdir_with_parents(filename, 0755);
 
