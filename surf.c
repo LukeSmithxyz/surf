@@ -71,7 +71,6 @@ extern char *optarg;
 extern gint optind;
 
 static void cleanup(void);
-static void proccookies(SoupMessage *m, Client *c);
 static void clipboard(Client *c, const Arg *arg);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
@@ -95,6 +94,7 @@ static WebKitWebView *newwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c)
 static void pasteurl(GtkClipboard *clipboard, const gchar *text, gpointer d);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
 static void print(Client *c, const Arg *arg);
+static void proccookies(SoupMessage *m, Client *c);
 static void progresschange(WebKitWebView *view, gint p, Client *c);
 static void request(SoupSession *s, SoupMessage *m, Client *c);
 static void reload(Client *c, const Arg *arg);
@@ -119,21 +119,6 @@ void
 cleanup(void) {
 	while(clients)
 		destroyclient(clients);
-}
-
-void
-proccookies(SoupMessage *m, Client *c) {
-	GSList *l;
-	SoupCookie *co;
-	long t;
-
-	rereadcookies();
-	for (l = soup_cookies_from_response(m); l; l = l->next){
-		co = (SoupCookie *)l->data;
-		t = co->expires ?  soup_date_to_time_t(co->expires) : 0;
-		setcookie(co->name, co->value, co->domain, co->value, t);
-	}
-	g_slist_free(l);
 }
 
 void
@@ -498,6 +483,21 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 void
 print(Client *c, const Arg *arg) {
 	webkit_web_frame_print(webkit_web_view_get_main_frame(c->view));
+}
+
+void
+proccookies(SoupMessage *m, Client *c) {
+	GSList *l;
+	SoupCookie *co;
+	long t;
+
+	rereadcookies();
+	for (l = soup_cookies_from_response(m); l; l = l->next){
+		co = (SoupCookie *)l->data;
+		t = co->expires ?  soup_date_to_time_t(co->expires) : 0;
+		setcookie(co->name, co->value, co->domain, co->value, t);
+	}
+	g_slist_free(l);
 }
 
 void
