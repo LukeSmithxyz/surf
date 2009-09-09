@@ -103,6 +103,7 @@ static void setcookie(char *name, char *val, char *dom, char *path, long exp);
 static void setup();
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame,
 		const gchar* title, Client *c);
+static void scroll(Client *c, const Arg *arg);
 static void searchtext(Client *c, const Arg *arg);
 static void source(Client *c, const Arg *arg);
 static void showsearch(Client *c, const Arg *arg);
@@ -526,6 +527,22 @@ rereadcookies() {
 
 	home = g_get_home_dir();
 	filename = g_build_filename(home, ".surf", "cookies", NULL);
+}
+
+void
+scroll(Client *c, const Arg *arg) {
+	gdouble v;
+	int h, d;
+	GtkAdjustment *a;
+
+	gdk_window_get_geometry(GTK_WIDGET(c->view)->window, &d, &d, &d, &h, &d);
+	a = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(c->scroll));
+	v = gtk_adjustment_get_value(a);
+	v += gtk_adjustment_get_step_increment(a) * arg->i;
+	v = MAX(v, 0.0);
+	v = MIN(v, (double)h);
+	printf("%f %i\n", v, h);
+	gtk_adjustment_set_value (a, v);
 }
 
 void
