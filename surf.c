@@ -90,7 +90,7 @@ static void loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c);
 static void loadfile(Client *c, const gchar *f);
 static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
-static Client *newclient();
+static Client *newclient(void);
 static WebKitWebView *newwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c);
 static void pasteurl(GtkClipboard *clipboard, const gchar *text, gpointer d);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
@@ -99,9 +99,9 @@ static void proccookies(SoupMessage *m, Client *c);
 static void progresschange(WebKitWebView *view, gint p, Client *c);
 static void request(SoupSession *s, SoupMessage *m, Client *c);
 static void reload(Client *c, const Arg *arg);
-static void rereadcookies();
+static void rereadcookies(void);
 static void setcookie(char *name, char *val, char *dom, char *path, long exp);
-static void setup();
+static void setup(void);
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame,
 		const gchar* title, Client *c);
 static void scroll(Client *c, const Arg *arg);
@@ -111,7 +111,7 @@ static void showsearch(Client *c, const Arg *arg);
 static void showurl(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, Client *c);
-static void usage();
+static void usage(void);
 static void update(Client *c);
 static void zoom(Client *c, const Arg *arg);
 
@@ -541,7 +541,7 @@ reload(Client *c, const Arg *arg) {
 }
 
 void
-rereadcookies() {
+rereadcookies(void) {
 	const gchar *filename, *home;
 
 	home = g_get_home_dir();
@@ -567,7 +567,7 @@ setcookie(char *name, char *val, char *dom, char *path, long exp) {
 }
 
 void
-setup() {
+setup(void) {
 	dpy = GDK_DISPLAY();
 	session = webkit_get_default_session();
 	urlprop = XInternAtom(dpy, "_SURF_URL", False);
@@ -627,7 +627,7 @@ titlechange(WebKitWebView *v, WebKitWebFrame *f, const gchar *t, Client *c) {
 }
 
 void
-usage() {
+usage(void) {
 	fputs("surf - simple browser\n", stderr);
 	die("usage: surf [-e] [-x] [uri]\n");
 }
