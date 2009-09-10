@@ -1,7 +1,6 @@
 /* modifier 0 means no modifier */
 static gchar *progress       = "#FF0000";
 static gchar *progress_trust = "#00FF00";
-static gchar *background     = "#000000";
 #define MODKEY GDK_CONTROL_MASK
 static Key keys[] = {
     /* modifier	            keyval      function    arg             Focus */
