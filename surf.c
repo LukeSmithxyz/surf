@@ -111,6 +111,7 @@ static void showsearch(Client *c, const Arg *arg);
 static void showurl(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, Client *c);
+static gboolean unfocusbar(GtkWidget *w, GdkEventFocus *e, Client *c);
 static void usage(void);
 static void update(Client *c);
 static void zoom(Client *c, const Arg *arg);
@@ -196,7 +197,7 @@ drawindicator(Client *c) {
 			TRUE, 0, 0, w->allocation.width, w->allocation.height);
 	gdk_draw_rectangle(w->window, gc, TRUE, 0, 0, width,
 			w->allocation.height);
-	g_object_unref(gc);/*g_free(gc);*/
+	g_object_unref(gc);
 }
 
 gboolean
@@ -408,10 +409,12 @@ newclient(void) {
 	/* urlbar */
 	c->urlbar = gtk_entry_new();
 	gtk_entry_set_has_frame(GTK_ENTRY(c->urlbar), FALSE);
+	g_signal_connect(G_OBJECT(c->urlbar), "focus-out-event", G_CALLBACK(unfocusbar), c);
 
 	/* searchbar */
 	c->searchbar = gtk_entry_new();
 	gtk_entry_set_has_frame(GTK_ENTRY(c->searchbar), FALSE);
+	g_signal_connect(G_OBJECT(c->searchbar), "focus-out-event", G_CALLBACK(unfocusbar), c);
 
 	/* indicator */
 	c->indicator = gtk_drawing_area_new();
@@ -624,6 +627,13 @@ void
 titlechange(WebKitWebView *v, WebKitWebFrame *f, const gchar *t, Client *c) {
 	c->title = copystr(&c->title, t);
 	update(c);
+}
+
+gboolean
+unfocusbar(GtkWidget *w, GdkEventFocus *e, Client *c) {
+	hidesearch(c, NULL);
+	hideurl(c, NULL);
+	return TRUE;
 }
 
 void
