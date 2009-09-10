@@ -72,6 +72,7 @@ extern gint optind;
 
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
+static gchar *copystr(gchar **str, const gchar *src);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 static void die(char *str);
@@ -111,7 +112,7 @@ static void showurl(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, Client *c);
 static void usage();
-static void update(Client *c, const gchar *title);
+static void update(Client *c);
 static void zoom(Client *c, const Arg *arg);
 
 #include "config.h"
@@ -125,10 +126,23 @@ cleanup(void) {
 void
 clipboard(Client *c, const Arg *arg) {
 	gboolean paste = *(gboolean *)arg;
+
 	if(paste)
 		gtk_clipboard_request_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), pasteurl, c);
 	else
 		gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), webkit_web_view_get_uri(c->view), -1);
+}
+
+gchar *
+copystr(gchar **str, const gchar *src) {
+	gchar *tmp;
+	tmp = g_strdup(src);
+
+	if(str && *str) {
+		g_free(*str);
+		*str = tmp;
+	}
+	return tmp;
 }
 
 void
@@ -199,7 +213,7 @@ download(WebKitDownload *o, GParamSpec *pspec, Client *c) {
 	if(status == WEBKIT_DOWNLOAD_STATUS_STARTED || status == WEBKIT_DOWNLOAD_STATUS_CREATED) {
 		c->progress = (gint)(webkit_download_get_progress(c->download)*100);
 	}
-	update(c, NULL);
+	update(c);
 }
 
 gboolean
@@ -223,7 +237,9 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	g_signal_connect(c->download, "notify::progress", G_CALLBACK(download), c);
 	g_signal_connect(c->download, "notify::status", G_CALLBACK(download), c);
 	webkit_download_start(c->download);
-	update(c, filename);
+	
+	c->title = copystr(&c->title, filename);
+	update(c);
 	g_free(html);
 	return TRUE;
 }
@@ -233,7 +249,7 @@ geturi(Client *c) {
 	gchar *uri;
 
 	if(!(uri = (gchar *)webkit_web_view_get_uri(c->view)))
-		uri = g_strdup("about:blank");
+		uri = copystr(NULL, "about:blank");
 	return uri;
 }
 
@@ -279,7 +295,7 @@ linkhover(WebKitWebView* page, const gchar* t, const gchar* l, Client *c) {
 	if(l)
 		gtk_window_set_title(GTK_WINDOW(c->win), l);
 	else
-		update(c, NULL);
+		update(c);
 }
 
 void
@@ -296,7 +312,7 @@ loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
 void
 loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
 	c->progress = 0;
-	update(c, NULL);
+	update(c);
 }
 
 void
@@ -327,7 +343,8 @@ loadfile(Client *c, const gchar *f) {
 		arg.v = uri = g_strdup_printf("file://%s", f);
 		loaduri(c, &arg);
 	}
-	update(c, uri);
+	c->title = copystr(&c->title, uri);
+	update(c);
 	g_free(uri);
 }
 
@@ -341,8 +358,9 @@ loaduri(Client *c, const Arg *arg) {
 		: g_strdup_printf("http://%s", uri);
 	webkit_web_view_load_uri(c->view, u);
 	c->progress = 0;
-	update(c, u);
+	c->title = copystr(&c->title, u);
 	g_free(u);
+	update(c);
 }
 
 void
@@ -504,7 +522,7 @@ proccookies(SoupMessage *m, Client *c) {
 void
 progresschange(WebKitWebView* view, gint p, Client *c) {
 	c->progress = p;
-	update(c, NULL);
+	update(c);
 }
 
 void
@@ -604,7 +622,8 @@ stop(Client *c, const Arg *arg) {
 
 void
 titlechange(WebKitWebView *v, WebKitWebFrame *f, const gchar *t, Client *c) {
-	update(c, t);
+	c->title = copystr(&c->title, t);
+	update(c);
 }
 
 void
@@ -614,14 +633,9 @@ usage() {
 }
 
 void
-update(Client *c, const char *title) {
+update(Client *c) {
 	gchar *t;
 
-	if(title) {
-		if(c->title)
-			g_free(c->title);
-		c->title = g_strdup(title);
-	}
 	if(c->progress == 100)
 		t = g_strdup(c->title);
 	else
