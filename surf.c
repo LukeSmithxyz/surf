@@ -579,13 +579,31 @@ setcookie(char *name, char *val, char *dom, char *path, long exp) {
 
 void
 setup(void) {
-	const gchar *home;
+	const gchar *home, *name;
+	SoupSession *s;
+	FILE *tmp;
+
 	dpy = GDK_DISPLAY();
 	session = webkit_get_default_session();
 	urlprop = XInternAtom(dpy, "_SURF_URL", False);
 
+
+	/* create dirs and files */
 	home = g_get_home_dir();
 	workdir = g_build_filename(home, ".surf", NULL);
+	g_mkdir_with_parents(workdir, 0755);
+	name = g_build_filename(workdir, "dl", NULL);
+	g_mkdir(name, 0755);
+	name = g_build_filename(workdir, "style.css", NULL);
+	if((tmp = g_fopen(name, "a")));
+		fclose(tmp);
+
+
+	/* cookie persistance */
+	s = webkit_get_default_session();
+	name = g_build_filename(workdir, "cookies.jar", NULL);
+	cookiejar = soup_cookie_jar_text_new(name, FALSE);
+	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar));
 }
 
 void
@@ -679,10 +697,8 @@ zoom(Client *c, const Arg *arg) {
 }
 
 int main(int argc, char *argv[]) {
-	SoupSession *s;
 	Client *c;
 	gint o;
-	const gchar *filename;
 	Arg arg;
 
 	gtk_init(NULL, NULL);
@@ -718,15 +734,6 @@ int main(int argc, char *argv[]) {
 	if(!clients)
 		newclient();
 
-	/* make dirs */
-	filename = g_build_filename(workdir, "dl", NULL);
-	g_mkdir_with_parents(filename, 0755);
-
-	/* cookie persistance */
-	s = webkit_get_default_session();
-	filename = g_build_filename(workdir, "cookies.jar", NULL);
-	cookiejar = soup_cookie_jar_text_new(filename, FALSE);
-	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar));
 
 	gtk_main();
 	cleanup();
