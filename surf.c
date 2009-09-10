@@ -67,6 +67,7 @@ Cookie *cookies = NULL;
 gboolean embed = FALSE;
 gboolean showxid = FALSE;
 gboolean ignore_once = FALSE;
+gchar *workdir;
 extern char *optarg;
 extern gint optind;
 
@@ -219,14 +220,13 @@ download(WebKitDownload *o, GParamSpec *pspec, Client *c) {
 
 gboolean
 initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
-	const gchar *home, *filename;
+	const gchar *filename;
 	gchar *uri, *path, *html;
 
 	stop(c, NULL);
 	c->download = o;
-	home = g_get_home_dir();
 	filename = webkit_download_get_suggested_filename(o);
-	path = g_build_filename(home, ".surf", "dl", 
+	path = g_build_filename(workdir, "dl", 
 			filename, NULL);
 	uri = g_strconcat("file://", path, NULL);
 	webkit_download_set_destination_uri(c->download, uri);
@@ -373,6 +373,9 @@ navigate(Client *c, const Arg *arg) {
 Client *
 newclient(void) {
 	Client *c;
+	WebKitWebSettings *settings;
+	gchar *filename;
+
 	if(!(c = calloc(1, sizeof(Client))))
 		die("Cannot malloc!\n");
 	/* Window */
@@ -448,6 +451,12 @@ newclient(void) {
 	gdk_window_set_events(GTK_WIDGET(c->win)->window, GDK_ALL_EVENTS_MASK);
 	gdk_window_add_filter(GTK_WIDGET(c->win)->window, processx, c);
 	webkit_web_view_set_full_content_zoom(c->view, TRUE);
+	settings = webkit_web_view_get_settings(c->view);
+	g_object_set (G_OBJECT(settings), "user-agent", "surf", NULL);
+	filename = g_build_filename(workdir, "style.css", NULL);
+	filename = g_strdup_printf("file://%s", filename);
+	g_object_set (G_OBJECT(settings), "user-stylesheet-uri", filename, NULL);
+
 	c->download = NULL;
 	c->title = NULL;
 	c->next = clients;
@@ -545,10 +554,9 @@ reload(Client *c, const Arg *arg) {
 
 void
 rereadcookies(void) {
-	const gchar *filename, *home;
+	const gchar *filename;
 
-	home = g_get_home_dir();
-	filename = g_build_filename(home, ".surf", "cookies", NULL);
+	filename = g_build_filename(workdir, "cookies", NULL);
 }
 
 void
@@ -571,9 +579,13 @@ setcookie(char *name, char *val, char *dom, char *path, long exp) {
 
 void
 setup(void) {
+	const gchar *home;
 	dpy = GDK_DISPLAY();
 	session = webkit_get_default_session();
 	urlprop = XInternAtom(dpy, "_SURF_URL", False);
+
+	home = g_get_home_dir();
+	workdir = g_build_filename(home, ".surf", NULL);
 }
 
 void
@@ -670,7 +682,7 @@ int main(int argc, char *argv[]) {
 	SoupSession *s;
 	Client *c;
 	gint o;
-	const gchar *home, *filename;
+	const gchar *filename;
 	Arg arg;
 
 	gtk_init(NULL, NULL);
@@ -707,13 +719,12 @@ int main(int argc, char *argv[]) {
 		newclient();
 
 	/* make dirs */
-	home = g_get_home_dir();
-	filename = g_build_filename(home, ".surf", "dl", NULL);
+	filename = g_build_filename(workdir, "dl", NULL);
 	g_mkdir_with_parents(filename, 0755);
 
 	/* cookie persistance */
 	s = webkit_get_default_session();
-	filename = g_build_filename(home, ".surf", "cookies.jar", NULL);
+	filename = g_build_filename(workdir, "cookies.jar", NULL);
 	cookiejar = soup_cookie_jar_text_new(filename, FALSE);
 	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar));
 
