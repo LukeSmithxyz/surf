@@ -64,7 +64,7 @@ SoupCookieJar *cookiejar;
 SoupSession *session;
 Client *clients = NULL;
 Cookie *cookies = NULL;
-gboolean embed = FALSE;
+GdkNativeWindow embed = 0;
 gboolean showxid = FALSE;
 gboolean ignore_once = FALSE;
 gchar *workdir;
@@ -380,7 +380,7 @@ newclient(void) {
 		die("Cannot malloc!\n");
 	/* Window */
 	if(embed) {
-		c->win = gtk_plug_new(0);
+		c->win = gtk_plug_new(embed);
 	}
 	else {
 		c->win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -669,7 +669,7 @@ unfocusbar(GtkWidget *w, GdkEventFocus *e, Client *c) {
 void
 usage(void) {
 	fputs("surf - simple browser\n", stderr);
-	die("usage: surf [-e] [-x] [uri]\n");
+	die("usage: surf [-e Window] [-x] [uri]\n");
 }
 
 void
@@ -698,21 +698,21 @@ zoom(Client *c, const Arg *arg) {
 
 int main(int argc, char *argv[]) {
 	Client *c;
-	gint o;
+	gint o, a;
 	Arg arg;
 
 	gtk_init(NULL, NULL);
 	if (!g_thread_supported())
 		g_thread_init(NULL);
-	setup();
-	while((o = getopt(argc, argv, "vhxeu:f:")) != -1)
+	while((o = getopt(argc, argv, "vhxe:")) != -1)
 		switch(o) {
 		case 'x':
 			showxid = TRUE;
 			break;
 		case 'e':
-			showxid = TRUE;
-			embed = TRUE;
+			if(!(a = atoi(optarg)))
+				usage();
+			embed = a;
 			break;
 		case 'v':
 			die("surf-"VERSION", © 2009 surf engineers, see LICENSE for details\n");
@@ -731,6 +731,7 @@ int main(int argc, char *argv[]) {
 	}
 	else if(optind != argc)
 		usage();
+	setup();
 	if(!clients)
 		newclient();
 
