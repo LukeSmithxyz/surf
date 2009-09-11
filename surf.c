@@ -16,7 +16,7 @@
 #include <webkit/webkit.h>
 #include <glib/gstdio.h>
 
-#define LENGTH(x) (sizeof x / sizeof x[0])
+#define LENGTH(x)               (sizeof x / sizeof x[0])
 #define CLEANMASK(mask)         (mask & ~(GDK_MOD2_MASK))
 
 Display *dpy;
