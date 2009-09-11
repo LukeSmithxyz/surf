@@ -601,7 +601,7 @@ setup(void) {
 
 	/* cookie persistance */
 	s = webkit_get_default_session();
-	name = g_build_filename(workdir, "cookies.jar", NULL);
+	name = g_build_filename(workdir, "cookies.txt", NULL);
 	cookiejar = soup_cookie_jar_text_new(name, FALSE);
 	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar));
 }
@@ -663,7 +663,7 @@ gboolean
 unfocusbar(GtkWidget *w, GdkEventFocus *e, Client *c) {
 	hidesearch(c, NULL);
 	hideurl(c, NULL);
-	return TRUE;
+	return FALSE;
 }
 
 void
