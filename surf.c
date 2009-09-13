@@ -60,14 +60,14 @@ typedef struct {
 	KeyFocus focus;
 } Key;
 
-SoupCookieJar *cookiejar;
-SoupSession *session;
-Client *clients = NULL;
-Cookie *cookies = NULL;
-GdkNativeWindow embed = 0;
-gboolean showxid = FALSE;
-gboolean ignore_once = FALSE;
-gchar *workdir;
+static SoupCookieJar *cookiejar;
+static SoupSession *session;
+static Client *clients = NULL;
+/*static Cookie *cookies = NULL;*/
+static GdkNativeWindow embed = 0;
+static gboolean showxid = FALSE;
+static gboolean ignore_once = FALSE;
+static gchar *workdir;
 extern char *optarg;
 extern gint optind;
 
@@ -123,6 +123,7 @@ void
 cleanup(void) {
 	while(clients)
 		destroyclient(clients);
+	g_free(workdir);
 }
 
 void
@@ -590,7 +591,7 @@ setup(void) {
 
 	/* create dirs and files */
 	home = g_get_home_dir();
-	workdir = g_build_filename(home, ".surf", NULL);
+	workdir = g_strdup(g_build_filename(home, ".surf", NULL));
 	g_mkdir_with_parents(workdir, 0755);
 	name = g_build_filename(workdir, "dl", NULL);
 	g_mkdir(name, 0755);
@@ -720,6 +721,7 @@ int main(int argc, char *argv[]) {
 		default:
 			usage();
 		}
+	setup();
 	if(optind + 1 == argc) {
 		c = newclient();
 		arg.v = argv[optind];
@@ -731,7 +733,6 @@ int main(int argc, char *argv[]) {
 	}
 	else if(optind != argc)
 		usage();
-	setup();
 	if(!clients)
 		newclient();
 
