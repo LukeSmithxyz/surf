@@ -15,12 +15,11 @@
 #include <stdio.h>
 #include <webkit/webkit.h>
 #include <glib/gstdio.h>
+#include <JavaScriptCore/JavaScript.h>
 
 #define LENGTH(x)               (sizeof x / sizeof x[0])
 #define CLEANMASK(mask)         (mask & ~(GDK_MOD2_MASK))
 
-Display *dpy;
-Atom urlprop;
 typedef union Arg Arg;
 union Arg {
 	const gboolean b;
@@ -60,6 +59,8 @@ typedef struct {
 	KeyFocus focus;
 } Key;
 
+static Display *dpy;
+static Atom urlprop;
 static SoupCookieJar *cookiejar;
 static SoupSession *session;
 static Client *clients = NULL;
@@ -115,6 +116,7 @@ static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar*
 static gboolean unfocusbar(GtkWidget *w, GdkEventFocus *e, Client *c);
 static void usage(void);
 static void update(Client *c);
+static void windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObjectRef win, Client *c);
 static void zoom(Client *c, const Arg *arg);
 
 #include "config.h"
@@ -408,6 +410,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
 	g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(newwindow), c);
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
+	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
 	g_signal_connect_after(session, "request-started", G_CALLBACK(request), c);
 
 	/* urlbar */
@@ -425,8 +428,6 @@ newclient(void) {
 	gtk_widget_set_size_request(c->indicator, 0, 2);
 	g_signal_connect (G_OBJECT (c->indicator), "expose_event",
 			G_CALLBACK (exposeindicator), c);
-
-	/* downloadbar */
 
 	/* Arranging */
 	gtk_container_add(GTK_CONTAINER(c->scroll), GTK_WIDGET(c->view));
@@ -685,6 +686,23 @@ update(Client *c) {
 	gtk_window_set_title(GTK_WINDOW(c->win), t);
 	g_free(t);
 
+}
+
+void
+windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObjectRef win, Client *c) {
+	JSStringRef jsscript;
+	gchar *script, *filename;
+	JSValueRef exception = NULL;
+	GError *error;
+	
+	filename = g_build_filename(workdir, "script.js", NULL);
+	if(g_file_get_contents(filename, &script, NULL, &error)) {
+		script = g_strdup_printf("window.addEventListener"
+				"('DOMContentLoaded', function () { %s }, true);",
+				script);
+		jsscript = JSStringCreateWithUTF8CString (script);
+		JSEvaluateScript (js, jsscript, JSContextGetGlobalObject(js), NULL, 0, &exception);
+	}
 }
 
 void
