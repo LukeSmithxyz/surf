@@ -10,7 +10,6 @@
 #include <gdk/gdkkeysyms.h>
 #include <string.h>
 #include <unistd.h>
-#include <getopt.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <webkit/webkit.h>
@@ -25,7 +24,7 @@ union Arg {
 	const gboolean b;
 	const gint i;
 	const void *v;
-} ;
+};
 
 typedef struct Client {
 	GtkWidget *win, *scroll, *vbox, *urlbar, *searchbar, *indicator;
@@ -45,10 +44,10 @@ typedef struct Cookie {
 } Cookie;
 
 typedef enum {
-    BROWSER = 0x0001,
-    SEARCHBAR = 0x0010,
-    URLBAR = 0x0100,
-    ALWAYS = ~0,
+	Browser = 0x0001,
+	SearchBar = 0x0010,
+	UrlBar = 0x0100,
+	Any = ~0,
 } KeyFocus;
 
 typedef struct {
@@ -69,8 +68,6 @@ static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static gboolean ignore_once = FALSE;
 static gchar *workdir;
-extern char *optarg;
-extern gint optind;
 
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
@@ -104,8 +101,7 @@ static void reload(Client *c, const Arg *arg);
 static void rereadcookies(void);
 static void setcookie(char *name, char *val, char *dom, char *path, long exp);
 static void setup(void);
-static void titlechange(WebKitWebView* view, WebKitWebFrame* frame,
-		const gchar* title, Client *c);
+static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, Client *c);
 static void scroll(Client *c, const Arg *arg);
 static void searchtext(Client *c, const Arg *arg);
 static void source(Client *c, const Arg *arg);
@@ -277,11 +273,11 @@ keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 	if(ev->type != GDK_KEY_PRESS)
 		return FALSE;
 	if(GTK_WIDGET_HAS_FOCUS(c->searchbar))
-		focus = SEARCHBAR;
+		focus = SearchBar;
 	else if(GTK_WIDGET_HAS_FOCUS(c->urlbar))
-		focus = URLBAR;
+		focus = UrlBar;
 	else
-		focus = BROWSER;
+		focus = Browser;
 	for(i = 0; i < LENGTH(keys); i++) {
 		if(focus & keys[i].focus
 				&& gdk_keyval_to_lower(ev->keyval) == keys[i].keyval
@@ -585,6 +581,10 @@ setup(void) {
 	SoupSession *s;
 	FILE *tmp;
 
+	gtk_init(NULL, NULL);
+	if (!g_thread_supported())
+		g_thread_init(NULL);
+
 	dpy = GDK_DISPLAY();
 	session = webkit_get_default_session();
 	urlprop = XInternAtom(dpy, "_SURF_URL", False);
@@ -719,45 +719,35 @@ zoom(Client *c, const Arg *arg) {
 }
 
 int main(int argc, char *argv[]) {
-	Client *c;
-	gint o, a;
+	int i;
 	Arg arg;
+	Client *c;
 
-	gtk_init(NULL, NULL);
-	if (!g_thread_supported())
-		g_thread_init(NULL);
-	while((o = getopt(argc, argv, "vhxe:")) != -1)
-		switch(o) {
-		case 'x':
+	/* command line args */
+	for(i = 1, arg.v = NULL; i < argc; i++) {
+		if(!strcmp(argv[i], "-x"))
 			showxid = TRUE;
-			break;
-		case 'e':
-			if(!(a = atoi(optarg)))
+		else if(!strcmp(argv[i], "-e")) {
+			if(++i < argc)
+				embed = atoi(argv[i]);
+			else
 				usage();
-			embed = a;
-			break;
-		case 'v':
-			die("surf-"VERSION", © 2009 surf engineers, see LICENSE for details\n");
-			break;
-		default:
-			usage();
 		}
+		else if(!strcmp(argv[i], "-v"))
+			die("surf-"VERSION", © 2009 surf engineers, see LICENSE for details\n");
+		else if(argv[i][0] == '-')
+			usage();
+		else
+			arg.v = argv[i];
+	}
 	setup();
-	if(optind + 1 == argc) {
-		c = newclient();
-		arg.v = argv[optind];
-		if(strchr("./", argv[optind][0]) || strcmp("-", argv[optind]) == 0)
-			loadfile(c, argv[optind]);
+	c = newclient();
+	if(arg.v) {
+		if(strchr("./", ((char *)arg.v)[0]) || strcmp("-", (char *)arg.v) == 0)
+			loadfile(c, (char *)arg.v);
 		else
 			loaduri(c, &arg);
-
 	}
-	else if(optind != argc)
-		usage();
-	if(!clients)
-		newclient();
-
-
 	gtk_main();
 	cleanup();
 	return EXIT_SUCCESS;
