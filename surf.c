@@ -599,6 +599,9 @@ setup(void) {
 	name = g_build_filename(workdir, "style.css", NULL);
 	if((tmp = g_fopen(name, "a")));
 		fclose(tmp);
+	name = g_build_filename(workdir, "script.js", NULL);
+	if((tmp = g_fopen(name, "a")));
+		fclose(tmp);
 
 
 	/* cookie persistance */
