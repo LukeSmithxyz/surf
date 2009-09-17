@@ -589,7 +589,6 @@ setup(void) {
 	session = webkit_get_default_session();
 	urlprop = XInternAtom(dpy, "_SURF_URL", False);
 
-
 	/* create dirs and files */
 	home = g_get_home_dir();
 	workdir = g_strdup(g_build_filename(home, ".surf", NULL));
@@ -602,7 +601,6 @@ setup(void) {
 	name = g_build_filename(workdir, "script.js", NULL);
 	if((tmp = g_fopen(name, "a")));
 		fclose(tmp);
-
 
 	/* cookie persistance */
 	s = webkit_get_default_session();
