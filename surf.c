@@ -115,6 +115,7 @@ static void update(Client *c);
 static void windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObjectRef win, Client *c);
 static void zoom(Client *c, const Arg *arg);
 
+/* configuration, allows nested code to access above variables */
 #include "config.h"
 
 void
