@@ -450,10 +450,10 @@ newclient(void) {
 	gdk_window_add_filter(GTK_WIDGET(c->win)->window, processx, c);
 	webkit_web_view_set_full_content_zoom(c->view, TRUE);
 	settings = webkit_web_view_get_settings(c->view);
-	g_object_set (G_OBJECT(settings), "user-agent", "surf", NULL);
+	g_object_set(G_OBJECT(settings), "user-agent", "surf", NULL);
 	filename = g_build_filename(workdir, "style.css", NULL);
 	filename = g_strdup_printf("file://%s", filename);
-	g_object_set (G_OBJECT(settings), "user-stylesheet-uri", filename, NULL);
+	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", filename, NULL);
 
 	c->download = NULL;
 	c->title = NULL;
