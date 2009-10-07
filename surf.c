@@ -699,9 +699,6 @@ windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObje
 	
 	filename = g_build_filename(workdir, "script.js", NULL);
 	if(g_file_get_contents(filename, &script, NULL, &error)) {
-		script = g_strdup_printf("window.addEventListener"
-				"('DOMContentLoaded', function () { %s }, true);",
-				script);
 		jsscript = JSStringCreateWithUTF8CString (script);
 		JSEvaluateScript (js, jsscript, JSContextGetGlobalObject(js), NULL, 0, &exception);
 	}
