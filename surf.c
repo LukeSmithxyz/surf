@@ -144,9 +144,10 @@ void
 cleanup(void) {
 	while(clients)
 		destroyclient(clients);
-	g_free(stylefile);
-	g_free(scriptfile);
+	g_free(cookiefile);
 	g_free(dldir);
+	g_free(scriptfile);
+	g_free(stylefile);
 }
 
 void
