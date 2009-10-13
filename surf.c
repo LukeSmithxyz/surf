@@ -86,7 +86,6 @@ static gboolean keypress(GtkWidget* w, GdkEventKey *ev, Client *c);
 static void linkhover(WebKitWebView* page, const gchar* t, const gchar* l, Client *c);
 static void loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c);
 static void loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c);
-static void loadfile(Client *c, const gchar *f);
 static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
 static Client *newclient(void);
@@ -336,39 +335,6 @@ void
 loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
 	c->progress = 0;
 	update(c);
-}
-
-void
-loadfile(Client *c, const gchar *f) {
-	GIOChannel *chan = NULL;
-	GError *e = NULL;
-	GString *code;
-	gchar *line, *uri;
-	Arg arg;
-
-	if(strcmp(f, "-") == 0) {
-		chan = g_io_channel_unix_new(STDIN_FILENO);
-		if (chan) {
-			code = g_string_new("");
-			while(g_io_channel_read_line(chan, &line, NULL, NULL,
-						&e) == G_IO_STATUS_NORMAL) {
-				g_string_append(code, line);
-				g_free(line);
-			}
-			webkit_web_view_load_html_string(c->view, code->str,
-					"file://.");
-			g_io_channel_shutdown(chan, FALSE, NULL);
-			g_string_free(code, TRUE);
-		}
-		arg.v = uri = g_strdup("stdin");
-	}
-	else {
-		arg.v = uri = g_strdup_printf("file://%s", f);
-		loaduri(c, &arg);
-	}
-	c->title = copystr(&c->title, uri);
-	update(c);
-	g_free(uri);
 }
 
 void
@@ -725,7 +691,6 @@ zoom(Client *c, const Arg *arg) {
 int main(int argc, char *argv[]) {
 	int i;
 	Arg arg;
-	Client *c;
 
 	/* command line args */
 	for(i = 1, arg.v = NULL; i < argc; i++) {
@@ -747,12 +712,9 @@ int main(int argc, char *argv[]) {
 			arg.v = argv[i];
 	}
 	setup();
-	c = newclient();
+	newclient();
 	if(arg.v) {
-		if(strchr("./", ((char *)arg.v)[0]) || strcmp("-", (char *)arg.v) == 0)
-			loadfile(c, (char *)arg.v);
-		else
-			loaduri(c, &arg);
+		loaduri(clients, &arg);
 	}
 	gtk_main();
 	cleanup();
