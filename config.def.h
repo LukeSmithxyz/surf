@@ -1,6 +1,10 @@
 /* modifier 0 means no modifier */
 static gchar *progress       = "#FF0000";
 static gchar *progress_trust = "#00FF00";
+static gchar *stylefile      = ".surf/style.css";
+static gchar *scriptfile     = ".surf/script.js";
+static gchar *cookiefile     = ".surf/cookie.txt";
+static gchar *dldir          = ".surf/dl";
 #define MODKEY GDK_CONTROL_MASK
 static Key keys[] = {
     /* modifier	            keyval      function    arg             Focus */

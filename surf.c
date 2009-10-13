@@ -67,8 +67,8 @@ static Client *clients = NULL;
 static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static gboolean ignore_once = FALSE;
-static gchar *workdir;
 
+static gchar *buildpath(const gchar *path);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
 static gchar *copystr(gchar **str, const gchar *src);
@@ -118,11 +118,35 @@ static void zoom(Client *c, const Arg *arg);
 /* configuration, allows nested code to access above variables */
 #include "config.h"
 
+gchar *
+buildpath(const gchar *path) {
+	gchar *apath, *p;
+	FILE *f;
+
+	/* creating directory */
+	if(path[0] == '/')
+		apath = g_strdup(path);
+	else
+		apath = g_strconcat(g_get_home_dir(), "/", path, NULL);
+	if((p = strrchr(apath, '/'))) {
+		*p = '\0';
+		g_mkdir_with_parents(apath, 0755);
+		*p = '/';
+	}
+	/* creating file (gives error when apath ends with "/") */
+	if((f = g_fopen(apath, "a")))
+		fclose(f);
+	puts(apath);
+	return apath;
+}
+
 void
 cleanup(void) {
 	while(clients)
 		destroyclient(clients);
-	g_free(workdir);
+	g_free(stylefile);
+	g_free(scriptfile);
+	g_free(dldir);
 }
 
 void
@@ -221,14 +245,12 @@ download(WebKitDownload *o, GParamSpec *pspec, Client *c) {
 gboolean
 initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	const gchar *filename;
-	gchar *uri, *path, *html;
+	gchar *uri, *html;
 
 	stop(c, NULL);
 	c->download = o;
 	filename = webkit_download_get_suggested_filename(o);
-	path = g_build_filename(workdir, "dl", 
-			filename, NULL);
-	uri = g_strconcat("file://", path, NULL);
+	uri = g_strconcat("file://", dldir, "/", filename, NULL);
 	webkit_download_set_destination_uri(c->download, uri);
 	c->progress = 0;
 	g_free(uri);
@@ -374,7 +396,7 @@ Client *
 newclient(void) {
 	Client *c;
 	WebKitWebSettings *settings;
-	gchar *filename;
+	gchar *uri;
 
 	if(!(c = calloc(1, sizeof(Client))))
 		die("Cannot malloc!\n");
@@ -452,9 +474,9 @@ newclient(void) {
 	webkit_web_view_set_full_content_zoom(c->view, TRUE);
 	settings = webkit_web_view_get_settings(c->view);
 	g_object_set(G_OBJECT(settings), "user-agent", "surf", NULL);
-	filename = g_build_filename(workdir, "style.css", NULL);
-	filename = g_strdup_printf("file://%s", filename);
-	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", filename, NULL);
+	uri = g_strconcat("file://", stylefile, NULL);
+	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
+	g_free(uri);
 
 	c->download = NULL;
 	c->title = NULL;
@@ -553,9 +575,6 @@ reload(Client *c, const Arg *arg) {
 
 void
 rereadcookies(void) {
-	const gchar *filename;
-
-	filename = g_build_filename(workdir, "cookies", NULL);
 }
 
 void
@@ -578,9 +597,7 @@ setcookie(char *name, char *val, char *dom, char *path, long exp) {
 
 void
 setup(void) {
-	const gchar *home, *name;
 	SoupSession *s;
-	FILE *tmp;
 
 	gtk_init(NULL, NULL);
 	if (!g_thread_supported())
@@ -591,22 +608,14 @@ setup(void) {
 	urlprop = XInternAtom(dpy, "_SURF_URL", False);
 
 	/* create dirs and files */
-	home = g_get_home_dir();
-	workdir = g_strdup(g_build_filename(home, ".surf", NULL));
-	g_mkdir_with_parents(workdir, 0755);
-	name = g_build_filename(workdir, "dl", NULL);
-	g_mkdir(name, 0755);
-	name = g_build_filename(workdir, "style.css", NULL);
-	if((tmp = g_fopen(name, "a")));
-		fclose(tmp);
-	name = g_build_filename(workdir, "script.js", NULL);
-	if((tmp = g_fopen(name, "a")));
-		fclose(tmp);
+	cookiefile = buildpath(cookiefile);
+	dldir = buildpath(dldir);
+	scriptfile = buildpath(scriptfile);
+	stylefile = buildpath(stylefile);
 
 	/* cookie persistance */
 	s = webkit_get_default_session();
-	name = g_build_filename(workdir, "cookies.txt", NULL);
-	cookiejar = soup_cookie_jar_text_new(name, FALSE);
+	cookiejar = soup_cookie_jar_text_new(cookiefile, FALSE);
 	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar));
 }
 
@@ -693,14 +702,13 @@ update(Client *c) {
 void
 windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObjectRef win, Client *c) {
 	JSStringRef jsscript;
-	gchar *script, *filename;
+	gchar *script;
 	JSValueRef exception = NULL;
 	GError *error;
 	
-	filename = g_build_filename(workdir, "script.js", NULL);
-	if(g_file_get_contents(filename, &script, NULL, &error)) {
+	if(g_file_get_contents(scriptfile, &script, NULL, &error)) {
 		jsscript = JSStringCreateWithUTF8CString(script);
-		JSEvaluateScript (js, jsscript, JSContextGetGlobalObject(js), NULL, 0, &exception);
+		JSEvaluateScript(js, jsscript, JSContextGetGlobalObject(js), NULL, 0, &exception);
 	}
 }
 
@@ -729,6 +737,8 @@ int main(int argc, char *argv[]) {
 			else
 				usage();
 		}
+		else if(!strcmp(argv[i], "--"))
+			break;
 		else if(!strcmp(argv[i], "-v"))
 			die("surf-"VERSION", © 2009 surf engineers, see LICENSE for details\n");
 		else if(argv[i][0] == '-')
