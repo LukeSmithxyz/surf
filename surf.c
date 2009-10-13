@@ -176,7 +176,7 @@ void
 destroyclient(Client *c) {
 	Client *p;
 
-	gtk_widget_destroy(GTK_WIDGET(webkit_web_view_new()));
+	gtk_widget_destroy(GTK_WIDGET(c->view));
 	gtk_widget_destroy(c->scroll);
 	gtk_widget_destroy(c->urlbar);
 	gtk_widget_destroy(c->searchbar);
