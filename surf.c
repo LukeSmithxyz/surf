@@ -699,7 +699,7 @@ windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObje
 	
 	filename = g_build_filename(workdir, "script.js", NULL);
 	if(g_file_get_contents(filename, &script, NULL, &error)) {
-		jsscript = JSStringCreateWithUTF8CString (script);
+		jsscript = JSStringCreateWithUTF8CString(script);
 		JSEvaluateScript (js, jsscript, JSContextGetGlobalObject(js), NULL, 0, &exception);
 	}
 }
