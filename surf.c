@@ -136,7 +136,6 @@ buildpath(const gchar *path) {
 	/* creating file (gives error when apath ends with "/") */
 	if((f = g_fopen(apath, "a")))
 		fclose(f);
-	puts(apath);
 	return apath;
 }
 
