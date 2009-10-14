@@ -595,10 +595,10 @@ showsearch(Client *c, const Arg *arg) {
 void
 source(Client *c, const Arg *arg) {
 	Arg a = { .b = FALSE };
-	/*gboolean s;
+	gboolean s;
 
 	s = webkit_web_view_get_view_source_mode(c->view);
-	webkit_web_view_set_view_source_mode(c->view, c->source);*/
+	webkit_web_view_set_view_source_mode(c->view, !s);
 	reload(c, &a);
 }
 
