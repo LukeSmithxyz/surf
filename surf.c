@@ -439,7 +439,7 @@ newclient(void) {
 	gdk_window_add_filter(GTK_WIDGET(c->win)->window, processx, c);
 	webkit_web_view_set_full_content_zoom(c->view, TRUE);
 	settings = webkit_web_view_get_settings(c->view);
-	g_object_set(G_OBJECT(settings), "user-agent", "surf", NULL);
+	g_object_set(G_OBJECT(settings), "user-agent", useragent, NULL);
 	uri = g_strconcat("file://", stylefile, NULL);
 	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
 	g_free(uri);
