@@ -1,5 +1,5 @@
 /* modifier 0 means no modifier */
-static gchar *useragent      = "Mozilla/5.0 (This is surf. Really! KHTML, like Gecko) Safari/531.2+";
+static gchar *useragent      = "Mozilla/5.0 (X11; U; Linux; en-us) AppleWebKit/531.2+ (KHTML, like Gecko, surf-"VERSION") Safari/531.2+";
 static gchar *progress       = "#FF0000";
 static gchar *progress_trust = "#00FF00";
 static gchar *stylefile      = ".surf/style.css";
