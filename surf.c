@@ -2,6 +2,7 @@
  *
  * To understand surf, start reading main().
  */
+#include <signal.h>
 #include <X11/X.h>
 #include <X11/Xatom.h>
 #include <gtk/gtk.h>
@@ -9,6 +10,8 @@
 #include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -67,11 +70,14 @@ static Client *clients = NULL;
 static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static gboolean ignore_once = FALSE;
+static gchar winid[64];
+static gchar *progname;
 
 static gchar *buildpath(const gchar *path);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
 static gchar *copystr(gchar **str, const gchar *src);
+static gboolean decidewindow(WebKitWebView *view, WebKitWebFrame *f, WebKitNetworkRequest *r, WebKitWebNavigationAction *n, WebKitWebPolicyDecision *p, Client *c);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 static void die(char *str);
@@ -89,7 +95,8 @@ static void loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c);
 static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
 static Client *newclient(void);
-static WebKitWebView *newwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c);
+static void newproc(const gchar *url);
+static WebKitWebView *createwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c);
 static void pasteurl(GtkClipboard *clipboard, const gchar *text, gpointer d);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
 static void print(Client *c, const Arg *arg);
@@ -98,8 +105,10 @@ static void progresschange(WebKitWebView *view, gint p, Client *c);
 static void request(SoupSession *s, SoupMessage *m, Client *c);
 static void reload(Client *c, const Arg *arg);
 static void rereadcookies(void);
+static void sigchld(int unused);
 static void setcookie(char *name, char *val, char *dom, char *path, long exp);
 static void setup(void);
+static void spawn(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, Client *c);
 static void scroll(Client *c, const Arg *arg);
 static void searchtext(Client *c, const Arg *arg);
@@ -111,6 +120,7 @@ static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar*
 static gboolean unfocusbar(GtkWidget *w, GdkEventFocus *e, Client *c);
 static void usage(void);
 static void update(Client *c);
+static void updatewinid(Client *c);
 static void windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObjectRef win, Client *c);
 static void zoom(Client *c, const Arg *arg);
 
@@ -188,6 +198,16 @@ destroyclient(Client *c) {
 	free(c);
 	if(clients == NULL)
 		gtk_main_quit();
+}
+
+gboolean
+decidewindow(WebKitWebView *view, WebKitWebFrame *f, WebKitNetworkRequest *r, WebKitWebNavigationAction *n, WebKitWebPolicyDecision *p, Client *c) {
+	if(webkit_web_navigation_action_get_reason(n) == WEBKIT_WEB_NAVIGATION_REASON_LINK_CLICKED) {
+		webkit_web_policy_decision_ignore(p);
+		newproc(webkit_network_request_get_uri(r));
+		return TRUE;
+	}
+	return FALSE;
 }
 
 void
@@ -300,6 +320,7 @@ keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 		focus = UrlBar;
 	else
 		focus = Browser;
+	updatewinid(c);
 	for(i = 0; i < LENGTH(keys); i++) {
 		if(focus & keys[i].focus
 				&& gdk_keyval_to_lower(ev->keyval) == keys[i].keyval
@@ -393,7 +414,8 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "load-committed", G_CALLBACK(loadcommit), c);
 	g_signal_connect(G_OBJECT(c->view), "load-started", G_CALLBACK(loadstart), c);
 	g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
-	g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(newwindow), c);
+	g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(createwindow), c);
+	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(decidewindow), c);
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
 	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
 	g_signal_connect_after(session, "request-started", G_CALLBACK(request), c);
@@ -456,8 +478,32 @@ newclient(void) {
 	return c;
 }
 
+void
+newproc(const gchar *url) {
+	guint i = 0, urlindex;
+	const gchar *cmd[7];
+	const Arg arg = { .v = (void *)cmd };
+	gchar tmp[64];
+
+	cmd[i++] = progname;
+	if(embed) {
+		cmd[i++] = "-e";
+		snprintf(tmp, LENGTH(tmp), "%u\n", (int)embed);
+		cmd[i++] = tmp;
+	}
+	if(showxid) {
+		cmd[i++] = "-x";
+	}
+	cmd[i++] = "--";
+	urlindex = i;
+	if(url)
+		cmd[i++] = url;
+	cmd[i++] = NULL;
+	spawn(NULL, &arg);
+}
+
 WebKitWebView *
-newwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c) {
+createwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c) {
 	Client *n = newclient();
 	return n->view;
 }
@@ -541,6 +587,7 @@ reload(Client *c, const Arg *arg) {
 
 void
 rereadcookies(void) {
+
 }
 
 void
@@ -557,6 +604,13 @@ scroll(Client *c, const Arg *arg) {
 }
 
 void
+sigchld(int unused) {
+	if(signal(SIGCHLD, sigchld) == SIG_ERR)
+		die("Can't install SIGCHLD handler");
+	while(0 < waitpid(-1, NULL, WNOHANG));
+}
+
+void
 setcookie(char *name, char *val, char *dom, char *path, long exp) {
 
 }
@@ -565,6 +619,8 @@ void
 setup(void) {
 	SoupSession *s;
 
+	/* clean up any zombies immediately */
+	sigchld(0);
 	gtk_init(NULL, NULL);
 	if (!g_thread_supported())
 		g_thread_init(NULL);
@@ -604,12 +660,11 @@ source(Client *c, const Arg *arg) {
 
 void
 searchtext(Client *c, const Arg *arg) {
+	const gchar *text;
 	gboolean forward = *(gboolean *)arg;
-	webkit_web_view_search_text(c->view,
-			gtk_entry_get_text(GTK_ENTRY(c->searchbar)),
-			FALSE,
-			forward,
-			TRUE);
+	text = gtk_entry_get_text(GTK_ENTRY(c->searchbar));
+	webkit_web_view_search_text(c->view, text, FALSE, forward, TRUE);
+	webkit_web_view_mark_text_matches(c->view, text, FALSE, 0);
 }
 
 void
@@ -630,6 +685,19 @@ stop(Client *c, const Arg *arg) {
 	else
 		webkit_web_view_stop_loading(c->view);
 	c->download = NULL;
+}
+
+void
+spawn(Client *c, const Arg *arg) {
+	if(fork() == 0) {
+		if(dpy)
+			close(ConnectionNumber(dpy));
+		setsid();
+		execvp(((char **)arg->v)[0], (char **)arg->v);
+		fprintf(stderr, "tabbed: execvp %s", ((char **)arg->v)[0]);
+		perror(" failed");
+		exit(0);
+	}
 }
 
 void
@@ -666,6 +734,12 @@ update(Client *c) {
 }
 
 void
+updatewinid(Client *c) {
+	snprintf(winid, LENGTH(winid), "%u",
+			(int)GDK_WINDOW_XID(GTK_WIDGET(c->win)->window));
+}
+
+void
 windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObjectRef win, Client *c) {
 	JSStringRef jsscript;
 	gchar *script;
@@ -692,8 +766,9 @@ int main(int argc, char *argv[]) {
 	int i;
 	Arg arg;
 
+	progname = argv[0];
 	/* command line args */
-	for(i = 1, arg.v = NULL; i < argc; i++) {
+	for(i = 1, arg.v = NULL; i < argc && argv[i][0] == '-'; i++) {
 		if(!strcmp(argv[i], "-x"))
 			showxid = TRUE;
 		else if(!strcmp(argv[i], "-e")) {
@@ -702,15 +777,17 @@ int main(int argc, char *argv[]) {
 			else
 				usage();
 		}
-		else if(!strcmp(argv[i], "--"))
+		else if(!strcmp(argv[i], "--")) {
+			i++;
 			break;
+		}
 		else if(!strcmp(argv[i], "-v"))
 			die("surf-"VERSION", © 2009 surf engineers, see LICENSE for details\n");
-		else if(argv[i][0] == '-')
-			usage();
 		else
-			arg.v = argv[i];
+			usage();
 	}
+	if(i < argc)
+		arg.v = argv[i];
 	setup();
 	newclient();
 	if(arg.v) {
