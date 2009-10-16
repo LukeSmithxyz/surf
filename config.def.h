@@ -37,7 +37,7 @@ static Key keys[] = {
 
 static Item items[] = {
     { "New Window",     newwindow, { .v = NULL } },
-    { "Reload",         reload,   { .b = FALSE } },
+    { "Reload",         reload,    { .b = FALSE } },
     { "Stop",           stop,      { 0 } },
     { "<===",           navigate,  { .i = -1 } },
     { "===>",           navigate,  { .i = +1 } },
