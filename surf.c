@@ -117,7 +117,7 @@ static void showsearch(Client *c, const Arg *arg);
 static void showurl(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView* view, WebKitWebFrame* frame, const gchar* title, Client *c);
-static gboolean unfocusbar(GtkWidget *w, GdkEventFocus *e, Client *c);
+static gboolean focusview(GtkWidget *w, GdkEventFocus *e, Client *c);
 static void usage(void);
 static void update(Client *c);
 static void updatewinid(Client *c);
@@ -419,16 +419,15 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
 	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
 	g_signal_connect_after(session, "request-started", G_CALLBACK(request), c);
+	g_signal_connect(G_OBJECT(c->view), "focus-in-event", G_CALLBACK(focusview), c);
 
 	/* urlbar */
 	c->urlbar = gtk_entry_new();
 	gtk_entry_set_has_frame(GTK_ENTRY(c->urlbar), FALSE);
-	g_signal_connect(G_OBJECT(c->urlbar), "focus-out-event", G_CALLBACK(unfocusbar), c);
 
 	/* searchbar */
 	c->searchbar = gtk_entry_new();
 	gtk_entry_set_has_frame(GTK_ENTRY(c->searchbar), FALSE);
-	g_signal_connect(G_OBJECT(c->searchbar), "focus-out-event", G_CALLBACK(unfocusbar), c);
 
 	/* indicator */
 	c->indicator = gtk_drawing_area_new();
@@ -508,7 +507,6 @@ createwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c) {
 	return n->view;
 }
 
- 
 void
 pasteurl(GtkClipboard *clipboard, const gchar *text, gpointer d) {
 	Arg arg = {.v = text };
@@ -707,7 +705,7 @@ titlechange(WebKitWebView *v, WebKitWebFrame *f, const gchar *t, Client *c) {
 }
 
 gboolean
-unfocusbar(GtkWidget *w, GdkEventFocus *e, Client *c) {
+focusview(GtkWidget *w, GdkEventFocus *e, Client *c) {
 	hidesearch(c, NULL);
 	hideurl(c, NULL);
 	return FALSE;
