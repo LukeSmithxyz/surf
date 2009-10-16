@@ -11,10 +11,10 @@ static Key keys[] = {
     /* modifier	            keyval      function    arg             Focus */
     { MODKEY|GDK_SHIFT_MASK,GDK_r,      reload,     { .b = TRUE },  Any },
     { MODKEY,               GDK_r,      reload,     { .b = FALSE }, Any },
-    { MODKEY,               GDK_g,      showurl,    { 0 },          Any },
+    { MODKEY,               GDK_g,      showuri,    { 0 },          Any },
     { MODKEY,               GDK_slash,  showsearch, { 0 },          Any },
     { 0,                    GDK_Escape, hidesearch, { 0 },          Any },
-    { 0,                    GDK_Escape, hideurl,    { 0 },          Any },
+    { 0,                    GDK_Escape, hideuri,    { 0 },          Any },
     { MODKEY|GDK_SHIFT_MASK,GDK_p,      print,      { 0 },          Any },
     { MODKEY,               GDK_p,      clipboard,  { .b = TRUE },  Browser },
     { MODKEY,               GDK_y,      clipboard,  { .b = FALSE }, Browser },
@@ -31,13 +31,15 @@ static Key keys[] = {
     { MODKEY|GDK_SHIFT_MASK,GDK_n,      searchtext, { .b = FALSE }, Browser|SearchBar },
     { 0,                    GDK_Return, searchtext, { .b = TRUE },  SearchBar },
     { GDK_SHIFT_MASK,       GDK_Return, searchtext, { .b = FALSE }, SearchBar },
-    { 0,                    GDK_Return, loaduri,    { .v = NULL },  UrlBar },
-    { 0,                    GDK_Return, hideurl,    { 0 },          UrlBar },
+    { 0,                    GDK_Return, loaduri,    { .v = NULL },  UriBar },
+    { 0,                    GDK_Return, hideuri,    { 0 },          UriBar },
 };
 
-static Context context[] = {
-    { "<===",           navigate,  { .i = -1 } }
-    { "===>",           navigate,  { .i = -1 } }
-    { "Stop",           navigate,  { .i = -1 } }
-    { "Open",           navigate,  { .i = -1 } }
+static Item items[] = {
+    { "Open",           loaduri,   { .v = NULL } },
+    { "New Window",     newwindow, { .v = NULL } },
+    { "Stop",           stop,      { 0 } },
+    { "<===",           navigate,  { .i = -1 } },
+    { "===>",           navigate,  { .i = +1 } },
+    { "suckless",       newwindow, { .v = (char *)"http://suckless.org" } },
 };
