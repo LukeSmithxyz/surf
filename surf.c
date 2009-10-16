@@ -31,9 +31,10 @@ union Arg {
 
 typedef struct Client {
 	GtkWidget *win, *scroll, *vbox, *uribar, *searchbar, *indicator;
+	GtkWidget **items;
 	WebKitWebView *view;
 	WebKitDownload *download;
-	gchar *title, *linkhover;
+	char *title, *linkhover;
 	gint progress;
 	struct Client *next;
 } Client;
@@ -45,10 +46,10 @@ typedef struct {
 } Item;
 
 typedef struct Cookie {
-	gchar *name;
-	gchar *value;
-	gchar *domain;
-	gchar *path;
+	char *name;
+	char *value;
+	char *domain;
+	char *path;
 	struct Cookie *next;
 } Cookie;
 
@@ -76,29 +77,29 @@ static Client *clients = NULL;
 static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static gboolean ignore_once = FALSE;
-static gchar winid[64];
-static gchar *progname;
+static char winid[64];
+static char *progname;
 
-static const gchar *autouri(Client *c);
-static gchar *buildpath(const gchar *path);
+static const char *autouri(Client *c);
+static char *buildpath(const char *path);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
 static void context(WebKitWebView *v, GtkMenu *m, Client *c);
-static gchar *copystr(gchar **str, const gchar *src);
+static char *copystr(char **str, const char *src);
 static gboolean decidewindow(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r, WebKitWebNavigationAction *n, WebKitWebPolicyDecision *p, Client *c);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
-static void die(gchar *str);
+static void die(char *str);
 static void download(WebKitDownload *o, GParamSpec *pspec, Client *c);
 static void drawindicator(Client *c);
 static gboolean exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c);
 static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
-static gchar *geturi(Client *c);
+static char *geturi(Client *c);
 static void hidesearch(Client *c, const Arg *arg);
 static void hideuri(Client *c, const Arg *arg);
 static void itemclick(GtkMenuItem *mi, Client *c);
 static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
-static void linkhover(WebKitWebView *v, const gchar* t, const gchar* l, Client *c);
+static void linkhover(WebKitWebView *v, const char* t, const char* l, Client *c);
 static void loadcommit(WebKitWebView *v, WebKitWebFrame *f, Client *c);
 static void loadstart(WebKitWebView *v, WebKitWebFrame *f, Client *c);
 static void loaduri(Client *c, const Arg *arg);
@@ -106,7 +107,7 @@ static void navigate(Client *c, const Arg *arg);
 static Client *newclient(void);
 static void newwindow(Client *c, const Arg *arg);
 static WebKitWebView *createwindow(WebKitWebView *v, WebKitWebFrame *f, Client *c);
-static void pasteuri(GtkClipboard *clipboard, const gchar *text, gpointer d);
+static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
 static void print(Client *c, const Arg *arg);
 static void proccookies(SoupMessage *m, Client *c);
@@ -115,17 +116,17 @@ static void request(SoupSession *s, SoupMessage *m, Client *c);
 static void reload(Client *c, const Arg *arg);
 static void rereadcookies(void);
 static void sigchld(int unused);
-static void setcookie(gchar *name, gchar *val, gchar *dom, gchar *path, long exp);
+static void setcookie(char *name, char *val, char *dom, char *path, long exp);
 static void setup(void);
 static void spawn(Client *c, const Arg *arg);
-static void titlechange(WebKitWebView *v, WebKitWebFrame* frame, const gchar* title, Client *c);
+static void titlechange(WebKitWebView *v, WebKitWebFrame* frame, const char* title, Client *c);
 static void scroll(Client *c, const Arg *arg);
 static void searchtext(Client *c, const Arg *arg);
 static void source(Client *c, const Arg *arg);
 static void showsearch(Client *c, const Arg *arg);
 static void showuri(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
-static void titlechange(WebKitWebView *v, WebKitWebFrame* frame, const gchar* title, Client *c);
+static void titlechange(WebKitWebView *v, WebKitWebFrame* frame, const char* title, Client *c);
 static gboolean focusview(GtkWidget *w, GdkEventFocus *e, Client *c);
 static void usage(void);
 static void update(Client *c);
@@ -136,7 +137,7 @@ static void zoom(Client *c, const Arg *arg);
 /* configuration, allows nested code to access above variables */
 #include "config.h"
 
-const gchar *
+const char *
 autouri(Client *c) {
 	if(GTK_WIDGET_HAS_FOCUS(c->uribar))
 		return gtk_entry_get_text(GTK_ENTRY(c->uribar));
@@ -145,9 +146,9 @@ autouri(Client *c) {
 	return NULL;
 }
 
-gchar *
-buildpath(const gchar *path) {
-	gchar *apath, *p;
+char *
+buildpath(const char *path) {
+	char *apath, *p;
 	FILE *f;
 
 	/* creating directory */
@@ -189,22 +190,24 @@ clipboard(Client *c, const Arg *arg) {
 void
 context(WebKitWebView *v, GtkMenu *m, Client *c) {
 	int i;
-	GtkWidget *item;
+	GtkContainer *parent;
 
 	gtk_widget_hide_all(GTK_WIDGET(m));
 	gtk_widget_show(GTK_WIDGET(m));
 	for(i = 0; i < LENGTH(items); i++) {
-		item = gtk_menu_item_new_with_label(items[i].label);
-		gtk_menu_shell_append(GTK_MENU_SHELL(m), item);
-		g_signal_connect(G_OBJECT(item), "activate",
+		parent = GTK_CONTAINER(gtk_widget_get_parent(c->items[i]));
+		if(parent)
+			gtk_container_remove(parent, c->items[i]);
+		gtk_menu_shell_append(GTK_MENU_SHELL(m), c->items[i]);
+		g_signal_connect(G_OBJECT(c->items[i]), "activate",
 				G_CALLBACK(itemclick), c);
-		gtk_widget_show(item);
+		gtk_widget_show(c->items[i]);
 	}
 }
 
-gchar *
-copystr(gchar **str, const gchar *src) {
-	gchar *tmp;
+char *
+copystr(char **str, const char *src) {
+	char *tmp;
 	tmp = g_strdup(src);
 
 	if(str && *str) {
@@ -216,6 +219,7 @@ copystr(gchar **str, const gchar *src) {
 
 void
 destroyclient(Client *c) {
+	int i;
 	Client *p;
 
 	gtk_widget_destroy(GTK_WIDGET(c->view));
@@ -224,6 +228,10 @@ destroyclient(Client *c) {
 	gtk_widget_destroy(c->searchbar);
 	gtk_widget_destroy(c->vbox);
 	gtk_widget_destroy(c->win);
+	for(i = 0; i < LENGTH(items); i++)
+		gtk_widget_destroy(c->items[i]);
+	free(c->items);
+
 	for(p = clients; p && p->next != c; p = p->next);
 	if(p)
 		p->next = c->next;
@@ -252,7 +260,7 @@ destroywin(GtkWidget* w, Client *c) {
 }
 
 void
-die(gchar *str) {
+die(char *str) {
 	fputs(str, stderr);
 	exit(EXIT_FAILURE);
 }
@@ -260,7 +268,7 @@ die(gchar *str) {
 void
 drawindicator(Client *c) {
 	gint width;
-	gchar *uri;
+	char *uri;
 	GtkWidget *w;
 	GdkGC *gc;
 	GdkColor fg;
@@ -299,8 +307,8 @@ download(WebKitDownload *o, GParamSpec *pspec, Client *c) {
 
 gboolean
 initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
-	const gchar *filename;
-	gchar *uri, *html;
+	const char *filename;
+	char *uri, *html;
 
 	stop(c, NULL);
 	c->download = o;
@@ -322,11 +330,11 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	return TRUE;
 }
 
-gchar *
+char *
 geturi(Client *c) {
-	gchar *uri;
+	char *uri;
 
-	if(!(uri = (gchar *)webkit_web_view_get_uri(c->view)))
+	if(!(uri = (char *)webkit_web_view_get_uri(c->view)))
 		uri = copystr(NULL, "about:blank");
 	return uri;
 }
@@ -346,7 +354,7 @@ hideuri(Client *c, const Arg *arg) {
 void
 itemclick(GtkMenuItem *mi, Client *c) {
 	int i;
-	const gchar *label;
+	const char *label;
 
 	label = gtk_menu_item_get_label(mi);
 	for(i = 0; i < LENGTH(items); i++)
@@ -381,7 +389,7 @@ keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 }
 
 void
-linkhover(WebKitWebView *v, const gchar* t, const gchar* l, Client *c) {
+linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
 	if(l)
 		c->linkhover = copystr(&c->linkhover, l);
 	else if(c->linkhover) {
@@ -393,7 +401,7 @@ linkhover(WebKitWebView *v, const gchar* t, const gchar* l, Client *c) {
 
 void
 loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
-	gchar *uri;
+	char *uri;
 
 	ignore_once = TRUE;
 	uri = geturi(c);
@@ -410,8 +418,8 @@ loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
 
 void
 loaduri(Client *c, const Arg *arg) {
-	gchar *u;
-	const gchar *uri = (gchar *)arg->v;
+	char *u;
+	const char *uri = (char *)arg->v;
 
 	if(!uri)
 		uri = autouri(c);
@@ -434,9 +442,10 @@ navigate(Client *c, const Arg *arg) {
 
 Client *
 newclient(void) {
+	int i;
 	Client *c;
 	WebKitWebSettings *settings;
-	gchar *uri;
+	char *uri;
 
 	if(!(c = calloc(1, sizeof(Client))))
 		die("Cannot malloc!\n");
@@ -451,6 +460,14 @@ newclient(void) {
 	gtk_window_set_default_size(GTK_WINDOW(c->win), 800, 600);
 	g_signal_connect(G_OBJECT(c->win), "destroy", G_CALLBACK(destroywin), c);
 	g_signal_connect(G_OBJECT(c->win), "key-press-event", G_CALLBACK(keypress), c);
+
+	if(!(c->items = calloc(1, sizeof(GtkWidget *) * LENGTH(items))))
+		die("Cannot malloc!\n");
+
+	/* contextmenu */
+	for(i = 0; i < LENGTH(items); i++)
+		c->items[i] = gtk_menu_item_new_with_label(items[i].label);
+
 
 	/* VBox */
 	c->vbox = gtk_vbox_new(FALSE, 0);
@@ -534,9 +551,9 @@ newclient(void) {
 void
 newwindow(Client *c, const Arg *arg) {
 	guint i = 0;
-	const gchar *cmd[7], *uri;
+	const char *cmd[7], *uri;
 	const Arg a = { .v = (void *)cmd };
-	gchar tmp[64];
+	char tmp[64];
 
 	cmd[i++] = progname;
 	if(embed) {
@@ -562,7 +579,7 @@ createwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c) {
 }
 
 void
-pasteuri(GtkClipboard *clipboard, const gchar *text, gpointer d) {
+pasteuri(GtkClipboard *clipboard, const char *text, gpointer d) {
 	Arg arg = {.v = text };
 	if(text != NULL)
 		loaduri((Client *) d, &arg);
@@ -663,7 +680,7 @@ sigchld(int unused) {
 }
 
 void
-setcookie(gchar *name, gchar *val, gchar *dom, gchar *path, long exp) {
+setcookie(char *name, char *val, char *dom, char *path, long exp) {
 
 }
 
@@ -712,7 +729,7 @@ source(Client *c, const Arg *arg) {
 
 void
 searchtext(Client *c, const Arg *arg) {
-	const gchar *text;
+	const char *text;
 	gboolean forward = *(gboolean *)arg;
 	text = gtk_entry_get_text(GTK_ENTRY(c->searchbar));
 	webkit_web_view_search_text(c->view, text, FALSE, forward, TRUE);
@@ -721,7 +738,7 @@ searchtext(Client *c, const Arg *arg) {
 
 void
 showuri(Client *c, const Arg *arg) {
-	gchar *uri;
+	char *uri;
 
 	hidesearch(c, NULL);
 	uri = geturi(c);
@@ -745,15 +762,15 @@ spawn(Client *c, const Arg *arg) {
 		if(dpy)
 			close(ConnectionNumber(dpy));
 		setsid();
-		execvp(((gchar **)arg->v)[0], (gchar **)arg->v);
-		fprintf(stderr, "tabbed: execvp %s", ((gchar **)arg->v)[0]);
+		execvp(((char **)arg->v)[0], (char **)arg->v);
+		fprintf(stderr, "tabbed: execvp %s", ((char **)arg->v)[0]);
 		perror(" failed");
 		exit(0);
 	}
 }
 
 void
-titlechange(WebKitWebView *v, WebKitWebFrame *f, const gchar *t, Client *c) {
+titlechange(WebKitWebView *v, WebKitWebFrame *f, const char *t, Client *c) {
 	c->title = copystr(&c->title, t);
 	update(c);
 }
@@ -773,7 +790,7 @@ usage(void) {
 
 void
 update(Client *c) {
-	gchar *t;
+	char *t;
 
 	if(c->progress != 100)
 		t = g_strdup_printf("%s [%i%%]", c->title, c->progress);
@@ -796,7 +813,7 @@ updatewinid(Client *c) {
 void
 windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObjectRef win, Client *c) {
 	JSStringRef jsscript;
-	gchar *script;
+	char *script;
 	JSValueRef exception = NULL;
 	GError *error;
 	

@@ -1,11 +1,11 @@
 /* modifier 0 means no modifier */
-static gchar *useragent      = "Mozilla/5.0 (X11; U; Linux; en-us) AppleWebKit/531.2+ (KHTML, like Gecko, surf-"VERSION") Safari/531.2+";
-static gchar *progress       = "#FF0000";
-static gchar *progress_trust = "#00FF00";
-static gchar *stylefile      = ".surf/style.css";
-static gchar *scriptfile     = ".surf/script.js";
-static gchar *cookiefile     = ".surf/cookie.txt";
-static gchar *dldir          = ".surf/dl";
+static char *useragent      = "Mozilla/5.0 (X11; U; Linux; en-us) AppleWebKit/531.2+ (KHTML, like Gecko, surf-"VERSION") Safari/531.2+";
+static char *progress       = "#FF0000";
+static char *progress_trust = "#00FF00";
+static char *stylefile      = ".surf/style.css";
+static char *scriptfile     = ".surf/script.js";
+static char *cookiefile     = ".surf/cookie.txt";
+static char *dldir          = ".surf/dl";
 #define MODKEY GDK_CONTROL_MASK
 static Key keys[] = {
     /* modifier	            keyval      function    arg             Focus */
@@ -36,10 +36,9 @@ static Key keys[] = {
 };
 
 static Item items[] = {
-    { "Open",           loaduri,   { .v = NULL } },
     { "New Window",     newwindow, { .v = NULL } },
+    { "Reload",         reload,   { .b = FALSE } },
     { "Stop",           stop,      { 0 } },
     { "<===",           navigate,  { .i = -1 } },
     { "===>",           navigate,  { .i = +1 } },
-    { "suckless",       newwindow, { .v = (char *)"http://suckless.org" } },
 };
