@@ -82,6 +82,7 @@ static gchar *progname;
 static gchar *buildpath(const gchar *path);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
+static void context(WebKitWebView *v, GtkMenu *m, Client *c);
 static gchar *copystr(gchar **str, const gchar *src);
 static gboolean decidewindow(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r, WebKitWebNavigationAction *n, WebKitWebPolicyDecision *p, Client *c);
 static void destroyclient(Client *c);
@@ -101,7 +102,7 @@ static void loadstart(WebKitWebView *v, WebKitWebFrame *f, Client *c);
 static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
 static Client *newclient(void);
-static void newproc(const gchar *url);
+static void newwindow(Client *c, const Arg *arg);
 static WebKitWebView *createwindow(WebKitWebView *v, WebKitWebFrame *f, Client *c);
 static void pasteurl(GtkClipboard *clipboard, const gchar *text, gpointer d);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
@@ -174,6 +175,12 @@ clipboard(Client *c, const Arg *arg) {
 		gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), webkit_web_view_get_uri(c->view), -1);
 }
 
+void
+context(WebKitWebView *v, GtkMenu *m, Client *c) {
+
+	//gtk_menu_shell_append  ((GtkMenuShell *)(menu),(child))
+}
+
 gchar *
 copystr(gchar **str, const gchar *src) {
 	gchar *tmp;
@@ -208,9 +215,11 @@ destroyclient(Client *c) {
 
 gboolean
 decidewindow(WebKitWebView *view, WebKitWebFrame *f, WebKitNetworkRequest *r, WebKitWebNavigationAction *n, WebKitWebPolicyDecision *p, Client *c) {
+	Arg arg;
 	if(webkit_web_navigation_action_get_reason(n) == WEBKIT_WEB_NAVIGATION_REASON_LINK_CLICKED) {
 		webkit_web_policy_decision_ignore(p);
-		newproc(webkit_network_request_get_uri(r));
+		arg.v = (void *)webkit_network_request_get_uri(r);
+		newwindow(NULL, &arg);
 		return TRUE;
 	}
 	return FALSE;
@@ -426,6 +435,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
 	g_signal_connect_after(session, "request-started", G_CALLBACK(request), c);
 	g_signal_connect(G_OBJECT(c->view), "focus-in-event", G_CALLBACK(focusview), c);
+	g_signal_connect(G_OBJECT(c->view), "populate-popup", G_CALLBACK(context), c);
 
 	/* urlbar */
 	c->urlbar = gtk_entry_new();
@@ -484,10 +494,10 @@ newclient(void) {
 }
 
 void
-newproc(const gchar *url) {
+newwindow(Client *c, const Arg *arg) {
 	guint i = 0, urlindex;
 	const gchar *cmd[7];
-	const Arg arg = { .v = (void *)cmd };
+	const Arg a = { .v = (void *)cmd };
 	gchar tmp[64];
 
 	cmd[i++] = progname;
@@ -501,10 +511,10 @@ newproc(const gchar *url) {
 	}
 	cmd[i++] = "--";
 	urlindex = i;
-	if(url)
-		cmd[i++] = url;
+	if(arg->v)
+		cmd[i++] = (char *)arg->v;
 	cmd[i++] = NULL;
-	spawn(NULL, &arg);
+	spawn(NULL, &a);
 }
 
 WebKitWebView *

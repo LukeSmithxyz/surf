@@ -35,3 +35,9 @@ static Key keys[] = {
     { 0,                    GDK_Return, hideurl,    { 0 },          UrlBar },
 };
 
+static Context context[] = {
+    { "<===",           navigate,  { .i = -1 } }
+    { "===>",           navigate,  { .i = -1 } }
+    { "Stop",           navigate,  { .i = -1 } }
+    { "Open",           navigate,  { .i = -1 } }
+};
