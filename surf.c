@@ -92,6 +92,7 @@ static void itemclick(GtkMenuItem *mi, Client *c);
 static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
 static void linkhover(WebKitWebView *v, const char* t, const char* l, Client *c);
 static void loadcommit(WebKitWebView *v, WebKitWebFrame *f, Client *c);
+static void loadfinished(WebKitWebView *v, WebKitWebFrame *f, Client *c);
 static void loadstart(WebKitWebView *v, WebKitWebFrame *f, Client *c);
 static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
@@ -103,10 +104,10 @@ static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
 static void print(Client *c, const Arg *arg);
 static void progresschange(WebKitWebView *v, gint p, Client *c);
 static void reload(Client *c, const Arg *arg);
+static void reloadcookie();
 static void sigchld(int unused);
 static void setup(void);
 static void spawn(Client *c, const Arg *arg);
-static void titlechange(WebKitWebView *v, WebKitWebFrame* frame, const char* title, Client *c);
 static void scroll(Client *c, const Arg *arg);
 static void searchtext(Client *c, const Arg *arg);
 static void source(Client *c, const Arg *arg);
@@ -398,7 +399,13 @@ loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
 }
 
 void
+loadfinished(WebKitWebView *v, WebKitWebFrame *f, Client *c) {
+	reloadcookie();
+}
+
+void
 loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
+	reloadcookie();
 	c->progress = 0;
 	update(c);
 }
@@ -468,6 +475,7 @@ newclient(void) {
 	c->view = WEBKIT_WEB_VIEW(webkit_web_view_new());
 	g_signal_connect(G_OBJECT(c->view), "title-changed", G_CALLBACK(titlechange), c);
 	g_signal_connect(G_OBJECT(c->view), "load-progress-changed", G_CALLBACK(progresschange), c);
+	g_signal_connect(G_OBJECT(c->view), "load-finished", G_CALLBACK(loadfinished), c);
 	g_signal_connect(G_OBJECT(c->view), "load-committed", G_CALLBACK(loadcommit), c);
 	g_signal_connect(G_OBJECT(c->view), "load-started", G_CALLBACK(loadstart), c);
 	g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
@@ -618,6 +626,16 @@ reload(Client *c, const Arg *arg) {
 	else
 		 webkit_web_view_reload(c->view);
 }
+
+void
+reloadcookie(void) {
+	SoupSession *s;
+
+	/* This forces the cookie to be written to hdd */
+	s = webkit_get_default_session();
+	soup_session_remove_feature(s, SOUP_SESSION_FEATURE(cookiejar));
+	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar));
+} 
 
 void
 scroll(Client *c, const Arg *arg) {
