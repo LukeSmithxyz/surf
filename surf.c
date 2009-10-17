@@ -187,8 +187,6 @@ context(WebKitWebView *v, GtkMenu *m, Client *c) {
 		if(parent)
 			gtk_container_remove(parent, c->items[i]);
 		gtk_menu_shell_append(GTK_MENU_SHELL(m), c->items[i]);
-		g_signal_connect(G_OBJECT(c->items[i]), "activate",
-				G_CALLBACK(itemclick), c);
 		gtk_widget_show(c->items[i]);
 	}
 }
@@ -459,8 +457,11 @@ newclient(void) {
 		die("Cannot malloc!\n");
 
 	/* contextmenu */
-	for(i = 0; i < LENGTH(items); i++)
+	for(i = 0; i < LENGTH(items); i++) {
 		c->items[i] = gtk_menu_item_new_with_label(items[i].label);
+		g_signal_connect(G_OBJECT(c->items[i]), "activate",
+				G_CALLBACK(itemclick), c);
+	}
 
 
 	/* VBox */
