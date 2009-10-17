@@ -45,14 +45,6 @@ typedef struct {
 	const Arg arg;
 } Item;
 
-typedef struct Cookie {
-	char *name;
-	char *value;
-	char *domain;
-	char *path;
-	struct Cookie *next;
-} Cookie;
-
 typedef enum {
 	Browser = 0x0001,
 	SearchBar = 0x0010,
@@ -73,7 +65,6 @@ static Atom uriprop;
 static SoupCookieJar *cookiejar;
 static SoupSession *session;
 static Client *clients = NULL;
-/*static Cookie *cookies = NULL;*/
 static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static gboolean ignore_once = FALSE;
@@ -110,13 +101,9 @@ static WebKitWebView *createwindow(WebKitWebView *v, WebKitWebFrame *f, Client *
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
 static void print(Client *c, const Arg *arg);
-static void proccookies(SoupMessage *m, Client *c);
 static void progresschange(WebKitWebView *v, gint p, Client *c);
-static void request(SoupSession *s, SoupMessage *m, Client *c);
 static void reload(Client *c, const Arg *arg);
-static void rereadcookies(void);
 static void sigchld(int unused);
-static void setcookie(char *name, char *val, char *dom, char *path, long exp);
 static void setup(void);
 static void spawn(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *v, WebKitWebFrame* frame, const char* title, Client *c);
@@ -488,7 +475,6 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(decidewindow), c);
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
 	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
-	g_signal_connect_after(session, "request-started", G_CALLBACK(request), c);
 	g_signal_connect(G_OBJECT(c->view), "focus-in-event", G_CALLBACK(focusview), c);
 	g_signal_connect(G_OBJECT(c->view), "populate-popup", G_CALLBACK(context), c);
 
@@ -619,30 +605,9 @@ print(Client *c, const Arg *arg) {
 }
 
 void
-proccookies(SoupMessage *m, Client *c) {
-	GSList *l;
-	SoupCookie *co;
-	long t;
-
-	rereadcookies();
-	for (l = soup_cookies_from_response(m); l; l = l->next){
-		co = (SoupCookie *)l->data;
-		t = co->expires ?  soup_date_to_time_t(co->expires) : 0;
-		setcookie(co->name, co->value, co->domain, co->value, t);
-	}
-	g_slist_free(l);
-}
-
-void
 progresschange(WebKitWebView *v, gint p, Client *c) {
 	c->progress = p;
 	update(c);
-}
-
-void
-request(SoupSession *s, SoupMessage *m, Client *c) {
-	soup_message_add_header_handler(m, "got-headers", "Set-Cookie",
-			G_CALLBACK(proccookies), c);
 }
 
 void
@@ -652,11 +617,6 @@ reload(Client *c, const Arg *arg) {
 		 webkit_web_view_reload_bypass_cache(c->view);
 	else
 		 webkit_web_view_reload(c->view);
-}
-
-void
-rereadcookies(void) {
-
 }
 
 void
@@ -677,11 +637,6 @@ sigchld(int unused) {
 	if(signal(SIGCHLD, sigchld) == SIG_ERR)
 		die("Can't install SIGCHLD handler");
 	while(0 < waitpid(-1, NULL, WNOHANG));
-}
-
-void
-setcookie(char *name, char *val, char *dom, char *path, long exp) {
-
 }
 
 void
