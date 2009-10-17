@@ -630,8 +630,22 @@ reload(Client *c, const Arg *arg) {
 
 void
 reloadcookie(void) {
+	GSList *p, *l;
+	SoupCookie *c;
 	SoupSession *s;
+	SoupDate *e;
 
+	e = soup_date_new_from_time_t(time(NULL) + sessiontime);
+	for(l = p = soup_cookie_jar_all_cookies(cookiejar); p; p = p->next) {
+		c = (SoupCookie *)l->data;
+		if(c->expires == NULL) {
+			soup_cookie_set_expires(c, e);
+			soup_cookie_jar_add_cookie(cookiejar,
+					soup_cookie_copy(c));
+		}
+	}
+	soup_cookies_free(l);
+	soup_date_free(e);
 	/* This forces the cookie to be written to hdd */
 	s = webkit_get_default_session();
 	soup_session_remove_feature(s, SOUP_SESSION_FEATURE(cookiejar));
@@ -670,7 +684,7 @@ setup(void) {
 
 	dpy = GDK_DISPLAY();
 	session = webkit_get_default_session();
-	uriprop = XInternAtom(dpy, "_SURF_uri", False);
+	uriprop = XInternAtom(dpy, "_SURF_URI", False);
 
 	/* create dirs and files */
 	cookiefile = buildpath(cookiefile);

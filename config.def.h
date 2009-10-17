@@ -4,8 +4,10 @@ static char *progress       = "#FF0000";
 static char *progress_trust = "#00FF00";
 static char *stylefile      = ".surf/style.css";
 static char *scriptfile     = ".surf/script.js";
-static char *cookiefile     = ".surf/cookie.txt";
+static char *cookiefile     = ".surf/cookies.txt";
 static char *dldir          = ".surf/dl";
+static time_t sessiontime   = 3600;
+
 #define MODKEY GDK_CONTROL_MASK
 static Key keys[] = {
     /* modifier	            keyval      function    arg             Focus */
