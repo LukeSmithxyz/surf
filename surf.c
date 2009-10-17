@@ -476,7 +476,6 @@ newclient(void) {
 				G_CALLBACK(itemclick), c);
 	}
 
-
 	/* VBox */
 	c->vbox = gtk_vbox_new(FALSE, 0);
 
