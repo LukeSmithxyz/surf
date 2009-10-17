@@ -73,6 +73,7 @@ static char *progname;
 
 static const char *autouri(Client *c);
 static char *buildpath(const char *path);
+static void changecookie(SoupCookieJar *jar, SoupCookie *o, SoupCookie *n, gpointer p);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
 static void context(WebKitWebView *v, GtkMenu *m, Client *c);
@@ -153,6 +154,18 @@ buildpath(const char *path) {
 	if((f = g_fopen(apath, "a")))
 		fclose(f);
 	return apath;
+}
+
+void
+changecookie(SoupCookieJar *jar, SoupCookie *oc, SoupCookie *c, gpointer p) {
+	SoupDate *e;
+
+	if(c && c->expires == NULL) {
+		e = soup_date_new_from_time_t(time(NULL) + sessiontime);
+		c = soup_cookie_copy(c);
+		soup_cookie_set_expires(c, e);
+		soup_cookie_jar_add_cookie(cookiejar, c);
+	}
 }
 
 void
@@ -630,22 +643,8 @@ reload(Client *c, const Arg *arg) {
 
 void
 reloadcookie(void) {
-	GSList *p, *l;
-	SoupCookie *c;
 	SoupSession *s;
-	SoupDate *e;
 
-	e = soup_date_new_from_time_t(time(NULL) + sessiontime);
-	for(l = p = soup_cookie_jar_all_cookies(cookiejar); p; p = p->next) {
-		c = (SoupCookie *)l->data;
-		if(c->expires == NULL) {
-			soup_cookie_set_expires(c, e);
-			soup_cookie_jar_add_cookie(cookiejar,
-					soup_cookie_copy(c));
-		}
-	}
-	soup_cookies_free(l);
-	soup_date_free(e);
 	/* This forces the cookie to be written to hdd */
 	s = webkit_get_default_session();
 	soup_session_remove_feature(s, SOUP_SESSION_FEATURE(cookiejar));
@@ -696,6 +695,7 @@ setup(void) {
 	s = webkit_get_default_session();
 	cookiejar = soup_cookie_jar_text_new(cookiefile, FALSE);
 	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar));
+	g_signal_connect(cookiejar, "changed", G_CALLBACK(changecookie), NULL);
 }
 
 void
