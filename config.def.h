@@ -38,9 +38,11 @@ static Key keys[] = {
 };
 
 static Item items[] = {
+    { "Back",        navigate,  { .i = -1 } },
+    { "Forward",     navigate,  { .i = +1 } },
     { "New Window",     newwindow, { .v = NULL } },
     { "Reload",         reload,    { .b = FALSE } },
     { "Stop",           stop,      { 0 } },
-    { "<===",           navigate,  { .i = -1 } },
-    { "===>",           navigate,  { .i = +1 } },
+    { "Paste URI",      clipboard, { .b = TRUE } },
+    { "Copy URI",       clipboard, { .b = FALSE } },
 };
