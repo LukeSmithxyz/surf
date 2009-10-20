@@ -237,6 +237,7 @@ destroyclient(Client *c) {
 	gtk_widget_destroy(c->uribar);
 	gtk_widget_destroy(c->searchbar);
 	gtk_widget_destroy(c->vbox);
+	gtk_widget_destroy(c->indicator);
 	gtk_widget_destroy(c->win);
 	for(i = 0; i < LENGTH(items); i++)
 		gtk_widget_destroy(c->items[i]);
