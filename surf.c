@@ -24,17 +24,18 @@
 
 typedef union Arg Arg;
 union Arg {
-	const gboolean b;
-	const gint i;
+	gboolean b;
+	gint i;
 	const void *v;
 };
 
 typedef struct Client {
-	GtkWidget *win, *scroll, *vbox, *uribar, *searchbar, *indicator;
+	GtkWidget *win, *scroll, *vbox, *indicator;
 	GtkWidget **items;
 	WebKitWebView *view;
 	WebKitDownload *download;
 	char *title, *linkhover;
+	const char *uri, *needle;
 	gint progress;
 	struct Client *next;
 	gboolean zoomed;
@@ -46,23 +47,15 @@ typedef struct {
 	const Arg arg;
 } Item;
 
-typedef enum {
-	Browser = 0x0001,
-	SearchBar = 0x0010,
-	UriBar = 0x0100,
-	Any = ~0,
-} KeyFocus;
-
 typedef struct {
 	guint mod;
 	guint keyval;
 	void (*func)(Client *c, const Arg *arg);
 	const Arg arg;
-	KeyFocus focus;
 } Key;
 
 static Display *dpy;
-static Atom uriprop;
+static Atom uriprop, findprop;
 static SoupCookieJar *cookies;
 static SoupSession *session;
 static Client *clients = NULL;
@@ -73,7 +66,6 @@ static char winid[64];
 static char *progname;
 static gboolean lockcookie = FALSE;
 
-static const char *autouri(Client *c);
 static char *buildpath(const char *path);
 static void changecookie(SoupCookieJar *jar, SoupCookie *o, SoupCookie *n, gpointer p);
 static void cleanup(void);
@@ -87,10 +79,8 @@ static void die(char *str);
 static void download(WebKitDownload *o, GParamSpec *pspec, Client *c);
 static void drawindicator(Client *c);
 static gboolean exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c);
+static const char *getatom(Client *c, Atom a);
 static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
-static char *geturi(Client *c);
-static void hidesearch(Client *c, const Arg *arg);
-static void hideuri(Client *c, const Arg *arg);
 static void itemclick(GtkMenuItem *mi, Client *c);
 static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
 static void linkhover(WebKitWebView *v, const char* t, const char* l, Client *c);
@@ -109,16 +99,14 @@ static void reloadcookies();
 static void reload(Client *c, const Arg *arg);
 static void resize(GtkWidget *w, GtkAllocation *a, Client *c);
 static void sigchld(int unused);
+static void setatom(Client *c, Atom a, const char *v);
 static void setup(void);
 static void spawn(Client *c, const Arg *arg);
 static void scroll(Client *c, const Arg *arg);
-static void searchtext(Client *c, const Arg *arg);
+static void find(Client *c, const Arg *arg);
 static void source(Client *c, const Arg *arg);
-static void showsearch(Client *c, const Arg *arg);
-static void showuri(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *v, WebKitWebFrame* frame, const char* title, Client *c);
-static gboolean focusview(GtkWidget *w, GdkEventFocus *e, Client *c);
 static void usage(void);
 static void update(Client *c);
 static void updatewinid(Client *c);
@@ -127,15 +115,6 @@ static void zoom(Client *c, const Arg *arg);
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
-
-const char *
-autouri(Client *c) {
-	if(GTK_WIDGET_HAS_FOCUS(c->uribar))
-		return gtk_entry_get_text(GTK_ENTRY(c->uribar));
-	else if(c->linkhover)
-		return c->linkhover;
-	return NULL;
-}
 
 char *
 buildpath(const char *path) {
@@ -234,8 +213,6 @@ destroyclient(Client *c) {
 
 	gtk_widget_destroy(GTK_WIDGET(c->view));
 	gtk_widget_destroy(c->scroll);
-	gtk_widget_destroy(c->uribar);
-	gtk_widget_destroy(c->searchbar);
 	gtk_widget_destroy(c->vbox);
 	gtk_widget_destroy(c->indicator);
 	gtk_widget_destroy(c->win);
@@ -279,12 +256,12 @@ die(char *str) {
 void
 drawindicator(Client *c) {
 	gint width;
-	char *uri;
+	const char *uri;
 	GtkWidget *w;
 	GdkGC *gc;
 	GdkColor fg;
 
-	uri = geturi(c);
+	uri = getatom(c, uriprop);
 	w = c->indicator;
 	width = c->progress * w->allocation.width / 100;
 	gc = gdk_gc_new(w->window);
@@ -314,6 +291,25 @@ download(WebKitDownload *o, GParamSpec *pspec, Client *c) {
 		c->progress = (gint)(webkit_download_get_progress(c->download)*100);
 	}
 	update(c);
+}
+
+const char *
+getatom(Client *c, Atom a) {
+	static char buf[BUFSIZ];
+	Atom adummy;
+	int idummy;
+	unsigned long ldummy;
+	unsigned char *p = NULL;
+
+	XGetWindowProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window),
+			a, 0L, BUFSIZ, False, XA_STRING,
+			&adummy, &idummy, &ldummy, &ldummy, &p);
+	if(p)
+		strncpy(buf, (char *)p, LENGTH(buf)-1);
+	else
+		buf[0] = '\0';
+	XFree(p);
+	return buf;
 }
 
 gboolean
@@ -351,18 +347,6 @@ geturi(Client *c) {
 }
 
 void
-hidesearch(Client *c, const Arg *arg) {
-	gtk_widget_hide(c->searchbar);
-	gtk_widget_grab_focus(GTK_WIDGET(c->view));
-}
-
-void
-hideuri(Client *c, const Arg *arg) {
-	gtk_widget_hide(c->uribar);
-	gtk_widget_grab_focus(GTK_WIDGET(c->view));
-}
-
-void
 itemclick(GtkMenuItem *mi, Client *c) {
 	int i;
 	const char *label;
@@ -375,21 +359,12 @@ itemclick(GtkMenuItem *mi, Client *c) {
 
 gboolean
 keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
-	guint i, focus;
+	guint i;
 	gboolean processed = FALSE;
 
-	if(ev->type != GDK_KEY_PRESS)
-		return FALSE;
-	if(GTK_WIDGET_HAS_FOCUS(c->searchbar))
-		focus = SearchBar;
-	else if(GTK_WIDGET_HAS_FOCUS(c->uribar))
-		focus = UriBar;
-	else
-		focus = Browser;
 	updatewinid(c);
 	for(i = 0; i < LENGTH(keys); i++) {
-		if(focus & keys[i].focus
-				&& gdk_keyval_to_lower(ev->keyval) == keys[i].keyval
+		if(gdk_keyval_to_lower(ev->keyval) == keys[i].keyval
 				&& CLEANMASK(ev->state) == keys[i].mod
 				&& keys[i].func) {
 			keys[i].func(c, &(keys[i].arg));
@@ -412,14 +387,7 @@ linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
 
 void
 loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
-	char *uri;
-
-	ignore_once = TRUE;
-	uri = geturi(c);
-	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), uriprop,
-			XA_STRING, 8, PropModeReplace, (unsigned char *)uri,
-			strlen(uri) + 1);
-
+	setatom(c, uriprop, webkit_web_view_get_uri(c->view));
 	reloadcookies();
 }
 
@@ -434,10 +402,6 @@ loaduri(Client *c, const Arg *arg) {
 	char *u;
 	const char *uri = (char *)arg->v;
 
-	if(!uri)
-		uri = autouri(c);
-	if(!uri)
-		return;
 	u = g_strrstr(uri, "://") ? g_strdup(uri)
 		: g_strdup_printf("http://%s", uri);
 	webkit_web_view_load_uri(c->view, u);
@@ -504,16 +468,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(decidewindow), c);
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
 	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
-	g_signal_connect(G_OBJECT(c->view), "focus-in-event", G_CALLBACK(focusview), c);
 	g_signal_connect(G_OBJECT(c->view), "populate-popup", G_CALLBACK(context), c);
-
-	/* uribar */
-	c->uribar = gtk_entry_new();
-	gtk_entry_set_has_frame(GTK_ENTRY(c->uribar), FALSE);
-
-	/* searchbar */
-	c->searchbar = gtk_entry_new();
-	gtk_entry_set_has_frame(GTK_ENTRY(c->searchbar), FALSE);
 
 	/* indicator */
 	c->indicator = gtk_drawing_area_new();
@@ -525,18 +480,12 @@ newclient(void) {
 	gtk_container_add(GTK_CONTAINER(c->scroll), GTK_WIDGET(c->view));
 	gtk_container_add(GTK_CONTAINER(c->win), c->vbox);
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->scroll);
-	gtk_container_add(GTK_CONTAINER(c->vbox), c->searchbar);
-	gtk_container_add(GTK_CONTAINER(c->vbox), c->uribar);
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->indicator);
 
 	/* Setup */
-	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->uribar, FALSE, FALSE, 0, GTK_PACK_START);
-	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->searchbar, FALSE, FALSE, 0, GTK_PACK_START);
 	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->indicator, FALSE, FALSE, 0, GTK_PACK_START);
 	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->scroll, TRUE, TRUE, 0, GTK_PACK_START);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
-	gtk_widget_hide_all(c->searchbar);
-	gtk_widget_hide_all(c->uribar);
 	gtk_widget_show(c->vbox);
 	gtk_widget_show(c->indicator);
 	gtk_widget_show(c->scroll);
@@ -550,6 +499,7 @@ newclient(void) {
 	uri = g_strconcat("file://", stylefile, NULL);
 	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
 	g_free(uri);
+	setatom(c, findprop, "");
 
 	c->download = NULL;
 	c->title = NULL;
@@ -580,7 +530,7 @@ newwindow(Client *c, const Arg *arg) {
 		cmd[i++] = "-x";
 	}
 	cmd[i++] = "--";
-	uri = arg->v ? (char *)arg->v : autouri(c);
+	uri = arg->v ? (char *)arg->v : c->linkhover;
 	if(uri)
 		cmd[i++] = uri;
 	cmd[i++] = NULL;
@@ -604,23 +554,20 @@ GdkFilterReturn
 processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 	Client *c = (Client *)d;
 	XPropertyEvent *ev;
-	Atom adummy;
-	gint idummy;
-	unsigned long ldummy;
-	unsigned char *buf = NULL;
 	Arg arg;
 
 	if(((XEvent *)e)->type == PropertyNotify) {
 		ev = &((XEvent *)e)->xproperty;
-		if(ev->atom == uriprop && ev->state == PropertyNewValue) {
-			if(ignore_once)
-			       ignore_once = FALSE;
-			else {
-				XGetWindowProperty(dpy, ev->window, uriprop, 0L, BUFSIZ, False, XA_STRING,
-					&adummy, &idummy, &ldummy, &ldummy, &buf);
-				arg.v = buf;
+		if(ignore_once)
+			ignore_once = FALSE;
+		else if(ev->state == PropertyNewValue) {
+			if(ev->atom == uriprop) {
+				arg.v = getatom(c, uriprop);
 				loaduri(c, &arg);
-				XFree(buf);
+			}
+			else if(ev->atom == findprop) {
+				arg.b = TRUE;
+				find(c, &arg);
 			}
 			return GDK_FILTER_REMOVE;
 		}
@@ -699,6 +646,15 @@ sigchld(int unused) {
 }
 
 void
+setatom(Client *c, Atom a, const char *v) {
+	XSync(dpy, False);
+	ignore_once = TRUE;
+	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), a,
+			XA_STRING, 8, PropModeReplace, (unsigned char *)v,
+			strlen(v) + 1);
+}
+
+void
 setup(void) {
 	SoupSession *s;
 
@@ -711,6 +667,7 @@ setup(void) {
 	dpy = GDK_DISPLAY();
 	session = webkit_get_default_session();
 	uriprop = XInternAtom(dpy, "_SURF_URI", False);
+	findprop = XInternAtom(dpy, "_SURF_FIND", False);
 
 	/* create dirs and files */
 	cookiefile = buildpath(cookiefile);
@@ -727,13 +684,6 @@ setup(void) {
 }
 
 void
-showsearch(Client *c, const Arg *arg) {
-	hideuri(c, NULL);
-	gtk_widget_show(c->searchbar);
-	gtk_widget_grab_focus(c->searchbar);
-}
-
-void
 source(Client *c, const Arg *arg) {
 	Arg a = { .b = FALSE };
 	gboolean s;
@@ -744,23 +694,12 @@ source(Client *c, const Arg *arg) {
 }
 
 void
-searchtext(Client *c, const Arg *arg) {
-	const char *text;
+find(Client *c, const Arg *arg) {
+	const char *s;
+
+	s = getatom(c, findprop);
 	gboolean forward = *(gboolean *)arg;
-	text = gtk_entry_get_text(GTK_ENTRY(c->searchbar));
-	webkit_web_view_search_text(c->view, text, FALSE, forward, TRUE);
-	webkit_web_view_mark_text_matches(c->view, text, FALSE, 0);
-}
-
-void
-showuri(Client *c, const Arg *arg) {
-	char *uri;
-
-	hidesearch(c, NULL);
-	uri = geturi(c);
-	gtk_entry_set_text(GTK_ENTRY(c->uribar), uri);
-	gtk_widget_show(c->uribar);
-	gtk_widget_grab_focus(c->uribar);
+	webkit_web_view_search_text(c->view, s, FALSE, forward, TRUE);
 }
 
 void
@@ -789,13 +728,6 @@ void
 titlechange(WebKitWebView *v, WebKitWebFrame *f, const char *t, Client *c) {
 	c->title = copystr(&c->title, t);
 	update(c);
-}
-
-gboolean
-focusview(GtkWidget *w, GdkEventFocus *e, Client *c) {
-	hidesearch(c, NULL);
-	hideuri(c, NULL);
-	return FALSE;
 }
 
 void
