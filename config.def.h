@@ -8,38 +8,39 @@ static char *cookiefile     = ".surf/cookies.txt";
 static char *dldir          = ".surf/dl";
 static time_t sessiontime   = 3600;
 
+#define SETPROP(p)       { .v = (char *[]){ "/bin/sh", "-c", \
+	"xprop -id $1 -f $0 8s -set $0 `echo -n | dmenu || exit 0`", \
+	p, winid, NULL } }
+
+	/*"set -x;a=`dmenu < $1 | tee -a $1`; echo >> $1;" \
+	//"xprop -f $2 8s -id $3 -set $2 \"$a\"", f, p, winid, NULL } } */
 #define MODKEY GDK_CONTROL_MASK
 static Key keys[] = {
     /* modifier	            keyval      function    arg             Focus */
-    { MODKEY|GDK_SHIFT_MASK,GDK_r,      reload,     { .b = TRUE },  Any },
-    { MODKEY,               GDK_r,      reload,     { .b = FALSE }, Any },
-    { MODKEY,               GDK_g,      showuri,    { 0 },          Any },
-    { MODKEY,               GDK_slash,  showsearch, { 0 },          Any },
-    { 0,                    GDK_Escape, hidesearch, { 0 },          Any },
-    { 0,                    GDK_Escape, hideuri,    { 0 },          Any },
-    { MODKEY|GDK_SHIFT_MASK,GDK_p,      print,      { 0 },          Any },
-    { MODKEY,               GDK_p,      clipboard,  { .b = TRUE },  Browser },
-    { MODKEY,               GDK_y,      clipboard,  { .b = FALSE }, Browser },
-    { MODKEY|GDK_SHIFT_MASK,GDK_j,      zoom,       { .i = -1 },    Browser },
-    { MODKEY|GDK_SHIFT_MASK,GDK_k,      zoom,       { .i = +1 },    Browser },
-    { MODKEY|GDK_SHIFT_MASK,GDK_i,      zoom,       { .i = 0  },    Browser },
-    { MODKEY,               GDK_l,      navigate,   { .i = +1 },    Browser },
-    { MODKEY,               GDK_h,      navigate,   { .i = -1 },    Browser },
-    { MODKEY,               GDK_j,      scroll,     { .i = +1 },    Browser },
-    { MODKEY,               GDK_k,      scroll,     { .i = -1 },    Browser },
-    { 0,                    GDK_Escape, stop,       { 0 },          Browser },
-    { MODKEY,               GDK_o,      source,     { 0 },          Browser },
-    { MODKEY,               GDK_n,      searchtext, { .b = TRUE },  Browser|SearchBar },
-    { MODKEY|GDK_SHIFT_MASK,GDK_n,      searchtext, { .b = FALSE }, Browser|SearchBar },
-    { 0,                    GDK_Return, searchtext, { .b = TRUE },  SearchBar },
-    { GDK_SHIFT_MASK,       GDK_Return, searchtext, { .b = FALSE }, SearchBar },
-    { 0,                    GDK_Return, loaduri,    { .v = NULL },  UriBar },
-    { 0,                    GDK_Return, hideuri,    { 0 },          UriBar },
+    { MODKEY|GDK_SHIFT_MASK,GDK_r,      reload,     { .b = TRUE } },
+    { MODKEY,               GDK_r,      reload,     { .b = FALSE } },
+    { MODKEY|GDK_SHIFT_MASK,GDK_p,      print,      { 0 } },
+    { MODKEY,               GDK_p,      clipboard,  { .b = TRUE } },
+    { MODKEY,               GDK_y,      clipboard,  { .b = FALSE } },
+    { MODKEY|GDK_SHIFT_MASK,GDK_j,      zoom,       { .i = -1 } },
+    { MODKEY|GDK_SHIFT_MASK,GDK_k,      zoom,       { .i = +1 } },
+    { MODKEY|GDK_SHIFT_MASK,GDK_i,      zoom,       { .i = 0  } },
+    { MODKEY,               GDK_l,      navigate,   { .i = +1 } },
+    { MODKEY,               GDK_h,      navigate,   { .i = -1 } },
+    { MODKEY,               GDK_j,      scroll,     { .i = +1 } },
+    { MODKEY,               GDK_k,      scroll,     { .i = -1 } },
+    { 0,                    GDK_Escape, stop,       { 0 } },
+    { MODKEY,               GDK_o,      source,     { 0 } },
+    { MODKEY,               GDK_g,      spawn,      SETPROP("_SURF_URI") },
+    { MODKEY,               GDK_slash,  spawn,      SETPROP("_SURF_FIND") },
+    { MODKEY,               GDK_n,      find,       { .b = TRUE } },
+    { MODKEY|GDK_SHIFT_MASK,GDK_n,      find,       { .b = FALSE } },
+    { 0,                    GDK_Return, loaduri,    { .v = NULL } },
 };
 
 static Item items[] = {
-    { "Back",        navigate,  { .i = -1 } },
-    { "Forward",     navigate,  { .i = +1 } },
+    { "Back",           navigate,  { .i = -1 } },
+    { "Forward",        navigate,  { .i = +1 } },
     { "New Window",     newwindow, { .v = NULL } },
     { "Reload",         reload,    { .b = FALSE } },
     { "Stop",           stop,      { 0 } },
