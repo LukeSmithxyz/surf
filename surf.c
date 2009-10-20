@@ -640,9 +640,9 @@ request(SoupSession *s, SoupMessage *m, gpointer p) {
 	SoupCookieJar *cookies;
 	SoupMessageHeaders *h;
 	char *cookiestr;
+
 	soup_message_add_header_handler(m, "got-headers", "Set-Cookie",
 			G_CALLBACK(setcookie), NULL);
-
 	h = m->request_headers;
 	cookies = soup_cookie_jar_text_new(cookiefile, TRUE);
 	cookiestr = soup_cookie_jar_get_cookies(cookies, soup_message_get_uri(m), FALSE);
