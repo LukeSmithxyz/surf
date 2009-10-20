@@ -106,6 +106,7 @@ static void print(Client *c, const Arg *arg);
 static void progresschange(WebKitWebView *v, gint p, Client *c);
 static void reloadcookies();
 static void reload(Client *c, const Arg *arg);
+static void resize(GtkWidget *w, GtkAllocation *a, Client *c);
 static void sigchld(int unused);
 static void setup(void);
 static void spawn(Client *c, const Arg *arg);
@@ -470,6 +471,7 @@ newclient(void) {
 	gtk_window_set_default_size(GTK_WINDOW(c->win), 800, 600);
 	g_signal_connect(G_OBJECT(c->win), "destroy", G_CALLBACK(destroywin), c);
 	g_signal_connect(G_OBJECT(c->win), "key-press-event", G_CALLBACK(keypress), c);
+	g_signal_connect(G_OBJECT(c->win), "size-allocate", G_CALLBACK(resize), c);
 
 	if(!(c->items = calloc(1, sizeof(GtkWidget *) * LENGTH(items))))
 		die("Cannot malloc!\n");
@@ -673,6 +675,19 @@ scroll(Client *c, const Arg *arg) {
 	v = MIN(v, gtk_adjustment_get_upper(a) - gtk_adjustment_get_page_size(a));
 	gtk_adjustment_set_value(a, v);
 }
+
+void
+resize(GtkWidget *w, GtkAllocation *a, Client *c) {
+	double zoom;
+
+	zoom = webkit_web_view_get_zoom_level(c->view);
+	if(a->width * a->height < 300 * 300 && zoom != 0.2)
+		webkit_web_view_set_zoom_level(c->view, 0.2);
+	else if(zoom != 1.0)
+		webkit_web_view_set_zoom_level(c->view, 1.0);
+}
+
+
 
 void
 sigchld(int unused) {
