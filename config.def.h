@@ -11,9 +11,6 @@ static time_t sessiontime   = 3600;
 #define SETPROP(p)       { .v = (char *[]){ "/bin/sh", "-c", \
 	"xprop -id $1 -f $0 8s -set $0 `echo -n | dmenu || exit 0`", \
 	p, winid, NULL } }
-
-	/*"set -x;a=`dmenu < $1 | tee -a $1`; echo >> $1;" \
-	//"xprop -f $2 8s -id $3 -set $2 \"$a\"", f, p, winid, NULL } } */
 #define MODKEY GDK_CONTROL_MASK
 static Key keys[] = {
     /* modifier	            keyval      function    arg             Focus */
