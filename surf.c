@@ -37,6 +37,7 @@ typedef struct Client {
 	char *title, *linkhover;
 	gint progress;
 	struct Client *next;
+	gboolean zoomed;
 } Client;
 
 typedef struct {
@@ -680,8 +681,10 @@ void
 resize(GtkWidget *w, GtkAllocation *a, Client *c) {
 	double zoom;
 
+	if(c->zoomed)
+		return;
 	zoom = webkit_web_view_get_zoom_level(c->view);
-	if(a->width * a->height < 300 * 300 && zoom != 0.2)
+	if(a->width * a->height < 300 * 400 && zoom != 0.2)
 		webkit_web_view_set_zoom_level(c->view, 0.2);
 	else if(zoom != 1.0)
 		webkit_web_view_set_zoom_level(c->view, 1.0);
@@ -839,12 +842,15 @@ windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObje
 
 void
 zoom(Client *c, const Arg *arg) {
+	c->zoomed = TRUE;
 	if(arg->i < 0)		/* zoom out */
 		webkit_web_view_zoom_out(c->view);
 	else if(arg->i > 0)	/* zoom in */
 		webkit_web_view_zoom_in(c->view);
-	else			/* reset */
+	else {			/* reset */
+		c->zoomed = FALSE;
 		webkit_web_view_set_zoom_level(c->view, 1.0);
+	}
 }
 
 int main(int argc, char *argv[]) {
