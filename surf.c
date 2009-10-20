@@ -345,7 +345,7 @@ geturi(Client *c) {
 	char *uri;
 
 	if(!(uri = (char *)webkit_web_view_get_uri(c->view)))
-		uri = copystr(NULL, "about:blank");
+		uri = "about:blank";
 	return uri;
 }
 
@@ -689,8 +689,6 @@ resize(GtkWidget *w, GtkAllocation *a, Client *c) {
 	else if(zoom != 1.0)
 		webkit_web_view_set_zoom_level(c->view, 1.0);
 }
-
-
 
 void
 sigchld(int unused) {
