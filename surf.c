@@ -79,6 +79,7 @@ static void die(char *str);
 static void download(WebKitDownload *o, GParamSpec *pspec, Client *c);
 static void drawindicator(Client *c);
 static gboolean exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c);
+static char *geturi(Client *c);
 static const char *getatom(Client *c, Atom a);
 static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
 static void itemclick(GtkMenuItem *mi, Client *c);
@@ -175,7 +176,7 @@ clipboard(Client *c, const Arg *arg) {
 	if(paste)
 		gtk_clipboard_request_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), pasteuri, c);
 	else
-		gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), webkit_web_view_get_uri(c->view), -1);
+		gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), geturi(c), -1);
 }
 
 void
@@ -388,7 +389,7 @@ linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
 
 void
 loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
-	setatom(c, uriprop, webkit_web_view_get_uri(c->view));
+	setatom(c, uriprop, geturi(c));
 	reloadcookies();
 }
 
