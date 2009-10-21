@@ -61,7 +61,7 @@ static SoupSession *session;
 static Client *clients = NULL;
 static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
-static gboolean ignore_once = FALSE;
+static int ignorexprop = 0;
 static char winid[64];
 static char *progname;
 static gboolean lockcookie = FALSE;
@@ -233,6 +233,7 @@ destroyclient(Client *c) {
 gboolean
 decidewindow(WebKitWebView *view, WebKitWebFrame *f, WebKitNetworkRequest *r, WebKitWebNavigationAction *n, WebKitWebPolicyDecision *p, Client *c) {
 	Arg arg;
+
 	if(webkit_web_navigation_action_get_reason(n) == WEBKIT_WEB_NAVIGATION_REASON_LINK_CLICKED) {
 		webkit_web_policy_decision_ignore(p);
 		arg.v = (void *)webkit_network_request_get_uri(r);
@@ -558,8 +559,8 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 
 	if(((XEvent *)e)->type == PropertyNotify) {
 		ev = &((XEvent *)e)->xproperty;
-		if(ignore_once)
-			ignore_once = FALSE;
+		if(ignorexprop)
+			ignorexprop--;
 		else if(ev->state == PropertyNewValue) {
 			if(ev->atom == uriprop) {
 				arg.v = getatom(c, uriprop);
@@ -648,7 +649,7 @@ sigchld(int unused) {
 void
 setatom(Client *c, Atom a, const char *v) {
 	XSync(dpy, False);
-	ignore_once = TRUE;
+	ignorexprop++;
 	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), a,
 			XA_STRING, 8, PropModeReplace, (unsigned char *)v,
 			strlen(v) + 1);
