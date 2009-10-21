@@ -32,7 +32,6 @@ static Key keys[] = {
     { MODKEY,               GDK_slash,  spawn,      SETPROP("_SURF_FIND") },
     { MODKEY,               GDK_n,      find,       { .b = TRUE } },
     { MODKEY|GDK_SHIFT_MASK,GDK_n,      find,       { .b = FALSE } },
-    { 0,                    GDK_Return, loaduri,    { .v = NULL } },
 };
 
 static Item items[] = {
