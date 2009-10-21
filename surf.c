@@ -424,6 +424,7 @@ newclient(void) {
 	int i;
 	Client *c;
 	WebKitWebSettings *settings;
+	GdkGeometry hints = { 1, 1 };
 	char *uri;
 
 	if(!(c = calloc(1, sizeof(Client))))
@@ -493,6 +494,7 @@ newclient(void) {
 	gtk_widget_show(c->scroll);
 	gtk_widget_show(GTK_WIDGET(c->view));
 	gtk_widget_show(c->win);
+	gtk_window_set_geometry_hints(GTK_WINDOW(c->win), NULL, &hints, GDK_HINT_MIN_SIZE);
 	gdk_window_set_events(GTK_WIDGET(c->win)->window, GDK_ALL_EVENTS_MASK);
 	gdk_window_add_filter(GTK_WIDGET(c->win)->window, processx, c);
 	webkit_web_view_set_full_content_zoom(c->view, TRUE);
