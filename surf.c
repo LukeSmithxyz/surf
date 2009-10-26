@@ -390,13 +390,13 @@ linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
 void
 loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
 	setatom(c, uriprop, geturi(c));
-	reloadcookies();
 }
 
 void
 loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
 	c->progress = 0;
 	update(c);
+	reloadcookies();
 }
 
 void
