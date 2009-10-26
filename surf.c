@@ -176,7 +176,7 @@ clipboard(Client *c, const Arg *arg) {
 	if(paste)
 		gtk_clipboard_request_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), pasteuri, c);
 	else
-		gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), geturi(c), -1);
+		gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), c->linkhover ? c->linkhover : geturi(c), -1);
 }
 
 void
