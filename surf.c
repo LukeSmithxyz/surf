@@ -76,7 +76,7 @@ static gboolean decidewindow(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkR
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 static void die(char *str);
-static void download(WebKitDownload *o, GParamSpec *pspec, Client *c);
+static void download(Client *c, const Arg *arg);
 static void drawindicator(Client *c);
 static gboolean exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c);
 static char *geturi(Client *c);
@@ -110,6 +110,7 @@ static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *v, WebKitWebFrame* frame, const char* title, Client *c);
 static void usage(void);
 static void update(Client *c);
+static void updatedownload(WebKitDownload *o, GParamSpec *pspec, Client *c);
 static void updatewinid(Client *c);
 static void windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObjectRef win, Client *c);
 static void zoom(Client *c, const Arg *arg);
@@ -232,6 +233,15 @@ destroyclient(Client *c) {
 }
 
 gboolean
+mime_policy_cb(WebKitWebView *web_view, WebKitWebFrame *frame, WebKitNetworkRequest *request, gchar *mime_type,  WebKitWebPolicyDecision *policy_decision, gpointer user_data) {
+	if(webkit_web_view_can_show_mime_type(web_view, mime_type))
+		webkit_web_policy_decision_use(policy_decision);
+	else
+		webkit_web_policy_decision_download(policy_decision);
+	return TRUE;
+}
+
+gboolean
 decidewindow(WebKitWebView *view, WebKitWebFrame *f, WebKitNetworkRequest *r, WebKitWebNavigationAction *n, WebKitWebPolicyDecision *p, Client *c) {
 	Arg arg;
 
@@ -285,14 +295,18 @@ exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c) {
 }
 
 void
-download(WebKitDownload *o, GParamSpec *pspec, Client *c) {
-	WebKitDownloadStatus status;
+download(Client *c, const Arg *arg) {
+	char *uri;
+	WebKitNetworkRequest *r;
+	WebKitDownload       *dl;
 
-	status = webkit_download_get_status(c->download);
-	if(status == WEBKIT_DOWNLOAD_STATUS_STARTED || status == WEBKIT_DOWNLOAD_STATUS_CREATED) {
-		c->progress = (gint)(webkit_download_get_progress(c->download)*100);
-	}
-	update(c);
+	if(arg->v)
+		uri = (char *)arg->v;
+	else
+		uri = c->linkhover ? c->linkhover : geturi(c);
+	r = webkit_network_request_new(uri);
+	dl = webkit_download_new(r);
+	initdownload(c->view, dl, c);
 }
 
 const char *
@@ -322,6 +336,8 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	stop(c, NULL);
 	c->download = o;
 	filename = webkit_download_get_suggested_filename(o);
+	if(!strcmp("", filename))
+		filename = "index.html";
 	uri = g_strconcat("file://", dldir, "/", filename, NULL);
 	webkit_download_set_destination_uri(c->download, uri);
 	c->progress = 0;
@@ -329,8 +345,8 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	html = g_strdup_printf("Download <b>%s</b>...", filename);
 	webkit_web_view_load_html_string(c->view, html,
 			webkit_download_get_uri(c->download));
-	g_signal_connect(c->download, "notify::progress", G_CALLBACK(download), c);
-	g_signal_connect(c->download, "notify::status", G_CALLBACK(download), c);
+	g_signal_connect(c->download, "notify::progress", G_CALLBACK(updatedownload), c);
+	g_signal_connect(c->download, "notify::status", G_CALLBACK(updatedownload), c);
 	webkit_download_start(c->download);
 	
 	c->title = copystr(&c->title, filename);
@@ -753,7 +769,17 @@ update(Client *c) {
 	drawindicator(c);
 	gtk_window_set_title(GTK_WINDOW(c->win), t);
 	g_free(t);
+}
 
+void
+updatedownload(WebKitDownload *o, GParamSpec *pspec, Client *c) {
+	WebKitDownloadStatus status;
+
+	status = webkit_download_get_status(c->download);
+	if(status == WEBKIT_DOWNLOAD_STATUS_STARTED || status == WEBKIT_DOWNLOAD_STATUS_CREATED) {
+		c->progress = (gint)(webkit_download_get_progress(c->download)*100);
+	}
+	update(c);
 }
 
 void

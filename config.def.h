@@ -42,4 +42,5 @@ static Item items[] = {
     { "Stop",           stop,      { 0 } },
     { "Paste URI",      clipboard, { .b = TRUE } },
     { "Copy URI",       clipboard, { .b = FALSE } },
+    { "Download",       download,  { 0 } },
 };
