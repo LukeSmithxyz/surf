@@ -72,6 +72,7 @@ static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
 static void context(WebKitWebView *v, GtkMenu *m, Client *c);
 static char *copystr(char **str, const char *src);
+static gboolean decidedownload(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r, gchar *m,  WebKitWebPolicyDecision *p, Client *c);
 static gboolean decidewindow(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r, WebKitWebNavigationAction *n, WebKitWebPolicyDecision *p, Client *c);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
@@ -233,12 +234,12 @@ destroyclient(Client *c) {
 }
 
 gboolean
-mime_policy_cb(WebKitWebView *web_view, WebKitWebFrame *frame, WebKitNetworkRequest *request, gchar *mime_type,  WebKitWebPolicyDecision *policy_decision, gpointer user_data) {
-	if(webkit_web_view_can_show_mime_type(web_view, mime_type))
-		webkit_web_policy_decision_use(policy_decision);
-	else
-		webkit_web_policy_decision_download(policy_decision);
-	return TRUE;
+decidedownload(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r, gchar *m,  WebKitWebPolicyDecision *p, Client *c) {
+	if(!webkit_web_view_can_show_mime_type(v, m)) {
+		webkit_web_policy_decision_download(p);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 gboolean
@@ -485,6 +486,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
 	g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(createwindow), c);
 	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(decidewindow), c);
+	g_signal_connect(G_OBJECT(c->view), "mime-type-policy-decision-requested", G_CALLBACK(decidedownload), c);
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
 	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
 	g_signal_connect(G_OBJECT(c->view), "populate-popup", G_CALLBACK(context), c);
