@@ -472,12 +472,12 @@ newclient(void) {
 	/* VBox */
 	c->vbox = gtk_vbox_new(FALSE, 0);
 
-	/* scrolled window */
+	/* Scrolled Window */
 	c->scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(c->scroll),
 			GTK_POLICY_NEVER, GTK_POLICY_NEVER);
 
-	/* webview */
+	/* Webview */
 	c->view = WEBKIT_WEB_VIEW(webkit_web_view_new());
 	g_signal_connect(G_OBJECT(c->view), "title-changed", G_CALLBACK(titlechange), c);
 	g_signal_connect(G_OBJECT(c->view), "load-progress-changed", G_CALLBACK(progresschange), c);
@@ -491,7 +491,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
 	g_signal_connect(G_OBJECT(c->view), "populate-popup", G_CALLBACK(context), c);
 
-	/* indicator */
+	/* Indicator */
 	c->indicator = gtk_drawing_area_new();
 	gtk_widget_set_size_request(c->indicator, 0, 2);
 	g_signal_connect (G_OBJECT (c->indicator), "expose_event",
@@ -844,9 +844,8 @@ int main(int argc, char *argv[]) {
 		arg.v = argv[i];
 	setup();
 	newclient();
-	if(arg.v) {
+	if(arg.v)
 		loaduri(clients, &arg);
-	}
 	gtk_main();
 	cleanup();
 	return EXIT_SUCCESS;
