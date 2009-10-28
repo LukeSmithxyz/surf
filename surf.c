@@ -214,10 +214,10 @@ destroyclient(Client *c) {
 	int i;
 	Client *p;
 
+	gtk_widget_destroy(c->indicator);
 	gtk_widget_destroy(GTK_WIDGET(c->view));
 	gtk_widget_destroy(c->scroll);
 	gtk_widget_destroy(c->vbox);
-	gtk_widget_destroy(c->indicator);
 	gtk_widget_destroy(c->win);
 	for(i = 0; i < LENGTH(items); i++)
 		gtk_widget_destroy(c->items[i]);
