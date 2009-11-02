@@ -457,7 +457,7 @@ newclient(void) {
 	Client *c;
 	WebKitWebSettings *settings;
 	GdkGeometry hints = { 1, 1 };
-	char *uri;
+	char *uri, *ua;
 
 	if(!(c = calloc(1, sizeof(Client))))
 		die("Cannot malloc!\n");
@@ -532,7 +532,9 @@ newclient(void) {
 	gdk_window_add_filter(GTK_WIDGET(c->win)->window, processx, c);
 	webkit_web_view_set_full_content_zoom(c->view, TRUE);
 	settings = webkit_web_view_get_settings(c->view);
-	g_object_set(G_OBJECT(settings), "user-agent", useragent, NULL);
+	if(!(ua = getenv("SURF_USERAGENT")))
+		ua = useragent;
+	g_object_set(G_OBJECT(settings), "user-agent", ua, NULL);
 	uri = g_strconcat("file://", stylefile, NULL);
 	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
 	g_free(uri);
@@ -681,6 +683,8 @@ setatom(Client *c, Atom a, const char *v) {
 void
 setup(void) {
 	SoupSession *s;
+	char *proxy;
+	SoupURI *puri;
 
 	/* clean up any zombies immediately */
 	sigchld(0);
@@ -704,6 +708,11 @@ setup(void) {
 	cookies = soup_cookie_jar_new();
 	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookies));
 	g_signal_connect(cookies, "changed", G_CALLBACK(changecookie), NULL);
+	if((proxy = getenv("http_proxy")) && strcmp(proxy, "")) {
+		puri = soup_uri_new(proxy);
+		g_object_set(G_OBJECT(s), "proxy-uri", puri, NULL);
+		soup_uri_free(puri);
+	}
 	reloadcookies();
 }
 
