@@ -61,7 +61,7 @@ static SoupSession *session;
 static Client *clients = NULL;
 static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
-static Time lastxprop = 0;
+static int ignorexprop = 0;
 static char winid[64];
 static char *progname;
 static gboolean lockcookie = FALSE;
@@ -539,7 +539,6 @@ newclient(void) {
 	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
 	g_free(uri);
 	setatom(c, findprop, "");
-	setatom(c, uriprop, "");
 
 	c->download = NULL;
 	c->title = NULL;
@@ -597,8 +596,9 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 
 	if(((XEvent *)e)->type == PropertyNotify) {
 		ev = &((XEvent *)e)->xproperty;
-		if((!lastxprop || lastxprop + 512 < ev->time)
-				&& ev->state == PropertyNewValue) {
+		if(ignorexprop)
+			ignorexprop--;
+		else if(ev->state == PropertyNewValue) {
 			if(ev->atom == uriprop) {
 				arg.v = getatom(c, uriprop);
 				loaduri(c, &arg);
@@ -607,7 +607,6 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 				arg.b = TRUE;
 				find(c, &arg);
 			}
-			lastxprop = ev->time;
 			return GDK_FILTER_REMOVE;
 		}
 	}
@@ -674,10 +673,11 @@ scroll(Client *c, const Arg *arg) {
 
 void
 setatom(Client *c, Atom a, const char *v) {
+	XSync(dpy, False);
+	ignorexprop++;
 	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), a,
 			XA_STRING, 8, PropModeReplace, (unsigned char *)v,
 			strlen(v) + 1);
-	XSync(dpy, False);
 }
 
 void
