@@ -9,8 +9,8 @@ static char *dldir          = ".surf/dl";
 static time_t sessiontime   = 3600;
 
 #define SETPROP(p)       { .v = (char *[]){ "/bin/sh", "-c", \
-	"prop=\"`dmenu < /dev/null`\" &&" \
-		"xprop -id $1 -f $0 8s -set $0 \"$prop\"", \
+	"prop=\"`xprop -id $1 $0 | cut -d '\"' -f 2 | dmenu`\" &&" \
+	"xprop -id $1 -f $0 8s -set $0 \"$prop\"", \
 	p, winid, NULL } }
 #define MODKEY GDK_CONTROL_MASK
 static Key keys[] = {
