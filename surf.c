@@ -467,7 +467,19 @@ newclient(void) {
 	}
 	else {
 		c->win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+		/* TA:  20091214:  Despite what the GNOME docs say, the ICCCM
+		 * is always correct, so we should still call this function.
+		 * But when doing so, we *must* differentiate between a
+		 * WM_CLASS and a resource on the window.  By convention, the
+		 * window class (WM_CLASS) is capped, while the resource is in
+		 * lowercase.   Both these values come as a pair.
+		 */
 		gtk_window_set_wmclass(GTK_WINDOW(c->win), "surf", "surf");
+
+		/* TA:  20091214:  And set the role here as well -- so that
+		 * sessions can pick this up.
+		 */
+		gtk_window_set_role(GTK_WINDOW(c->win), "Surf");
 	}
 	gtk_window_set_default_size(GTK_WINDOW(c->win), 800, 600);
 	g_signal_connect(G_OBJECT(c->win), "destroy", G_CALLBACK(destroywin), c);
@@ -684,6 +696,7 @@ void
 setup(void) {
 	SoupSession *s;
 	char *proxy;
+	char *new_proxy;
 	SoupURI *puri;
 
 	/* clean up any zombies immediately */
@@ -709,9 +722,13 @@ setup(void) {
 	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookies));
 	g_signal_connect(cookies, "changed", G_CALLBACK(changecookie), NULL);
 	if((proxy = getenv("http_proxy")) && strcmp(proxy, "")) {
-		puri = soup_uri_new(proxy);
+		new_proxy = g_strrstr(proxy, "http://") ? g_strdup(proxy) :
+			    g_strdup_printf("http://%s", proxy);
+
+		puri = soup_uri_new(new_proxy);
 		g_object_set(G_OBJECT(s), "proxy-uri", puri, NULL);
 		soup_uri_free(puri);
+		g_free(new_proxy);
 	}
 	reloadcookies();
 }
