@@ -3,7 +3,8 @@
 surf \- simple webkit-based browser
 .SH SYNOPSIS
 .B surf
-.RB [ \-ehvx ]
+.RB [ \-hvx ]
+.RB [ \-e xid ]
 .RB "URI"
 .SH DESCRIPTION
 surf is a simple Web browser based on WebKit/GTK+. It is able
@@ -12,9 +13,8 @@ which makes it possible to embed it in another application. Furthermore,
 one can point surf to another URI by setting its XProperties.
 .SH OPTIONS
 .TP
-.B \-e
-Prints xid to standard output and waits until an application reparents the
-window.
+.B \-e xid
+reparents to window specified by xid.
 .TP
 .B \-h
 Prints usage information to standard output, then exits.
