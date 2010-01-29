@@ -435,14 +435,23 @@ void
 loaduri(Client *c, const Arg *arg) {
 	char *u;
 	const char *uri = (char *)arg->v;
+	Arg a = { .b = FALSE };
 
+	if(strcmp(uri, "") == 0)
+		return;
 	u = g_strrstr(uri, "://") ? g_strdup(uri)
 		: g_strdup_printf("http://%s", uri);
-	webkit_web_view_load_uri(c->view, u);
-	c->progress = 0;
-	c->title = copystr(&c->title, u);
-	g_free(u);
-	update(c);
+	/* prevents endless loop */
+	if(c->uri && strcmp(u, c->uri) == 0) {
+		reload(c, &a);
+	}
+	else {
+		webkit_web_view_load_uri(c->view, u);
+		c->progress = 0;
+		c->title = copystr(&c->title, u);
+		g_free(u);
+		update(c);
+	}
 }
 
 void
@@ -551,6 +560,7 @@ newclient(void) {
 	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
 	g_free(uri);
 	setatom(c, findprop, "");
+	setatom(c, uriprop, "");
 
 	c->download = NULL;
 	c->title = NULL;
