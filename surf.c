@@ -90,6 +90,7 @@ static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
 static Client *newclient(void);
 static void newwindow(Client *c, const Arg *arg);
+static void newrequest(WebKitWebView *v, WebKitWebFrame *f, WebKitWebResource *r, WebKitNetworkRequest *req, WebKitNetworkResponse *res, Client *c);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
 static void print(Client *c, const Arg *arg);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
@@ -503,6 +504,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "populate-popup", G_CALLBACK(context), c);
 	g_signal_connect(G_OBJECT(c->view), "notify::load-status", G_CALLBACK(loadstatuschange), c);
 	g_signal_connect(G_OBJECT(c->view), "notify::progress", G_CALLBACK(progresschange), c);
+	g_signal_connect(G_OBJECT(c->view), "resource-request-starting", G_CALLBACK(newrequest), c);
 
 	/* Indicator */
 	c->indicator = gtk_drawing_area_new();
@@ -549,6 +551,15 @@ newclient(void) {
 		fflush(NULL);
 	}
 	return c;
+}
+
+static void newrequest(WebKitWebView *v, WebKitWebFrame *f, WebKitWebResource *r, WebKitNetworkRequest *req, WebKitNetworkResponse *res, Client *c) {
+	SoupMessage *msg = webkit_network_request_get_message(req);
+	SoupMessageHeaders *h;
+	if(!msg)
+		return;
+	h = msg->request_headers;
+	soup_message_headers_remove(h, "Cookies");
 }
 
 void
@@ -614,7 +625,7 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 
 void
 progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
-	c->progress = webkit_web_view_get_progress(c->view);;
+	c->progress = webkit_web_view_get_progress(c->view) * 100;
 	update(c);
 }
 
