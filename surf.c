@@ -434,7 +434,7 @@ loaduri(Client *c, const Arg *arg) {
 
 void
 navigate(Client *c, const Arg *arg) {
-	gint steps = *(gint *)arg;
+	int steps = *(int *)arg;
 	webkit_web_view_go_back_or_forward(c->view, steps);
 }
 
