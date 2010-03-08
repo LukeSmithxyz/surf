@@ -56,7 +56,6 @@ typedef struct {
 
 static Display *dpy;
 static Atom uriprop, findprop;
-static SoupCookieJar *cookies;
 static SoupSession *session;
 static Client *clients = NULL;
 static GdkNativeWindow embed = 0;
@@ -64,10 +63,8 @@ static gboolean showxid = FALSE;
 static int ignorexprop = 0;
 static char winid[64];
 static char *progname;
-static gboolean lockcookie = FALSE;
 
 static char *buildpath(const char *path);
-static void changecookie(SoupCookieJar *jar, SoupCookie *o, SoupCookie *n, gpointer p);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
 static void context(WebKitWebView *v, GtkMenu *m, Client *c);
@@ -88,8 +85,7 @@ static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
 static void itemclick(GtkMenuItem *mi, Client *c);
 static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
 static void linkhover(WebKitWebView *v, const char* t, const char* l, Client *c);
-static void loadcommit(WebKitWebView *v, WebKitWebFrame *f, Client *c);
-static void loadstart(WebKitWebView *v, WebKitWebFrame *f, Client *c);
+static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
 static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
 static Client *newclient(void);
@@ -97,9 +93,8 @@ static void newwindow(Client *c, const Arg *arg);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
 static void print(Client *c, const Arg *arg);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
-static void progresschange(WebKitWebView *v, gint p, Client *c);
+static void progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
 static void reload(Client *c, const Arg *arg);
-static void reloadcookies();
 static void resize(GtkWidget *w, GtkAllocation *a, Client *c);
 static void scroll(Client *c, const Arg *arg);
 static void setatom(Client *c, Atom a, const char *v);
@@ -138,27 +133,6 @@ buildpath(const char *path) {
 	if((f = g_fopen(apath, "a")))
 		fclose(f);
 	return apath;
-}
-
-void
-changecookie(SoupCookieJar *j, SoupCookie *oc, SoupCookie *c, gpointer p) {
-	SoupDate *e;
-	SoupCookieJar *jar;
-
-	if(lockcookie)
-		return;
-	if(c && c->expires == NULL) {
-		e = soup_date_new_from_time_t(time(NULL) + sessiontime);
-		c = soup_cookie_copy(c);
-		soup_cookie_set_expires(c, e);
-	}
-	
-	jar = soup_cookie_jar_text_new(cookiefile, FALSE);
-	if(c)
-		soup_cookie_jar_add_cookie(jar, soup_cookie_copy(c));
-	else
-		soup_cookie_jar_delete_cookie(jar, oc);
-	g_object_unref(jar);
 }
 
 void
@@ -420,15 +394,19 @@ linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
 }
 
 void
-loadcommit(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
-	setatom(c, uriprop, geturi(c));
-}
-
-void
-loadstart(WebKitWebView *view, WebKitWebFrame *f, Client *c) {
-	c->progress = 0;
-	update(c);
-	reloadcookies();
+loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
+	switch(webkit_web_view_get_load_status (c->view)) {
+	case WEBKIT_LOAD_COMMITTED:
+		setatom(c, uriprop, geturi(c));
+		break;
+	case WEBKIT_LOAD_FINISHED:
+		c->progress = 0;
+		update(c);
+		break;
+	case WEBKIT_LOAD_PROVISIONAL:
+	case WEBKIT_LOAD_FIRST_VISUALLY_NON_EMPTY_LAYOUT:
+		break;
+	}
 }
 
 void
@@ -516,9 +494,6 @@ newclient(void) {
 	/* Webview */
 	c->view = WEBKIT_WEB_VIEW(webkit_web_view_new());
 	g_signal_connect(G_OBJECT(c->view), "title-changed", G_CALLBACK(titlechange), c);
-	g_signal_connect(G_OBJECT(c->view), "load-progress-changed", G_CALLBACK(progresschange), c);
-	g_signal_connect(G_OBJECT(c->view), "load-committed", G_CALLBACK(loadcommit), c);
-	g_signal_connect(G_OBJECT(c->view), "load-started", G_CALLBACK(loadstart), c);
 	g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
 	g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(createwindow), c);
 	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(decidewindow), c);
@@ -526,6 +501,8 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
 	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
 	g_signal_connect(G_OBJECT(c->view), "populate-popup", G_CALLBACK(context), c);
+	g_signal_connect(G_OBJECT(c->view), "notify::load-status", G_CALLBACK(loadstatuschange), c);
+	g_signal_connect(G_OBJECT(c->view), "notify::progress", G_CALLBACK(progresschange), c);
 
 	/* Indicator */
 	c->indicator = gtk_drawing_area_new();
@@ -636,8 +613,8 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 }
 
 void
-progresschange(WebKitWebView *v, gint p, Client *c) {
-	c->progress = p;
+progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
+	c->progress = webkit_web_view_get_progress(c->view);;
 	update(c);
 }
 
@@ -648,23 +625,6 @@ reload(Client *c, const Arg *arg) {
 		 webkit_web_view_reload_bypass_cache(c->view);
 	else
 		 webkit_web_view_reload(c->view);
-}
-
-void
-reloadcookies() {
-	SoupCookieJar *jar;
-	GSList *l, *e;
-
-	lockcookie = TRUE;
-	for(l = e = soup_cookie_jar_all_cookies(cookies); e; e = e->next)
-		soup_cookie_jar_delete_cookie(cookies, (SoupCookie *)e->data);
-	soup_cookies_free(l);
-	jar = soup_cookie_jar_text_new(cookiefile, TRUE);
-	for(l = e = soup_cookie_jar_all_cookies(jar); e; e = e->next)
-		soup_cookie_jar_add_cookie(cookies, (SoupCookie *)e->data);
-	g_slist_free(l);
-	lockcookie = FALSE;
-	g_object_unref(jar);
 }
 
 void
@@ -726,21 +686,16 @@ setup(void) {
 	scriptfile = buildpath(scriptfile);
 	stylefile = buildpath(stylefile);
 
-	/* cookie persistance */
-	s = webkit_get_default_session();
-	cookies = soup_cookie_jar_new();
-	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookies));
-	g_signal_connect(cookies, "changed", G_CALLBACK(changecookie), NULL);
+	/* proxy */
 	if((proxy = getenv("http_proxy")) && strcmp(proxy, "")) {
 		new_proxy = g_strrstr(proxy, "http://") ? g_strdup(proxy) :
-			    g_strdup_printf("http://%s", proxy);
+			g_strdup_printf("http://%s", proxy);
 
 		puri = soup_uri_new(new_proxy);
 		g_object_set(G_OBJECT(s), "proxy-uri", puri, NULL);
 		soup_uri_free(puri);
 		g_free(new_proxy);
 	}
-	reloadcookies();
 }
 
 void
