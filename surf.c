@@ -56,7 +56,6 @@ typedef struct {
 
 static Display *dpy;
 static Atom uriprop, findprop;
-static SoupSession *session;
 static Client *clients = NULL;
 static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
@@ -553,13 +552,18 @@ newclient(void) {
 	return c;
 }
 
+void func(const char *name, const char *value, void *dummy) {
+printf("%s = %s\n", name, value);
+}
+
+
 static void newrequest(WebKitWebView *v, WebKitWebFrame *f, WebKitWebResource *r, WebKitNetworkRequest *req, WebKitNetworkResponse *res, Client *c) {
 	SoupMessage *msg = webkit_network_request_get_message(req);
 	SoupMessageHeaders *h;
 	if(!msg)
 		return;
 	h = msg->request_headers;
-	soup_message_headers_remove(h, "Cookies");
+	soup_message_headers_foreach(h, func, NULL);
 }
 
 void
@@ -675,10 +679,10 @@ setatom(Client *c, Atom a, const char *v) {
 
 void
 setup(void) {
-	SoupSession *s;
 	char *proxy;
 	char *new_proxy;
 	SoupURI *puri;
+	SoupSession *s;
 
 	/* clean up any zombies immediately */
 	sigchld(0);
@@ -687,7 +691,7 @@ setup(void) {
 		g_thread_init(NULL);
 
 	dpy = GDK_DISPLAY();
-	session = webkit_get_default_session();
+	s = webkit_get_default_session();
 	uriprop = XInternAtom(dpy, "_SURF_URI", False);
 	findprop = XInternAtom(dpy, "_SURF_FIND", False);
 
@@ -696,6 +700,10 @@ setup(void) {
 	dldir = buildpath(dldir);
 	scriptfile = buildpath(scriptfile);
 	stylefile = buildpath(stylefile);
+
+	s = webkit_get_default_session();
+
+	soup_session_remove_feature_by_type(s, soup_cookie_get_type());
 
 	/* proxy */
 	if((proxy = getenv("http_proxy")) && strcmp(proxy, "")) {
