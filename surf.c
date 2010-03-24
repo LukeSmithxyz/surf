@@ -80,7 +80,9 @@ static void drawindicator(Client *c);
 static gboolean exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c);
 static void find(Client *c, const Arg *arg);
 static const char *getatom(Client *c, Atom a);
+static const char *getcookies(SoupURI *uri);
 static char *geturi(Client *c);
+void gotheaders(SoupMessage *msg, gpointer user_data);
 static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
 static void itemclick(GtkMenuItem *mi, Client *c);
 static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
@@ -99,6 +101,7 @@ static void reload(Client *c, const Arg *arg);
 static void resize(GtkWidget *w, GtkAllocation *a, Client *c);
 static void scroll(Client *c, const Arg *arg);
 static void setatom(Client *c, Atom a, const char *v);
+static void setcookie(SoupCookie *c);
 static void setup(void);
 static void sigchld(int unused);
 static void source(Client *c, const Arg *arg);
@@ -301,6 +304,11 @@ find(Client *c, const Arg *arg) {
 }
 
 const char *
+getcookies(SoupURI *uri) {
+	return NULL;
+}
+
+const char *
 getatom(Client *c, Atom a) {
 	static char buf[BUFSIZ];
 	Atom adummy;
@@ -326,6 +334,19 @@ geturi(Client *c) {
 	if(!(uri = (char *)webkit_web_view_get_uri(c->view)))
 		uri = "about:blank";
 	return uri;
+}
+
+void
+gotheaders(SoupMessage *msg, gpointer v) {
+	SoupURI *uri;
+	GSList *l, *p;
+
+	uri = soup_message_get_uri(msg);
+	for(p = l = soup_cookies_from_response(msg); p;
+		p = g_slist_next(p))  {
+		setcookie((SoupCookie *)p->data);
+	}
+	soup_cookies_free(l);
 }
 
 gboolean
@@ -555,10 +576,17 @@ newclient(void) {
 	return c;
 }
 
-static void newrequest(SoupSession *s, SoupMessage *msg, gpointer v) {
+void
+newrequest(SoupSession *s, SoupMessage *msg, gpointer v) {
 	SoupMessageHeaders *h = msg->request_headers;
+	SoupURI *uri;
+	const char *c;
 
 	soup_message_headers_remove(h, "Cookie");
+	uri = soup_message_get_uri(msg);
+	if((c = getcookies(uri))) {
+		soup_message_headers_append(h, "Cookie", c);
+	}
 }
 
 void
@@ -669,6 +697,11 @@ scroll(Client *c, const Arg *arg) {
 }
 
 void
+setcookie(SoupCookie *c) {
+
+}
+
+void
 setatom(Client *c, Atom a, const char *v) {
 	XSync(dpy, False);
 	ignorexprop++;
@@ -706,6 +739,7 @@ setup(void) {
 	soup_session_remove_feature_by_type(s, soup_cookie_get_type());
 	soup_session_remove_feature_by_type(s, soup_cookie_jar_get_type());
 	g_signal_connect_after(G_OBJECT(s), "request-started", G_CALLBACK(newrequest), NULL);
+	g_signal_connect_after(G_OBJECT(s), "got-headers", G_CALLBACK(gotheaders), NULL);
 
 
 	/* proxy */
@@ -829,7 +863,8 @@ zoom(Client *c, const Arg *arg) {
 	}
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[]) {
 	int i;
 	Arg arg;
 
