@@ -263,6 +263,7 @@ download(Client *c, const Arg *arg) {
 	r = webkit_network_request_new(uri);
 	dl = webkit_download_new(r);
 	initdownload(c->view, dl, c);
+	webkit_download_start(c->download);
 }
 
 void
@@ -352,11 +353,10 @@ gotheaders(SoupMessage *msg, gpointer v) {
 gboolean
 initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	const char *filename;
-	char *uri, *html;
+	char *uri;
 	WebKitWebBackForwardList *h;
 	WebKitWebHistoryItem *i;
 
-	stop(c, NULL);
 	c->download = o;
 	filename = webkit_download_get_suggested_filename(o);
 	if(!strcmp("", filename))
@@ -364,20 +364,14 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	uri = g_strconcat("file://", dldir, "/", filename, NULL);
 	webkit_download_set_destination_uri(c->download, uri);
 	c->progress = 0;
-	g_free(uri);
-	html = g_strdup_printf("Download <b>%s</b>...", filename);
-	webkit_web_view_load_html_string(c->view, html,
-			webkit_download_get_uri(c->download));
 	h = webkit_web_view_get_back_forward_list(c->view);
 	i = webkit_web_history_item_new_with_data(webkit_download_get_uri(c->download), filename);
 	webkit_web_back_forward_list_add_item(h, i);
 	g_signal_connect(c->download, "notify::progress", G_CALLBACK(updatedownload), c);
 	g_signal_connect(c->download, "notify::status", G_CALLBACK(updatedownload), c);
-	webkit_download_start(c->download);
 	
 	c->title = copystr(&c->title, filename);
 	update(c);
-	g_free(html);
 	return TRUE;
 }
 
@@ -422,6 +416,8 @@ linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
 
 void
 loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
+	if(c->download)
+		stop(c, NULL);
 	switch(webkit_web_view_get_load_status (c->view)) {
 	case WEBKIT_LOAD_COMMITTED:
 		setatom(c, uriprop, geturi(c));
@@ -827,6 +823,8 @@ updatedownload(WebKitDownload *o, GParamSpec *pspec, Client *c) {
 	if(status == WEBKIT_DOWNLOAD_STATUS_STARTED || status == WEBKIT_DOWNLOAD_STATUS_CREATED) {
 		c->progress = (gint)(webkit_download_get_progress(c->download)*100);
 	}
+	else
+		stop(c, NULL);
 	update(c);
 }
 
