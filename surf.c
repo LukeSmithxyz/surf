@@ -574,18 +574,14 @@ newwindow(Client *c, const Arg *arg) {
 		snprintf(tmp, LENGTH(tmp), "%u\n", (int)embed);
 		cmd[i++] = tmp;
 	}
-	if(!script) {
+	if(!script)
 		cmd[i++] = "-s";
-	}
-	if(!plugin) {
+	if(!plugin)
 		cmd[i++] = "-p";
-	}
-	if(!loadimage) {
+	if(!loadimage)
 		cmd[i++] = "-l";
-	}
-	if(showxid) {
+	if(showxid)
 		cmd[i++] = "-x";
-	}
 	cmd[i++] = "--";
 	uri = arg->v ? (char *)arg->v : c->linkhover;
 	if(uri)
