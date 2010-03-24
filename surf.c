@@ -900,6 +900,8 @@ main(int argc, char *argv[]) {
 			break;
 		case 'v':
 			die("surf-"VERSION", © 2009 surf engineers, see LICENSE for details\n");
+		default:
+			usage();
 		}
 	}
 	if(i < argc)
