@@ -353,6 +353,8 @@ gboolean
 initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	const char *filename;
 	char *uri, *html;
+	WebKitWebBackForwardList *h;
+	WebKitWebHistoryItem *i;
 
 	stop(c, NULL);
 	c->download = o;
@@ -366,6 +368,9 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	html = g_strdup_printf("Download <b>%s</b>...", filename);
 	webkit_web_view_load_html_string(c->view, html,
 			webkit_download_get_uri(c->download));
+	h = webkit_web_view_get_back_forward_list(c->view);
+	i = webkit_web_history_item_new_with_data(webkit_download_get_uri(c->download), filename);
+	webkit_web_back_forward_list_add_item(h, i);
 	g_signal_connect(c->download, "notify::progress", G_CALLBACK(updatedownload), c);
 	g_signal_connect(c->download, "notify::status", G_CALLBACK(updatedownload), c);
 	webkit_download_start(c->download);
@@ -587,6 +592,7 @@ newrequest(SoupSession *s, SoupMessage *msg, gpointer v) {
 	if((c = getcookies(uri))) {
 		soup_message_headers_append(h, "Cookie", c);
 	}
+	g_signal_connect_after(G_OBJECT(msg), "got-headers", G_CALLBACK(gotheaders), NULL);
 }
 
 void
@@ -739,7 +745,6 @@ setup(void) {
 	soup_session_remove_feature_by_type(s, soup_cookie_get_type());
 	soup_session_remove_feature_by_type(s, soup_cookie_jar_get_type());
 	g_signal_connect_after(G_OBJECT(s), "request-started", G_CALLBACK(newrequest), NULL);
-	g_signal_connect_after(G_OBJECT(s), "got-headers", G_CALLBACK(gotheaders), NULL);
 
 
 	/* proxy */
