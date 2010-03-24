@@ -62,6 +62,7 @@ static gboolean showxid = FALSE;
 static int ignorexprop = 0;
 static char winid[64];
 static char *progname;
+static gboolean loadimage = 1, plugin = 1, script = 1;
 
 static char *buildpath(const char *path);
 static void cleanup(void);
@@ -535,6 +536,9 @@ newclient(void) {
 	g_object_set(G_OBJECT(settings), "user-agent", ua, NULL);
 	uri = g_strconcat("file://", stylefile, NULL);
 	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
+	g_object_set(G_OBJECT(settings), "auto-load-images", loadimage, NULL);
+	g_object_set(G_OBJECT(settings), "enable-plugins", plugin, NULL);
+	g_object_set(G_OBJECT(settings), "enable-scripts", script, NULL);
 	g_free(uri);
 	setatom(c, findprop, "");
 	setatom(c, uriprop, "");
@@ -560,7 +564,7 @@ static void newrequest(SoupSession *s, SoupMessage *msg, gpointer v) {
 void
 newwindow(Client *c, const Arg *arg) {
 	guint i = 0;
-	const char *cmd[7], *uri;
+	const char *cmd[10], *uri;
 	const Arg a = { .v = (void *)cmd };
 	char tmp[64];
 
@@ -569,6 +573,15 @@ newwindow(Client *c, const Arg *arg) {
 		cmd[i++] = "-e";
 		snprintf(tmp, LENGTH(tmp), "%u\n", (int)embed);
 		cmd[i++] = tmp;
+	}
+	if(!script) {
+		cmd[i++] = "-s";
+	}
+	if(!plugin) {
+		cmd[i++] = "-p";
+	}
+	if(!loadimage) {
+		cmd[i++] = "-l";
 	}
 	if(showxid) {
 		cmd[i++] = "-x";
@@ -791,7 +804,7 @@ updatewinid(Client *c) {
 void
 usage(void) {
 	fputs("surf - simple browser\n", stderr);
-	die("usage: surf [-e Window] [-x] [uri]\n");
+	die("usage: surf [-e Window] [-x] [-i] [-p] [-s] [uri]\n");
 }
 
 void
@@ -826,23 +839,34 @@ int main(int argc, char *argv[]) {
 
 	progname = argv[0];
 	/* command line args */
-	for(i = 1, arg.v = NULL; i < argc && argv[i][0] == '-'; i++) {
-		if(!strcmp(argv[i], "-x"))
+	for(i = 1, arg.v = NULL; i < argc && argv[i][0] == '-' &&
+			argv[i][1] != '\0' && argv[i][2] == '\0'; i++) {
+		if(!strcmp(argv[i], "--")) {
+			i++;
+			break;
+		}
+		switch(argv[i][1]) {
+		case 'x':
 			showxid = TRUE;
-		else if(!strcmp(argv[i], "-e")) {
+			break;
+		case 'e':
 			if(++i < argc)
 				embed = atoi(argv[i]);
 			else
 				usage();
-		}
-		else if(!strcmp(argv[i], "--")) {
-			i++;
 			break;
-		}
-		else if(!strcmp(argv[i], "-v"))
+		case 'i':
+			loadimage = 0;
+			break;
+		case 'p':
+			plugin = 0;
+			break;
+		case 's':
+			script = 0;
+			break;
+		case 'v':
 			die("surf-"VERSION", © 2009 surf engineers, see LICENSE for details\n");
-		else
-			usage();
+		}
 	}
 	if(i < argc)
 		arg.v = argv[i];
