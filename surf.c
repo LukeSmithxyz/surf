@@ -837,7 +837,7 @@ updatewinid(Client *c) {
 void
 usage(void) {
 	fputs("surf - simple browser\n", stderr);
-	die("usage: surf [-e Window] [-x] [-i] [-p] [-s] [uri]\n");
+	die("usage: surf [-e xid] [-i] [-p] [-s] [-v] [-x] [uri]\n");
 }
 
 void
@@ -880,9 +880,6 @@ main(int argc, char *argv[]) {
 			break;
 		}
 		switch(argv[i][1]) {
-		case 'x':
-			showxid = TRUE;
-			break;
 		case 'e':
 			if(++i < argc)
 				embed = atoi(argv[i]);
@@ -897,6 +894,9 @@ main(int argc, char *argv[]) {
 			break;
 		case 's':
 			script = 0;
+			break;
+		case 'x':
+			showxid = TRUE;
 			break;
 		case 'v':
 			die("surf-"VERSION", © 2009 surf engineers, see LICENSE for details\n");
