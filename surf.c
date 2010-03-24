@@ -89,7 +89,7 @@ static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
 static Client *newclient(void);
 static void newwindow(Client *c, const Arg *arg);
-static void newrequest(WebKitWebView *v, WebKitWebFrame *f, WebKitWebResource *r, WebKitNetworkRequest *req, WebKitNetworkResponse *res, Client *c);
+static void newrequest(SoupSession *s, SoupMessage *msg, gpointer v);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
 static void print(Client *c, const Arg *arg);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
@@ -503,7 +503,6 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "populate-popup", G_CALLBACK(context), c);
 	g_signal_connect(G_OBJECT(c->view), "notify::load-status", G_CALLBACK(loadstatuschange), c);
 	g_signal_connect(G_OBJECT(c->view), "notify::progress", G_CALLBACK(progresschange), c);
-	g_signal_connect(G_OBJECT(c->view), "resource-request-starting", G_CALLBACK(newrequest), c);
 
 	/* Indicator */
 	c->indicator = gtk_drawing_area_new();
@@ -552,18 +551,10 @@ newclient(void) {
 	return c;
 }
 
-void func(const char *name, const char *value, void *dummy) {
-printf("%s = %s\n", name, value);
-}
+static void newrequest(SoupSession *s, SoupMessage *msg, gpointer v) {
+	SoupMessageHeaders *h = msg->request_headers;
 
-
-static void newrequest(WebKitWebView *v, WebKitWebFrame *f, WebKitWebResource *r, WebKitNetworkRequest *req, WebKitNetworkResponse *res, Client *c) {
-	SoupMessage *msg = webkit_network_request_get_message(req);
-	SoupMessageHeaders *h;
-	if(!msg)
-		return;
-	h = msg->request_headers;
-	soup_message_headers_foreach(h, func, NULL);
+	soup_message_headers_remove(h, "Cookie");
 }
 
 void
@@ -695,15 +686,18 @@ setup(void) {
 	uriprop = XInternAtom(dpy, "_SURF_URI", False);
 	findprop = XInternAtom(dpy, "_SURF_FIND", False);
 
-	/* create dirs and files */
+	/* dirs and files */
 	cookiefile = buildpath(cookiefile);
 	dldir = buildpath(dldir);
 	scriptfile = buildpath(scriptfile);
 	stylefile = buildpath(stylefile);
 
+	/* request handler */
 	s = webkit_get_default_session();
-
 	soup_session_remove_feature_by_type(s, soup_cookie_get_type());
+	soup_session_remove_feature_by_type(s, soup_cookie_jar_get_type());
+	g_signal_connect_after(G_OBJECT(s), "request-started", G_CALLBACK(newrequest), NULL);
+
 
 	/* proxy */
 	if((proxy = getenv("http_proxy")) && strcmp(proxy, "")) {
