@@ -306,7 +306,11 @@ find(Client *c, const Arg *arg) {
 
 const char *
 getcookies(SoupURI *uri) {
-	return NULL;
+	const char *c;
+	SoupCookieJar *j = soup_cookie_jar_text_new(cookiefile, TRUE);
+	c = soup_cookie_jar_get_cookies(j, uri, TRUE);
+	g_object_unref(j);
+	return c;
 }
 
 const char *
@@ -700,7 +704,15 @@ scroll(Client *c, const Arg *arg) {
 
 void
 setcookie(SoupCookie *c) {
-
+	SoupDate *e;
+	SoupCookieJar *j = soup_cookie_jar_text_new(cookiefile, FALSE);
+	c = soup_cookie_copy(c);
+	if(c && c->expires == NULL) {
+		e = soup_date_new_from_time_t(time(NULL) + sessiontime);
+		soup_cookie_set_expires(c, e);
+	}
+	soup_cookie_jar_add_cookie(j, c);
+	g_object_unref(j);
 }
 
 void
