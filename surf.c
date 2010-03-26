@@ -613,7 +613,7 @@ newwindow(Client *c, const Arg *arg) {
 	if(!plugin)
 		cmd[i++] = "-p";
 	if(!loadimage)
-		cmd[i++] = "-l";
+		cmd[i++] = "-i";
 	if(showxid)
 		cmd[i++] = "-x";
 	cmd[i++] = "--";
@@ -707,7 +707,7 @@ setcookie(SoupCookie *c) {
 	SoupDate *e;
 	SoupCookieJar *j = soup_cookie_jar_text_new(cookiefile, FALSE);
 	c = soup_cookie_copy(c);
-	if(c && c->expires == NULL) {
+	if(c->expires == NULL) {
 		e = soup_date_new_from_time_t(time(NULL) + sessiontime);
 		soup_cookie_set_expires(c, e);
 	}
