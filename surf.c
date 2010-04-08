@@ -589,9 +589,8 @@ newrequest(SoupSession *s, SoupMessage *msg, gpointer v) {
 
 	soup_message_headers_remove(h, "Cookie");
 	uri = soup_message_get_uri(msg);
-	if((c = getcookies(uri))) {
+	if((c = getcookies(uri)))
 		soup_message_headers_append(h, "Cookie", c);
-	}
 	g_signal_connect_after(G_OBJECT(msg), "got-headers", G_CALLBACK(gotheaders), NULL);
 }
 
@@ -753,7 +752,6 @@ setup(void) {
 	soup_session_remove_feature_by_type(s, soup_cookie_get_type());
 	soup_session_remove_feature_by_type(s, soup_cookie_jar_get_type());
 	g_signal_connect_after(G_OBJECT(s), "request-started", G_CALLBACK(newrequest), NULL);
-
 
 	/* proxy */
 	if((proxy = getenv("http_proxy")) && strcmp(proxy, "")) {
