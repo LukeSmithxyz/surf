@@ -17,7 +17,7 @@ LIBS = -L/usr/lib -lc ${GTKLIB} -lgthread-2.0
 
 # flags
 CPPFLAGS = -DVERSION=\"${VERSION}\"
-CFLAGS = -std=c99 -pedantic -Wall -Os ${INCS} ${CPPFLAGS}
+CFLAGS = -std=c99 -pedantic -Wall -O0 -g ${INCS} ${CPPFLAGS}
 LDFLAGS = -g ${LIBS}
 
 # Solaris

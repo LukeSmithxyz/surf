@@ -254,7 +254,7 @@ void
 download(Client *c, const Arg *arg) {
 	char *uri;
 	WebKitNetworkRequest *r;
-	WebKitDownload       *dl;
+	WebKitDownload *dl;
 
 	if(arg->v)
 		uri = (char *)arg->v;
@@ -420,18 +420,17 @@ linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
 
 void
 loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
-	if(c->download)
-		stop(c, NULL);
 	switch(webkit_web_view_get_load_status (c->view)) {
 	case WEBKIT_LOAD_COMMITTED:
-		setatom(c, uriprop, geturi(c));
+	if(c->download)
+		stop(c, NULL);
+	setatom(c, uriprop, geturi(c));
 		break;
 	case WEBKIT_LOAD_FINISHED:
 		c->progress = 0;
 		update(c);
 		break;
-	case WEBKIT_LOAD_PROVISIONAL:
-	case WEBKIT_LOAD_FIRST_VISUALLY_NON_EMPTY_LAYOUT:
+	default:
 		break;
 	}
 }
