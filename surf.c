@@ -18,6 +18,7 @@
 #include <webkit/webkit.h>
 #include <glib/gstdio.h>
 #include <JavaScriptCore/JavaScript.h>
+#include <sys/file.h>
 
 #define LENGTH(x)               (sizeof x / sizeof x[0])
 #define CLEANMASK(mask)         (mask & ~(GDK_MOD2_MASK))
@@ -703,6 +704,10 @@ scroll(Client *c, const Arg *arg) {
 
 void
 setcookie(SoupCookie *c) {
+	int lock;
+
+	lock = open(cookiefile, 0);
+	flock(lock, LOCK_EX);
 	SoupDate *e;
 	SoupCookieJar *j = soup_cookie_jar_text_new(cookiefile, FALSE);
 	c = soup_cookie_copy(c);
@@ -712,6 +717,8 @@ setcookie(SoupCookie *c) {
 	}
 	soup_cookie_jar_add_cookie(j, c);
 	g_object_unref(j);
+	flock(lock, LOCK_UN);
+	close(lock);
 }
 
 void
