@@ -430,8 +430,7 @@ loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 		c->progress = 0;
 		update(c);
 		break;
-	case WEBKIT_LOAD_PROVISIONAL:
-	case WEBKIT_LOAD_FIRST_VISUALLY_NON_EMPTY_LAYOUT:
+	default:
 		break;
 	}
 }
