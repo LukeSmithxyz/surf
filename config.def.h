@@ -6,7 +6,8 @@ static char *stylefile      = ".surf/style.css";
 static char *scriptfile     = ".surf/script.js";
 static char *cookiefile     = ".surf/cookies.txt";
 static char *dldir          = ".surf/dl/";
-static time_t sessiontime   = 3600;
+static time_t sessiontime   = 0;
+#define NOBACKGROUND 0
 
 #define SETPROP(p)       { .v = (char *[]){ "/bin/sh", "-c", \
 	"prop=\"`xprop -id $1 $0 | cut -d '\"' -f 2 | dmenu`\" &&" \

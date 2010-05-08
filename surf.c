@@ -567,6 +567,8 @@ newclient(void) {
 	g_free(uri);
 	setatom(c, findprop, "");
 	setatom(c, uriprop, "");
+	if(!NOBACKGROUND)
+		webkit_web_view_set_transparent(c->view, TRUE);
 
 	c->download = NULL;
 	c->title = NULL;
@@ -705,7 +707,7 @@ setcookie(SoupCookie *c) {
 	SoupDate *e;
 	SoupCookieJar *j = soup_cookie_jar_text_new(cookiefile, FALSE);
 	c = soup_cookie_copy(c);
-	if(c->expires == NULL) {
+	if(c->expires == NULL && sessiontime) {
 		e = soup_date_new_from_time_t(time(NULL) + sessiontime);
 		soup_cookie_set_expires(c, e);
 	}
