@@ -268,7 +268,7 @@ void
 download(Client *c, const Arg *arg) {
 	char *uri;
 	WebKitNetworkRequest *r;
-	WebKitDownload       *dl;
+	WebKitDownload *dl;
 
 	if(arg->v)
 		uri = (char *)arg->v;
@@ -434,11 +434,11 @@ linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
 
 void
 loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
-	if(c->download)
-		stop(c, NULL);
 	switch(webkit_web_view_get_load_status (c->view)) {
 	case WEBKIT_LOAD_COMMITTED:
-		setatom(c, uriprop, geturi(c));
+	if(c->download)
+		stop(c, NULL);
+	setatom(c, uriprop, geturi(c));
 		break;
 	case WEBKIT_LOAD_FINISHED:
 		c->progress = 0;
@@ -584,6 +584,8 @@ newclient(void) {
 	g_free(uri);
 	setatom(c, findprop, "");
 	setatom(c, uriprop, "");
+	if(!NOBACKGROUND)
+		webkit_web_view_set_transparent(c->view, TRUE);
 
 	c->download = NULL;
 	c->title = NULL;
@@ -605,9 +607,8 @@ newrequest(SoupSession *s, SoupMessage *msg, gpointer v) {
 
 	soup_message_headers_remove(h, "Cookie");
 	uri = soup_message_get_uri(msg);
-	if((c = getcookies(uri))) {
+	if((c = getcookies(uri)))
 		soup_message_headers_append(h, "Cookie", c);
-	}
 	g_signal_connect_after(G_OBJECT(msg), "got-headers", G_CALLBACK(gotheaders), NULL);
 }
 
@@ -727,7 +728,7 @@ setcookie(SoupCookie *c) {
 	SoupDate *e;
 	SoupCookieJar *j = soup_cookie_jar_text_new(cookiefile, FALSE);
 	c = soup_cookie_copy(c);
-	if(c->expires == NULL) {
+	if(c->expires == NULL && sessiontime) {
 		e = soup_date_new_from_time_t(time(NULL) + sessiontime);
 		soup_cookie_set_expires(c, e);
 	}
@@ -775,7 +776,6 @@ setup(void) {
 	soup_session_remove_feature_by_type(s, soup_cookie_get_type());
 	soup_session_remove_feature_by_type(s, soup_cookie_jar_get_type());
 	g_signal_connect_after(G_OBJECT(s), "request-started", G_CALLBACK(newrequest), NULL);
-
 
 	/* proxy */
 	if((proxy = getenv("http_proxy")) && strcmp(proxy, "")) {

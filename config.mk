@@ -7,8 +7,8 @@ VERSION = 0.4
 PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/share/man
 
-GTKINC=$(shell pkg-config --static --cflags gtk+-2.0 webkit-1.0)
-GTKLIB=$(shell pkg-config --static --libs gtk+-2.0 webkit-1.0)
+GTKINC=$(shell pkg-config --cflags gtk+-2.0 webkit-1.0)
+GTKLIB=$(shell pkg-config --libs gtk+-2.0 webkit-1.0)
 
 
 # includes and libs
