@@ -151,6 +151,19 @@ cleanup(void) {
 }
 
 void
+runscript(WebKitWebFrame *frame, JSContextRef js) {
+	JSStringRef jsscript;
+	char *script;
+	JSValueRef exception = NULL;
+	GError *error;
+	
+	if(g_file_get_contents(scriptfile, &script, NULL, &error)) {
+		jsscript = JSStringCreateWithUTF8CString(script);
+		JSEvaluateScript(js, jsscript, JSContextGetGlobalObject(js), NULL, 0, &exception);
+	}
+}
+
+void
 clipboard(Client *c, const Arg *arg) {
 	gboolean paste = *(gboolean *)arg;
 
@@ -470,6 +483,7 @@ newclient(void) {
 	int i;
 	Client *c;
 	WebKitWebSettings *settings;
+	WebKitWebFrame *frame;
 	GdkGeometry hints = { 1, 1 };
 	char *uri, *ua;
 
@@ -556,6 +570,8 @@ newclient(void) {
 	gdk_window_set_events(GTK_WIDGET(c->win)->window, GDK_ALL_EVENTS_MASK);
 	gdk_window_add_filter(GTK_WIDGET(c->win)->window, processx, c);
 	webkit_web_view_set_full_content_zoom(c->view, TRUE);
+	frame = webkit_web_view_get_main_frame(c->view);
+	runscript(frame, webkit_web_frame_get_global_context(frame));
 	settings = webkit_web_view_get_settings(c->view);
 	if(!(ua = getenv("SURF_USERAGENT")))
 		ua = useragent;
@@ -860,15 +876,7 @@ usage(void) {
 
 void
 windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObjectRef win, Client *c) {
-	JSStringRef jsscript;
-	char *script;
-	JSValueRef exception = NULL;
-	GError *error;
-	
-	if(g_file_get_contents(scriptfile, &script, NULL, &error)) {
-		jsscript = JSStringCreateWithUTF8CString(script);
-		JSEvaluateScript(js, jsscript, JSContextGetGlobalObject(js), NULL, 0, &exception);
-	}
+	runscript(frame, js);
 }
 
 void
