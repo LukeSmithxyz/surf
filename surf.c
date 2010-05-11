@@ -579,7 +579,7 @@ newclient(void) {
 	g_free(uri);
 	setatom(c, findprop, "");
 	setatom(c, uriprop, "");
-	if(!NOBACKGROUND)
+	if(NOBACKGROUND)
 		webkit_web_view_set_transparent(c->view, TRUE);
 
 	c->download = NULL;
