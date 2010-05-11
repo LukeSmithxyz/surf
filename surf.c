@@ -372,8 +372,6 @@ gboolean
 initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	const char *filename;
 	char *uri;
-	WebKitWebBackForwardList *h;
-	WebKitWebHistoryItem *i;
 
 	c->download = o;
 	filename = webkit_download_get_suggested_filename(o);
@@ -382,9 +380,6 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	uri = g_strconcat("file://", dldir, "/", filename, NULL);
 	webkit_download_set_destination_uri(c->download, uri);
 	c->progress = 0;
-	h = webkit_web_view_get_back_forward_list(c->view);
-	i = webkit_web_history_item_new_with_data(webkit_download_get_uri(c->download), filename);
-	webkit_web_back_forward_list_add_item(h, i);
 	g_signal_connect(c->download, "notify::progress", G_CALLBACK(updatedownload), c);
 	g_signal_connect(c->download, "notify::status", G_CALLBACK(updatedownload), c);
 	
