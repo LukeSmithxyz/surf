@@ -5,7 +5,7 @@ static char *progress_trust = "#00FF00";
 static char *stylefile      = ".surf/style.css";
 static char *scriptfile     = ".surf/script.js";
 static char *cookiefile     = ".surf/cookies.txt";
-static time_t sessiontime   = 0;
+static time_t sessiontime   = 3600;
 #define NOBACKGROUND 0
 
 #define SETPROP(p, q)     { .v = (char *[]){ "/bin/sh", "-c", \
