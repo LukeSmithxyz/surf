@@ -8,10 +8,10 @@ static char *cookiefile     = ".surf/cookies.txt";
 static time_t sessiontime   = 0;
 #define NOBACKGROUND 0
 
-#define SETPROP(p)       { .v = (char *[]){ "/bin/sh", "-c", \
-	"prop=\"`xprop -id $1 $0 | cut -d '\"' -f 2 | dmenu`\" &&" \
-	"xprop -id $1 -f $0 8s -set $0 \"$prop\"", \
-	p, winid, NULL } }
+#define SETPROP(p, q)     { .v = (char *[]){ "/bin/sh", "-c", \
+	"prop=\"`xprop -id $2 $0 | cut -d '\"' -f 2 | dmenu`\" &&" \
+	"xprop -id $2 -f $1 8s -set $1 \"$prop\"", \
+	p, q, winid, NULL } }
 #define MODKEY GDK_CONTROL_MASK
 static Key keys[] = {
     /* modifier	            keyval      function    arg             Focus */
@@ -29,8 +29,8 @@ static Key keys[] = {
     { MODKEY,               GDK_k,      scroll,     { .i = -1 } },
     { 0,                    GDK_Escape, stop,       { 0 } },
     { MODKEY,               GDK_o,      source,     { 0 } },
-    { MODKEY,               GDK_g,      spawn,      SETPROP("_SURF_URI") },
-    { MODKEY,               GDK_slash,  spawn,      SETPROP("_SURF_FIND") },
+    { MODKEY,               GDK_g,      spawn,      SETPROP("_SURF_URI", "_SURF_GO") },
+    { MODKEY,               GDK_slash,  spawn,      SETPROP("_SURF_FIND", "_SURF_FIND") },
     { MODKEY,               GDK_n,      find,       { .b = TRUE } },
     { MODKEY|GDK_SHIFT_MASK,GDK_n,      find,       { .b = FALSE } },
 };

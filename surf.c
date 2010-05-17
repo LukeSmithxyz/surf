@@ -23,6 +23,8 @@
 #define LENGTH(x)               (sizeof x / sizeof x[0])
 #define CLEANMASK(mask)         (mask & ~(GDK_MOD2_MASK))
 
+enum { AtomFind, AtomGo, AtomUri, AtomHiLight, AtomLast };
+
 typedef union Arg Arg;
 union Arg {
 	gboolean b;
@@ -54,11 +56,10 @@ typedef struct {
 } Key;
 
 static Display *dpy;
-static Atom uriprop, findprop;
+static Atom atoms[AtomLast];
 static Client *clients = NULL;
 static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
-static int ignorexprop = 0;
 static char winid[64];
 static char *progname;
 static gboolean loadimage = 1, plugin = 1, script = 1;
@@ -76,7 +77,7 @@ static void die(char *str);
 static void drawindicator(Client *c);
 static gboolean exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c);
 static void find(Client *c, const Arg *arg);
-static const char *getatom(Client *c, Atom a);
+static const char *getatom(Client *c, int a);
 static const char *getcookies(SoupURI *uri);
 static char *geturi(Client *c);
 void gotheaders(SoupMessage *msg, gpointer user_data);
@@ -95,7 +96,7 @@ static void progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
 static void reload(Client *c, const Arg *arg);
 static void resize(GtkWidget *w, GtkAllocation *a, Client *c);
 static void scroll(Client *c, const Arg *arg);
-static void setatom(Client *c, Atom a, const char *v);
+static void setatom(Client *c, int a, const char *v);
 static void setcookie(SoupCookie *c);
 static void setup(void);
 static void sigchld(int unused);
@@ -247,7 +248,7 @@ drawindicator(Client *c) {
 	GdkGC *gc;
 	GdkColor fg;
 
-	uri = getatom(c, uriprop);
+	uri = geturi(c);
 	w = c->indicator;
 	width = c->progress * w->allocation.width / 100;
 	gc = gdk_gc_new(w->window);
@@ -272,7 +273,7 @@ void
 find(Client *c, const Arg *arg) {
 	const char *s;
 
-	s = getatom(c, findprop);
+	s = getatom(c, AtomFind);
 	gboolean forward = *(gboolean *)arg;
 	webkit_web_view_search_text(c->view, s, FALSE, forward, TRUE);
 }
@@ -287,7 +288,7 @@ getcookies(SoupURI *uri) {
 }
 
 const char *
-getatom(Client *c, Atom a) {
+getatom(Client *c, int a) {
 	static char buf[BUFSIZ];
 	Atom adummy;
 	int idummy;
@@ -295,7 +296,7 @@ getatom(Client *c, Atom a) {
 	unsigned char *p = NULL;
 
 	XGetWindowProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window),
-			a, 0L, BUFSIZ, False, XA_STRING,
+			atoms[a], 0L, BUFSIZ, False, XA_STRING,
 			&adummy, &idummy, &ldummy, &ldummy, &p);
 	if(p)
 		strncpy(buf, (char *)p, LENGTH(buf)-1);
@@ -360,7 +361,7 @@ void
 loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 	switch(webkit_web_view_get_load_status (c->view)) {
 	case WEBKIT_LOAD_COMMITTED:
-		setatom(c, uriprop, geturi(c));
+		setatom(c, AtomUri, geturi(c));
 		break;
 	case WEBKIT_LOAD_FINISHED:
 		c->progress = 0;
@@ -491,8 +492,9 @@ newclient(void) {
 	g_object_set(G_OBJECT(settings), "enable-plugins", plugin, NULL);
 	g_object_set(G_OBJECT(settings), "enable-scripts", script, NULL);
 	g_free(uri);
-	setatom(c, findprop, "");
-	setatom(c, uriprop, "");
+
+	setatom(c, AtomFind, "");
+	setatom(c, AtomUri, "about:blank");
 	if(NOBACKGROUND)
 		webkit_web_view_set_transparent(c->view, TRUE);
 
@@ -569,18 +571,17 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 
 	if(((XEvent *)e)->type == PropertyNotify) {
 		ev = &((XEvent *)e)->xproperty;
-		if(ignorexprop)
-			ignorexprop--;
-		else if(ev->state == PropertyNewValue) {
-			if(ev->atom == uriprop) {
-				arg.v = getatom(c, uriprop);
-				loaduri(c, &arg);
-			}
-			else if(ev->atom == findprop) {
+		if(ev->state == PropertyNewValue) {
+			if(ev->atom == atoms[AtomFind]) {
 				arg.b = TRUE;
 				find(c, &arg);
+				return GDK_FILTER_REMOVE;
 			}
-			return GDK_FILTER_REMOVE;
+			else if(ev->atom == atoms[AtomGo]) {
+				arg.v = getatom(c, AtomGo);
+				loaduri(c, &arg);
+				return GDK_FILTER_REMOVE;
+			}
 		}
 	}
 	return GDK_FILTER_CONTINUE;
@@ -647,10 +648,9 @@ setcookie(SoupCookie *c) {
 }
 
 void
-setatom(Client *c, Atom a, const char *v) {
+setatom(Client *c, int a, const char *v) {
 	XSync(dpy, False);
-	ignorexprop++;
-	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), a,
+	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), atoms[a],
 			XA_STRING, 8, PropModeReplace, (unsigned char *)v,
 			strlen(v) + 1);
 }
@@ -670,8 +670,12 @@ setup(void) {
 
 	dpy = GDK_DISPLAY();
 	s = webkit_get_default_session();
-	uriprop = XInternAtom(dpy, "_SURF_URI", False);
-	findprop = XInternAtom(dpy, "_SURF_FIND", False);
+
+	/* atoms */
+	atoms[AtomFind] = XInternAtom(dpy, "_SURF_FIND", False);
+	atoms[AtomGo] = XInternAtom(dpy, "_SURF_GO", False);
+	atoms[AtomUri] = XInternAtom(dpy, "_SURF_URI", False);
+	atoms[AtomHiLight] = XInternAtom(dpy, "_SURF_HILIGHT", False);
 
 	/* dirs and files */
 	cookiefile = buildpath(cookiefile);
@@ -688,7 +692,6 @@ setup(void) {
 	if((proxy = getenv("http_proxy")) && strcmp(proxy, "")) {
 		new_proxy = g_strrstr(proxy, "http://") ? g_strdup(proxy) :
 			g_strdup_printf("http://%s", proxy);
-
 		puri = soup_uri_new(new_proxy);
 		g_object_set(G_OBJECT(s), "proxy-uri", puri, NULL);
 		soup_uri_free(puri);
