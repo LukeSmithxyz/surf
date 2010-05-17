@@ -35,14 +35,3 @@ static Key keys[] = {
     { MODKEY,               GDK_n,      find,       { .b = TRUE } },
     { MODKEY|GDK_SHIFT_MASK,GDK_n,      find,       { .b = FALSE } },
 };
-
-static Item items[] = {
-    { "Back",           navigate,  { .i = -1 } },
-    { "Forward",        navigate,  { .i = +1 } },
-    { "New Window",     newwindow, { .v = NULL } },
-    { "Reload",         reload,    { .b = FALSE } },
-    { "Stop",           stop,      { 0 } },
-    { "Paste URI",      clipboard, { .b = TRUE } },
-    { "Copy URI",       clipboard, { .b = FALSE } },
-    { "Download",       download,  { 0 } },
-};

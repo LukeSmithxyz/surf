@@ -32,9 +32,7 @@ union Arg {
 
 typedef struct Client {
 	GtkWidget *win, *scroll, *vbox, *indicator;
-	GtkWidget **items;
 	WebKitWebView *view;
-	WebKitDownload *download;
 	char *title, *linkhover;
 	const char *uri, *needle;
 	gint progress;
@@ -68,7 +66,6 @@ static gboolean loadimage = 1, plugin = 1, script = 1;
 static char *buildpath(const char *path);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
-static void context(WebKitWebView *v, GtkMenu *m, Client *c);
 static char *copystr(char **str, const char *src);
 static WebKitWebView *createwindow(WebKitWebView *v, WebKitWebFrame *f, Client *c);
 static gboolean decidedownload(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r, gchar *m,  WebKitWebPolicyDecision *p, Client *c);
@@ -76,7 +73,6 @@ static gboolean decidewindow(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkR
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 static void die(char *str);
-static void download(Client *c, const Arg *arg);
 static void drawindicator(Client *c);
 static gboolean exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c);
 static void find(Client *c, const Arg *arg);
@@ -84,8 +80,6 @@ static const char *getatom(Client *c, Atom a);
 static const char *getcookies(SoupURI *uri);
 static char *geturi(Client *c);
 void gotheaders(SoupMessage *msg, gpointer user_data);
-static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
-static void itemclick(GtkMenuItem *mi, Client *c);
 static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
 static void linkhover(WebKitWebView *v, const char* t, const char* l, Client *c);
 static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
@@ -110,7 +104,6 @@ static void spawn(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *v, WebKitWebFrame* frame, const char* title, Client *c);
 static void update(Client *c);
-static void updatedownload(WebKitDownload *o, GParamSpec *pspec, Client *c);
 static void updatewinid(Client *c);
 static void usage(void);
 static void windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObjectRef win, Client *c);
@@ -173,22 +166,6 @@ clipboard(Client *c, const Arg *arg) {
 		gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), c->linkhover ? c->linkhover : geturi(c), -1);
 }
 
-void
-context(WebKitWebView *v, GtkMenu *m, Client *c) {
-	int i;
-	GtkContainer *parent;
-
-	gtk_widget_hide_all(GTK_WIDGET(m));
-	gtk_widget_show(GTK_WIDGET(m));
-	for(i = 0; i < LENGTH(items); i++) {
-		parent = GTK_CONTAINER(gtk_widget_get_parent(c->items[i]));
-		if(parent)
-			gtk_container_remove(parent, c->items[i]);
-		gtk_menu_shell_append(GTK_MENU_SHELL(m), c->items[i]);
-		gtk_widget_show(c->items[i]);
-	}
-}
-
 char *
 copystr(char **str, const char *src) {
 	char *tmp;
@@ -210,7 +187,10 @@ createwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c) {
 gboolean
 decidedownload(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r, gchar *m,  WebKitWebPolicyDecision *p, Client *c) {
 	if(!webkit_web_view_can_show_mime_type(v, m)) {
-		webkit_web_policy_decision_download(p);
+		webkit_web_policy_decision_ignore(p);
+		webkit_web_view_load_html_string(c->view,
+				"Can't display content.",
+				webkit_network_request_get_uri(r));
 		return TRUE;
 	}
 	return FALSE;
@@ -231,7 +211,6 @@ decidewindow(WebKitWebView *view, WebKitWebFrame *f, WebKitNetworkRequest *r, We
 
 void
 destroyclient(Client *c) {
-	int i;
 	Client *p;
 
 	gtk_widget_destroy(c->indicator);
@@ -239,9 +218,6 @@ destroyclient(Client *c) {
 	gtk_widget_destroy(c->scroll);
 	gtk_widget_destroy(c->vbox);
 	gtk_widget_destroy(c->win);
-	for(i = 0; i < LENGTH(items); i++)
-		gtk_widget_destroy(c->items[i]);
-	free(c->items);
 
 	for(p = clients; p && p->next != c; p = p->next);
 	if(p)
@@ -262,22 +238,6 @@ void
 die(char *str) {
 	fputs(str, stderr);
 	exit(EXIT_FAILURE);
-}
-
-void
-download(Client *c, const Arg *arg) {
-	char *uri;
-	WebKitNetworkRequest *r;
-	WebKitDownload *dl;
-
-	if(arg->v)
-		uri = (char *)arg->v;
-	else
-		uri = c->linkhover ? c->linkhover : geturi(c);
-	r = webkit_network_request_new(uri);
-	dl = webkit_download_new(r);
-	initdownload(c->view, dl, c);
-	webkit_download_start(c->download);
 }
 
 void
@@ -369,37 +329,6 @@ gotheaders(SoupMessage *msg, gpointer v) {
 }
 
 gboolean
-initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
-	const char *filename;
-	char *uri;
-
-	c->download = o;
-	filename = webkit_download_get_suggested_filename(o);
-	if(!strcmp("", filename))
-		filename = "index.html";
-	uri = g_strconcat("file://", dldir, "/", filename, NULL);
-	webkit_download_set_destination_uri(c->download, uri);
-	c->progress = 0;
-	g_signal_connect(c->download, "notify::progress", G_CALLBACK(updatedownload), c);
-	g_signal_connect(c->download, "notify::status", G_CALLBACK(updatedownload), c);
-	
-	c->title = copystr(&c->title, filename);
-	update(c);
-	return TRUE;
-}
-
-void
-itemclick(GtkMenuItem *mi, Client *c) {
-	int i;
-	const char *label;
-
-	label = gtk_menu_item_get_label(mi);
-	for(i = 0; i < LENGTH(items); i++)
-		if(!strcmp(items[i].label, label))
-			items[i].func(c, &(items[i].arg));
-}
-
-gboolean
 keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 	guint i;
 	gboolean processed = FALSE;
@@ -418,8 +347,9 @@ keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 
 void
 linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
-	if(l)
+	if(l) {
 		c->linkhover = copystr(&c->linkhover, l);
+	}
 	else if(c->linkhover) {
 		free(c->linkhover);
 		c->linkhover = NULL;
@@ -431,9 +361,7 @@ void
 loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 	switch(webkit_web_view_get_load_status (c->view)) {
 	case WEBKIT_LOAD_COMMITTED:
-	if(c->download)
-		stop(c, NULL);
-	setatom(c, uriprop, geturi(c));
+		setatom(c, uriprop, geturi(c));
 		break;
 	case WEBKIT_LOAD_FINISHED:
 		c->progress = 0;
@@ -475,7 +403,6 @@ navigate(Client *c, const Arg *arg) {
 
 Client *
 newclient(void) {
-	int i;
 	Client *c;
 	WebKitWebSettings *settings;
 	WebKitWebFrame *frame;
@@ -509,16 +436,6 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->win), "key-press-event", G_CALLBACK(keypress), c);
 	g_signal_connect(G_OBJECT(c->win), "size-allocate", G_CALLBACK(resize), c);
 
-	if(!(c->items = calloc(1, sizeof(GtkWidget *) * LENGTH(items))))
-		die("Cannot malloc!\n");
-
-	/* contextmenu */
-	for(i = 0; i < LENGTH(items); i++) {
-		c->items[i] = gtk_menu_item_new_with_label(items[i].label);
-		g_signal_connect(G_OBJECT(c->items[i]), "activate",
-				G_CALLBACK(itemclick), c);
-	}
-
 	/* VBox */
 	c->vbox = gtk_vbox_new(FALSE, 0);
 
@@ -534,9 +451,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(createwindow), c);
 	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(decidewindow), c);
 	g_signal_connect(G_OBJECT(c->view), "mime-type-policy-decision-requested", G_CALLBACK(decidedownload), c);
-	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
 	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
-	g_signal_connect(G_OBJECT(c->view), "populate-popup", G_CALLBACK(context), c);
 	g_signal_connect(G_OBJECT(c->view), "notify::load-status", G_CALLBACK(loadstatuschange), c);
 	g_signal_connect(G_OBJECT(c->view), "notify::progress", G_CALLBACK(progresschange), c);
 
@@ -582,7 +497,6 @@ newclient(void) {
 	if(NOBACKGROUND)
 		webkit_web_view_set_transparent(c->view, TRUE);
 
-	c->download = NULL;
 	c->title = NULL;
 	c->next = clients;
 	clients = c;
@@ -816,11 +730,7 @@ spawn(Client *c, const Arg *arg) {
 
 void
 stop(Client *c, const Arg *arg) {
-	if(c->download)
-		webkit_download_cancel(c->download);
-	else
-		webkit_web_view_stop_loading(c->view);
-	c->download = NULL;
+	webkit_web_view_stop_loading(c->view);
 }
 
 void
@@ -842,19 +752,6 @@ update(Client *c) {
 	drawindicator(c);
 	gtk_window_set_title(GTK_WINDOW(c->win), t);
 	g_free(t);
-}
-
-void
-updatedownload(WebKitDownload *o, GParamSpec *pspec, Client *c) {
-	WebKitDownloadStatus status;
-
-	status = webkit_download_get_status(c->download);
-	if(status == WEBKIT_DOWNLOAD_STATUS_STARTED || status == WEBKIT_DOWNLOAD_STATUS_CREATED) {
-		c->progress = (gint)(webkit_download_get_progress(c->download)*100);
-	}
-	else
-		stop(c, NULL);
-	update(c);
 }
 
 void
