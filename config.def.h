@@ -5,7 +5,6 @@ static char *progress_trust = "#00FF00";
 static char *stylefile      = ".surf/style.css";
 static char *scriptfile     = ".surf/script.js";
 static char *cookiefile     = ".surf/cookies.txt";
-static char *dldir          = ".surf/dl/";
 static time_t sessiontime   = 0;
 #define NOBACKGROUND 0
 

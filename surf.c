@@ -128,7 +128,7 @@ buildpath(const char *path) {
 		*p = '/';
 	}
 	/* creating file (gives error when apath ends with "/") */
-	if((f = g_fopen(apath, "a")))
+	if((f = fopen(apath, "a")))
 		fclose(f);
 	return apath;
 }
@@ -138,7 +138,6 @@ cleanup(void) {
 	while(clients)
 		destroyclient(clients);
 	g_free(cookiefile);
-	g_free(dldir);
 	g_free(scriptfile);
 	g_free(stylefile);
 }
@@ -676,7 +675,6 @@ setup(void) {
 
 	/* dirs and files */
 	cookiefile = buildpath(cookiefile);
-	dldir = buildpath(dldir);
 	scriptfile = buildpath(scriptfile);
 	stylefile = buildpath(stylefile);
 
