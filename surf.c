@@ -85,6 +85,7 @@ static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
 static void linkhover(WebKitWebView *v, const char* t, const char* l, Client *c);
 static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
 static void loaduri(Client *c, const Arg *arg);
+static void mousemove(GtkWidget *w, GdkEventMotion *e, Client *c);
 static void navigate(Client *c, const Arg *arg);
 static Client *newclient(void);
 static void newwindow(Client *c, const Arg *arg);
@@ -396,6 +397,21 @@ loaduri(Client *c, const Arg *arg) {
 }
 
 void
+mousemove(GtkWidget *w, GdkEventMotion *e, Client *c) {
+	int result;
+	GdkEventButton coord;
+	WebKitHitTestResult *hit;
+
+	coord.x = e->x;
+	coord.y = e->y;
+	hit = webkit_web_view_get_hit_test_result(c->view, &coord);
+	g_object_get(hit, "context", &result, NULL);
+	if(result & WEBKIT_HIT_TEST_RESULT_CONTEXT_IMAGE && !c->linkhover) {
+		puts("Picture");
+	}
+}
+
+void
 navigate(Client *c, const Arg *arg) {
 	int steps = *(int *)arg;
 	webkit_web_view_go_back_or_forward(c->view, steps);
@@ -454,6 +470,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
 	g_signal_connect(G_OBJECT(c->view), "notify::load-status", G_CALLBACK(loadstatuschange), c);
 	g_signal_connect(G_OBJECT(c->view), "notify::progress", G_CALLBACK(progresschange), c);
+	g_signal_connect(G_OBJECT(c->view), "motion-notify-event", G_CALLBACK(mousemove), c);
 
 	/* Indicator */
 	c->indicator = gtk_drawing_area_new();
@@ -495,6 +512,7 @@ newclient(void) {
 
 	setatom(c, AtomFind, "");
 	setatom(c, AtomUri, "about:blank");
+	setatom(c, AtomHiLight, "about:blank");
 	if(NOBACKGROUND)
 		webkit_web_view_set_transparent(c->view, TRUE);
 
@@ -744,12 +762,14 @@ void
 update(Client *c) {
 	char *t;
 
-	if(c->progress != 100)
+	if(c->progress != 100) {
 		t = g_strdup_printf("[%i%%] %s", c->progress, c->title);
+	}
 	else if(c->linkhover)
 		t = g_strdup(c->linkhover);
 	else
 		t = g_strdup(c->title);
+	setatom(c, AtomHiLight, c->linkhover ? c->linkhover : geturi(c));
 	drawindicator(c);
 	gtk_window_set_title(GTK_WINDOW(c->win), t);
 	g_free(t);
