@@ -8,13 +8,21 @@ static char *cookiefile     = ".surf/cookies.txt";
 static time_t sessiontime   = 3600;
 #define NOBACKGROUND 0
 
-#define SETPROP(p, q)     { .v = (char *[]){ "/bin/sh", "-c", \
+#define SETPROP(p, q)     { \
+	.v = (char *[]){ "sh", "-c", \
 	"prop=\"`xprop -id $2 $0 | cut -d '\"' -f 2 | dmenu`\" &&" \
 	"xprop -id $2 -f $1 8s -set $1 \"$prop\"", \
 	p, q, winid, NULL } }
+#define DOWNLOAD(p)       { \
+	.v = (char *[]){ "/bin/sh", "-c", \
+	"prop=\"`xprop -id $1 $0 | cut -d '\"' -f 2 | tr -d '\\''`\";" \
+	"xterm -e \"wget --load-cookies '~/.surf/cookies.txt' '$prop';\"", \
+	p, winid, NULL } }
+
 #define MODKEY GDK_CONTROL_MASK
 static Key keys[] = {
     /* modifier	            keyval      function    arg             Focus */
+    { MODKEY,               GDK_s,      spawn,      DOWNLOAD("_SURF_HILIGHT") },
     { MODKEY|GDK_SHIFT_MASK,GDK_r,      reload,     { .b = TRUE } },
     { MODKEY,               GDK_r,      reload,     { .b = FALSE } },
     { MODKEY|GDK_SHIFT_MASK,GDK_p,      print,      { 0 } },
