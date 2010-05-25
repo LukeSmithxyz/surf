@@ -1,5 +1,5 @@
 /* modifier 0 means no modifier */
-static char *useragent      = "Mozilla/5.0 (X11; U; Linux; en-us) AppleWebKit/531.2+ (KHTML, like Gecko, surf-"VERSION") Safari/531.2+";
+static char *useragent      = "Surf/"VERSION" (X11; U; Unix; en-US) AppleWebKit/531.2+ Compatible (Safari)";
 static char *progress       = "#FF0000";
 static char *progress_trust = "#00FF00";
 static char *stylefile      = ".surf/style.css";
