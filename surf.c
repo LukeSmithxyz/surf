@@ -81,6 +81,7 @@ static const char *getatom(Client *c, int a);
 static const char *getcookies(SoupURI *uri);
 static char *geturi(Client *c);
 void gotheaders(SoupMessage *msg, gpointer user_data);
+static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
 static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
 static void linkhover(WebKitWebView *v, const char* t, const char* l, Client *c);
 static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
@@ -329,6 +330,16 @@ gotheaders(SoupMessage *msg, gpointer v) {
 }
 
 gboolean
+initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
+	Arg arg;
+
+	updatewinid(c);
+	cmd = (Arg)DOWNLOAD("_SURF_HILIGHT");
+	spawn(c, &cmg);
+	return FALSE;
+}
+
+gboolean
 keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 	guint i;
 	gboolean processed = FALSE;
@@ -454,6 +465,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
 	g_signal_connect(G_OBJECT(c->view), "notify::load-status", G_CALLBACK(loadstatuschange), c);
 	g_signal_connect(G_OBJECT(c->view), "notify::progress", G_CALLBACK(progresschange), c);
+	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
 
 	/* Indicator */
 	c->indicator = gtk_drawing_area_new();
@@ -495,6 +507,7 @@ newclient(void) {
 
 	setatom(c, AtomFind, "");
 	setatom(c, AtomUri, "about:blank");
+	setatom(c, AtomHiLight, "about:blank");
 	if(NOBACKGROUND)
 		webkit_web_view_set_transparent(c->view, TRUE);
 
@@ -750,6 +763,7 @@ update(Client *c) {
 		t = g_strdup(c->linkhover);
 	else
 		t = g_strdup(c->title);
+	setatom(c, AtomHiLight, c->linkhover ? c->linkhover : geturi(c));
 	drawindicator(c);
 	gtk_window_set_title(GTK_WINDOW(c->win), t);
 	g_free(t);
