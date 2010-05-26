@@ -334,8 +334,8 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	Arg arg;
 
 	updatewinid(c);
-	cmd = (Arg)DOWNLOAD("_SURF_HILIGHT");
-	spawn(c, &cmg);
+	arg = (Arg)DOWNLOAD("_SURF_HILIGHT");
+	spawn(c, &arg);
 	return FALSE;
 }
 
