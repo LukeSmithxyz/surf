@@ -23,7 +23,7 @@
 #define LENGTH(x)               (sizeof x / sizeof x[0])
 #define CLEANMASK(mask)         (mask & ~(GDK_MOD2_MASK))
 
-enum { AtomFind, AtomGo, AtomUri, AtomHiLight, AtomLast };
+enum { AtomFind, AtomGo, AtomUri, AtomLast };
 
 typedef union Arg Arg;
 union Arg {
@@ -188,10 +188,7 @@ createwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c) {
 gboolean
 decidedownload(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r, gchar *m,  WebKitWebPolicyDecision *p, Client *c) {
 	if(!webkit_web_view_can_show_mime_type(v, m)) {
-		webkit_web_policy_decision_ignore(p);
-		webkit_web_view_load_html_string(c->view,
-				"Can't display content.",
-				webkit_network_request_get_uri(r));
+		webkit_web_policy_decision_download(p);
 		return TRUE;
 	}
 	return FALSE;
@@ -334,7 +331,7 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	Arg arg;
 
 	updatewinid(c);
-	arg = (Arg)DOWNLOAD("_SURF_HILIGHT");
+	arg = (Arg)DOWNLOAD((char *)webkit_download_get_uri(o));
 	spawn(c, &arg);
 	return FALSE;
 }
@@ -503,11 +500,12 @@ newclient(void) {
 	g_object_set(G_OBJECT(settings), "auto-load-images", loadimage, NULL);
 	g_object_set(G_OBJECT(settings), "enable-plugins", plugin, NULL);
 	g_object_set(G_OBJECT(settings), "enable-scripts", script, NULL);
+	g_object_set(G_OBJECT(settings), "enable-spatial-navigation", true, NULL);
+
 	g_free(uri);
 
 	setatom(c, AtomFind, "");
 	setatom(c, AtomUri, "about:blank");
-	setatom(c, AtomHiLight, "about:blank");
 	if(NOBACKGROUND)
 		webkit_web_view_set_transparent(c->view, TRUE);
 
@@ -688,7 +686,6 @@ setup(void) {
 	atoms[AtomFind] = XInternAtom(dpy, "_SURF_FIND", False);
 	atoms[AtomGo] = XInternAtom(dpy, "_SURF_GO", False);
 	atoms[AtomUri] = XInternAtom(dpy, "_SURF_URI", False);
-	atoms[AtomHiLight] = XInternAtom(dpy, "_SURF_HILIGHT", False);
 
 	/* dirs and files */
 	cookiefile = buildpath(cookiefile);
@@ -763,7 +760,6 @@ update(Client *c) {
 		t = g_strdup(c->linkhover);
 	else
 		t = g_strdup(c->title);
-	setatom(c, AtomHiLight, c->linkhover ? c->linkhover : geturi(c));
 	drawindicator(c);
 	gtk_window_set_title(GTK_WINDOW(c->win), t);
 	g_free(t);
