@@ -87,7 +87,7 @@ static void linkhover(WebKitWebView *v, const char* t, const char* l, Client *c)
 static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
 static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
-static Client *newclient(void);
+static Client *newclient(gboolean view);
 static void newwindow(Client *c, const Arg *arg);
 static void newrequest(SoupSession *s, SoupMessage *msg, gpointer v);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
@@ -181,7 +181,7 @@ copystr(char **str, const char *src) {
 
 WebKitWebView *
 createwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c) {
-	Client *n = newclient();
+	Client *n = newclient(TRUE);
 	return n->view;
 }
 
@@ -410,7 +410,7 @@ navigate(Client *c, const Arg *arg) {
 }
 
 Client *
-newclient(void) {
+newclient(gboolean newview) {
 	Client *c;
 	WebKitWebSettings *settings;
 	WebKitWebFrame *frame;
@@ -454,15 +454,18 @@ newclient(void) {
 
 	/* Webview */
 	c->view = WEBKIT_WEB_VIEW(webkit_web_view_new());
-	g_signal_connect(G_OBJECT(c->view), "title-changed", G_CALLBACK(titlechange), c);
-	g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
-	g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(createwindow), c);
-	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(decidewindow), c);
-	g_signal_connect(G_OBJECT(c->view), "mime-type-policy-decision-requested", G_CALLBACK(decidedownload), c);
-	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
-	g_signal_connect(G_OBJECT(c->view), "notify::load-status", G_CALLBACK(loadstatuschange), c);
-	g_signal_connect(G_OBJECT(c->view), "notify::progress", G_CALLBACK(progresschange), c);
-	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
+	/* The widget to which the widget is added will handle the signals. */
+	if (!newview){
+		g_signal_connect(G_OBJECT(c->view), "title-changed", G_CALLBACK(titlechange), c);
+		g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
+		g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(createwindow), c);
+		g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(decidewindow), c);
+		g_signal_connect(G_OBJECT(c->view), "mime-type-policy-decision-requested", G_CALLBACK(decidedownload), c);
+		g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
+		g_signal_connect(G_OBJECT(c->view), "notify::load-status", G_CALLBACK(loadstatuschange), c);
+		g_signal_connect(G_OBJECT(c->view), "notify::progress", G_CALLBACK(progresschange), c);
+		g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
+	}
 
 	/* Indicator */
 	c->indicator = gtk_drawing_area_new();
@@ -836,7 +839,7 @@ main(int argc, char *argv[]) {
 	if(i < argc)
 		arg.v = argv[i];
 	setup();
-	newclient();
+	newclient(FALSE);
 	if(arg.v)
 		loaduri(clients, &arg);
 	gtk_main();
