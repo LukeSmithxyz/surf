@@ -507,7 +507,7 @@ newclient(void) {
 
 	setatom(c, AtomFind, "");
 	setatom(c, AtomUri, "about:blank");
-	if(NOBACKGROUND)
+	if(HIDE_BACKGROUND)
 		webkit_web_view_set_transparent(c->view, TRUE);
 
 	c->title = NULL;
