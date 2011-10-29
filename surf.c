@@ -21,7 +21,6 @@
 #include <sys/file.h>
 
 #define LENGTH(x)               (sizeof x / sizeof x[0])
-#define CLEANMASK(mask)         (mask & ~(GDK_MOD2_MASK))
 
 enum { AtomFind, AtomGo, AtomUri, AtomLast };
 
@@ -345,7 +344,7 @@ keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 	updatewinid(c);
 	for(i = 0; i < LENGTH(keys); i++) {
 		if(gdk_keyval_to_lower(ev->keyval) == keys[i].keyval
-				&& CLEANMASK(ev->state) == keys[i].mod
+				&& (ev->state & keys[i].mod) == keys[i].mod
 				&& keys[i].func) {
 			keys[i].func(c, &(keys[i].arg));
 			processed = TRUE;
