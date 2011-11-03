@@ -102,6 +102,7 @@ static void setup(void);
 static void sigchld(int unused);
 static void source(Client *c, const Arg *arg);
 static void spawn(Client *c, const Arg *arg);
+static void eval(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *v, WebKitWebFrame* frame, const char* title, Client *c);
 static void update(Client *c);
@@ -144,15 +145,24 @@ cleanup(void) {
 }
 
 void
-runscript(WebKitWebFrame *frame, JSContextRef js) {
-	JSStringRef jsscript;
-	char *script;
+evalscript(WebKitWebFrame *frame, JSContextRef js, char *script, char* scriptname) {
+	JSStringRef jsscript, jsscriptname;
 	JSValueRef exception = NULL;
+
+	jsscript = JSStringCreateWithUTF8CString(script);
+	jsscriptname = JSStringCreateWithUTF8CString(scriptname);
+	JSEvaluateScript(js, jsscript, JSContextGetGlobalObject(js), jsscriptname, 0, &exception);
+	JSStringRelease(jsscript);
+	JSStringRelease(jsscriptname);
+}
+
+void
+runscript(WebKitWebFrame *frame, JSContextRef js) {
+	char *script;
 	GError *error;
-	
+
 	if(g_file_get_contents(scriptfile, &script, NULL, &error)) {
-		jsscript = JSStringCreateWithUTF8CString(script);
-		JSEvaluateScript(js, jsscript, JSContextGetGlobalObject(js), NULL, 0, &exception);
+		evalscript(frame, webkit_web_frame_get_global_context(frame), script, scriptfile);
 	}
 }
 
@@ -737,6 +747,12 @@ spawn(Client *c, const Arg *arg) {
 		perror(" failed");
 		exit(0);
 	}
+}
+
+void
+eval(Client *c, const Arg *arg) {
+	WebKitWebFrame *frame = webkit_web_view_get_main_frame(c->view);
+	evalscript(frame, webkit_web_frame_get_global_context(frame), ((char **)arg->v)[0], "");
 }
 
 void
