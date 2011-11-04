@@ -461,7 +461,7 @@ newclient(void) {
 		 * window class (WM_CLASS) is capped, while the resource is in
 		 * lowercase.   Both these values come as a pair.
 		 */
-		gtk_window_set_wmclass(GTK_WINDOW(c->win), "surf", "surf");
+		gtk_window_set_wmclass(GTK_WINDOW(c->win), "surf", "Surf");
 
 		/* TA:  20091214:  And set the role here as well -- so that
 		 * sessions can pick this up.
