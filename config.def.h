@@ -1,11 +1,14 @@
 /* modifier 0 means no modifier */
 static char *useragent      = "Surf/"VERSION" (X11; U; Unix; en-US) AppleWebKit/531.2+ Compatible (Safari)";
-static char *progress       = "#FF0000";
+static char *progress       = "#0066FF";
+static char *progress_untrust = "#FF6600";
 static char *progress_trust = "#00FF00";
 static char *stylefile      = ".surf/style.css";
 static char *scriptfile     = ".surf/script.js";
 static char *cookiefile     = ".surf/cookies.txt";
 static time_t sessiontime   = 3600;
+static char *cafile         = "/etc/ssl/certs/ca-certificates.crt";
+static char *strictssl      = FALSE; /* Refuse untrusted SSL connections */
 #define HIDE_BACKGROUND FALSE
 
 #define SETPROP(p, q)     { .v = (char *[]){ "/bin/sh", "-c", \

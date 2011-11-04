@@ -37,6 +37,7 @@ typedef struct Client {
 	char *title, *linkhover;
 	const char *uri, *needle;
 	gint progress;
+	gboolean sslfailed;
 	struct Client *next;
 	gboolean zoomed;
 } Client;
@@ -260,8 +261,11 @@ drawindicator(Client *c) {
 	w = c->indicator;
 	width = c->progress * w->allocation.width / 100;
 	gc = gdk_gc_new(w->window);
-	gdk_color_parse(strstr(uri, "https://") == uri ?
-			progress_trust : progress, &fg);
+	if(strstr(uri, "https://") == uri)
+		gdk_color_parse(c->sslfailed ?
+		                progress_untrust : progress_trust, &fg);
+	else
+		gdk_color_parse(progress, &fg);
 	gdk_gc_set_rgb_fg_color(gc, &fg);
 	gdk_draw_rectangle(w->window,
 			w->style->bg_gc[GTK_WIDGET_STATE(w)],
@@ -377,9 +381,24 @@ linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
 
 void
 loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
+	WebKitWebFrame *frame;
+	WebKitWebDataSource *src;
+	WebKitNetworkRequest *request;
+	SoupMessage *msg;
+	char *uri;
+
 	switch(webkit_web_view_get_load_status (c->view)) {
 	case WEBKIT_LOAD_COMMITTED:
-		setatom(c, AtomUri, geturi(c));
+		uri = geturi(c);
+		if(strstr(uri, "https://") == uri) {
+			frame = webkit_web_view_get_main_frame(c->view);
+			src = webkit_web_frame_get_data_source(frame);
+			request = webkit_web_data_source_get_request(src);
+			msg = webkit_network_request_get_message(request);
+			c->sslfailed = soup_message_get_flags(msg)
+			               ^ SOUP_MESSAGE_CERTIFICATE_TRUSTED;
+		}
+		setatom(c, AtomUri, uri);
 		break;
 	case WEBKIT_LOAD_FINISHED:
 		c->progress = 0;
@@ -707,6 +726,10 @@ setup(void) {
 	soup_session_remove_feature_by_type(s, soup_cookie_get_type());
 	soup_session_remove_feature_by_type(s, soup_cookie_jar_get_type());
 	g_signal_connect_after(G_OBJECT(s), "request-started", G_CALLBACK(newrequest), NULL);
+
+	/* ssl */
+	g_object_set(G_OBJECT(s), "ssl-ca-file", cafile, NULL);
+	g_object_set(G_OBJECT(s), "ssl-strict", strictssl, NULL);
 
 	/* proxy */
 	if((proxy = getenv("http_proxy")) && strcmp(proxy, "")) {
