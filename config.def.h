@@ -15,10 +15,11 @@ static char *strictssl      = FALSE; /* Refuse untrusted SSL connections */
 	"prop=\"`xprop -id $2 $0 | cut -d '\"' -f 2 | dmenu`\" &&" \
 	"xprop -id $2 -f $1 8s -set $1 \"$prop\"", \
 	p, q, winid, NULL } }
-#define DOWNLOAD(d) { \
+#define DOWNLOAD(d, u) {                  \
 	.v = (char *[]){ "/bin/sh", "-c", \
-	"xterm -e \"wget --load-cookies ~/.surf/cookies.txt '$0';\"", \
-	d, NULL } }
+	"xterm -e \"wget '$0' \
+--load-cookies ~/.surf/cookies.txt \
+--user-agent '$1' ; sleep 5\"", d, u, NULL } }
 #define MODKEY GDK_CONTROL_MASK
 static Key keys[] = {
     /* modifier	            keyval      function    arg             Focus */
