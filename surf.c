@@ -529,7 +529,7 @@ newclient(void) {
 	g_object_set(G_OBJECT(settings), "auto-load-images", loadimage, NULL);
 	g_object_set(G_OBJECT(settings), "enable-plugins", plugin, NULL);
 	g_object_set(G_OBJECT(settings), "enable-scripts", script, NULL);
-	g_object_set(G_OBJECT(settings), "enable-spatial-navigation", true, NULL);
+	g_object_set(G_OBJECT(settings), "enable-spatial-navigation", SPATIAL_BROWSING, NULL);
 
 	g_free(uri);
 
