@@ -793,10 +793,10 @@ void
 update(Client *c) {
 	char *t;
 
-	if(c->progress != 100)
-		t = g_strdup_printf("[%i%%] %s", c->progress, c->title);
-	else if(c->linkhover)
+	if(c->linkhover)
 		t = g_strdup(c->linkhover);
+        else if(c->progress != 100)
+		t = g_strdup_printf("[%i%%] %s", c->progress, c->title);
 	else
 		t = g_strdup(c->title);
 	drawindicator(c);
