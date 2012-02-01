@@ -15,7 +15,8 @@ GTKLIB = `pkg-config --libs gtk+-2.0 webkit-1.0`
 
 # includes and libs
 INCS = -I. -I/usr/include -I${X11INC} ${GTKINC}
-LIBS = -L/usr/lib -lc -L${X11LIB} -lX11 ${GTKLIB} -lgthread-2.0
+LIBS = -L/usr/lib -lc -L${X11LIB} -lX11 ${GTKLIB} -lgthread-2.0 \
+       -ljavascriptcoregtk-1.0
 
 # flags
 CPPFLAGS = -DVERSION=\"${VERSION}\"
