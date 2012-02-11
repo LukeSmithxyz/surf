@@ -128,11 +128,14 @@ buildpath(const char *path) {
 	if((p = strrchr(apath, '/'))) {
 		*p = '\0';
 		g_mkdir_with_parents(apath, 0700);
+		g_chmod(apath, 0700); /* in case it existed */
 		*p = '/';
 	}
 	/* creating file (gives error when apath ends with "/") */
-	if((f = fopen(apath, "a")))
+	if((f = fopen(apath, "a"))) {
+		g_chmod(apath, 0600); /* always */
 		fclose(f);
+	}
 	return apath;
 }
 
