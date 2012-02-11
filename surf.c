@@ -127,7 +127,7 @@ buildpath(const char *path) {
 		apath = g_strconcat(g_get_home_dir(), "/", path, NULL);
 	if((p = strrchr(apath, '/'))) {
 		*p = '\0';
-		g_mkdir_with_parents(apath, 0755);
+		g_mkdir_with_parents(apath, 0700);
 		*p = '/';
 	}
 	/* creating file (gives error when apath ends with "/") */
@@ -867,7 +867,7 @@ main(int argc, char *argv[]) {
 			showxid = TRUE;
 			break;
 		case 'v':
-			die("surf-"VERSION", © 2009 surf engineers, see LICENSE for details\n");
+			die("surf-"VERSION", ©2009-2012 surf engineers, see LICENSE for details\n");
 		default:
 			usage();
 		}
