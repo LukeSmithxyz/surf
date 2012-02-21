@@ -548,6 +548,9 @@ newclient(void) {
 		gdk_display_sync(gtk_widget_get_display(c->win));
 		printf("%u\n", (guint)GDK_WINDOW_XID(GTK_WIDGET(c->win)->window));
 		fflush(NULL);
+                if (fclose(stdout) != 0) {
+			die("Error closing stdout");
+                }
 	}
 	return c;
 }
