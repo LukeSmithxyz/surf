@@ -96,7 +96,9 @@ static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
 static void progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
 static void reload(Client *c, const Arg *arg);
 static void resize(GtkWidget *w, GtkAllocation *a, Client *c);
-static void scroll(Client *c, const Arg *arg);
+static void scroll_h(Client *c, const Arg *arg);
+static void scroll_v(Client *c, const Arg *arg);
+static void scroll(GtkAdjustment *a, const Arg *arg);
 static void setatom(Client *c, int a, const char *v);
 static void setcookie(SoupCookie *c);
 static void setup(void);
@@ -662,16 +664,32 @@ resize(GtkWidget *w, GtkAllocation *a, Client *c) {
 }
 
 void
-scroll(Client *c, const Arg *arg) {
-	gdouble v;
-	GtkAdjustment *a;
+scroll_h(Client *c, const Arg *arg) {
+ scroll(gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(c->scroll)), arg);
+}
 
-	a = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(c->scroll));
-	v = gtk_adjustment_get_value(a);
-	v += gtk_adjustment_get_step_increment(a) * arg->i;
-	v = MAX(v, 0.0);
-	v = MIN(v, gtk_adjustment_get_upper(a) - gtk_adjustment_get_page_size(a));
-	gtk_adjustment_set_value(a, v);
+void
+scroll_v(Client *c, const Arg *arg) {
+ scroll(gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(c->scroll)), arg);
+}
+
+void
+scroll(GtkAdjustment *a, const Arg *arg) {
+ gdouble v;
+
+ v = gtk_adjustment_get_value(a);
+ switch (arg->i){
+ case +10000:
+ case -10000:
+ v += gtk_adjustment_get_page_increment(a) * (arg->i / 10000); break;
+ case +20000:
+ case -20000:
+ default:
+ v += gtk_adjustment_get_step_increment(a) * arg->i;
+ }
+ v = MAX(v, 0.0);
+ v = MIN(v, gtk_adjustment_get_upper(a) - gtk_adjustment_get_page_size(a));
+ gtk_adjustment_set_value(a, v);
 }
 
 void
