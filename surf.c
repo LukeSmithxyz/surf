@@ -95,7 +95,6 @@ static void print(Client *c, const Arg *arg);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
 static void progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
 static void reload(Client *c, const Arg *arg);
-static void resize(GtkWidget *w, GtkAllocation *a, Client *c);
 static void scroll_h(Client *c, const Arg *arg);
 static void scroll_v(Client *c, const Arg *arg);
 static void scroll(GtkAdjustment *a, const Arg *arg);
@@ -476,7 +475,6 @@ newclient(void) {
 	gtk_window_set_default_size(GTK_WINDOW(c->win), 800, 600);
 	g_signal_connect(G_OBJECT(c->win), "destroy", G_CALLBACK(destroywin), c);
 	g_signal_connect(G_OBJECT(c->win), "key-press-event", G_CALLBACK(keypress), c);
-	g_signal_connect(G_OBJECT(c->win), "size-allocate", G_CALLBACK(resize), c);
 
 	/* VBox */
 	c->vbox = gtk_vbox_new(FALSE, 0);
@@ -648,19 +646,6 @@ reload(Client *c, const Arg *arg) {
 		 webkit_web_view_reload_bypass_cache(c->view);
 	else
 		 webkit_web_view_reload(c->view);
-}
-
-void
-resize(GtkWidget *w, GtkAllocation *a, Client *c) {
-	double zoom;
-
-	if(c->zoomed)
-		return;
-	zoom = webkit_web_view_get_zoom_level(c->view);
-	if(a->width * a->height < 300 * 400 && zoom != 0.2)
-		webkit_web_view_set_zoom_level(c->view, 0.2);
-	else if(zoom != 1.0)
-		webkit_web_view_set_zoom_level(c->view, 1.0);
 }
 
 void
