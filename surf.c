@@ -150,7 +150,7 @@ cleanup(void) {
 }
 
 void
-evalscript(WebKitWebFrame *frame, JSContextRef js, char *script, char* scriptname) {
+evalscript(JSContextRef js, char *script, char* scriptname) {
 	JSStringRef jsscript, jsscriptname;
 	JSValueRef exception = NULL;
 
@@ -162,12 +162,12 @@ evalscript(WebKitWebFrame *frame, JSContextRef js, char *script, char* scriptnam
 }
 
 void
-runscript(WebKitWebFrame *frame, JSContextRef js) {
+runscript(WebKitWebFrame *frame) {
 	char *script;
 	GError *error;
 
 	if(g_file_get_contents(scriptfile, &script, NULL, &error)) {
-		evalscript(frame, webkit_web_frame_get_global_context(frame), script, scriptfile);
+		evalscript(webkit_web_frame_get_global_context(frame), script, scriptfile);
 	}
 }
 
@@ -333,10 +333,8 @@ geturi(Client *c) {
 
 void
 gotheaders(SoupMessage *msg, gpointer v) {
-	SoupURI *uri;
 	GSList *l, *p;
 
-	uri = soup_message_get_uri(msg);
 	for(p = l = soup_cookies_from_response(msg); p;
 		p = g_slist_next(p))  {
 		setcookie((SoupCookie *)p->data);
@@ -522,7 +520,7 @@ newclient(void) {
 	gdk_window_add_filter(GTK_WIDGET(c->win)->window, processx, c);
 	webkit_web_view_set_full_content_zoom(c->view, TRUE);
 	frame = webkit_web_view_get_main_frame(c->view);
-	runscript(frame, webkit_web_frame_get_global_context(frame));
+	runscript(frame);
 	settings = webkit_web_view_get_settings(c->view);
 	if(!(ua = getenv("SURF_USERAGENT")))
 		ua = useragent;
@@ -784,7 +782,7 @@ spawn(Client *c, const Arg *arg) {
 void
 eval(Client *c, const Arg *arg) {
 	WebKitWebFrame *frame = webkit_web_view_get_main_frame(c->view);
-	evalscript(frame, webkit_web_frame_get_global_context(frame), ((char **)arg->v)[0], "");
+	evalscript(webkit_web_frame_get_global_context(frame), ((char **)arg->v)[0], "");
 }
 
 void
@@ -827,7 +825,7 @@ usage(void) {
 
 void
 windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObjectRef win, Client *c) {
-	runscript(frame, js);
+	runscript(frame);
 }
 
 void
