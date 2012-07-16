@@ -857,7 +857,7 @@ main(int argc, char *argv[]) {
 		switch(argv[i][1]) {
 		case 'e':
 			if(++i < argc)
-				embed = atoi(argv[i]);
+				embed = strtol(argv[i], NULL, 0);
 			else
 				usage();
 			break;
