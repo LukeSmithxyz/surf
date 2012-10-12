@@ -21,6 +21,7 @@
 #include <sys/file.h>
 
 #define LENGTH(x)               (sizeof x / sizeof x[0])
+#define CLEANMASK(mask)         (mask & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
 
 enum { AtomFind, AtomGo, AtomUri, AtomLast };
 
@@ -360,7 +361,7 @@ keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 	updatewinid(c);
 	for(i = 0; i < LENGTH(keys); i++) {
 		if(gdk_keyval_to_lower(ev->keyval) == keys[i].keyval
-				&& (ev->state & keys[i].mod) == keys[i].mod
+				&& CLEANMASK(keys[i].mod) == CLEANMASK(ev->state)
 				&& keys[i].func) {
 			keys[i].func(c, &(keys[i].arg));
 			processed = TRUE;
@@ -648,31 +649,37 @@ reload(Client *c, const Arg *arg) {
 
 void
 scroll_h(Client *c, const Arg *arg) {
- scroll(gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(c->scroll)), arg);
+	scroll(gtk_scrolled_window_get_hadjustment(
+				GTK_SCROLLED_WINDOW(c->scroll)), arg);
 }
 
 void
 scroll_v(Client *c, const Arg *arg) {
- scroll(gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(c->scroll)), arg);
+	scroll(gtk_scrolled_window_get_vadjustment(
+				GTK_SCROLLED_WINDOW(c->scroll)), arg);
 }
 
 void
 scroll(GtkAdjustment *a, const Arg *arg) {
- gdouble v;
+	gdouble v;
 
- v = gtk_adjustment_get_value(a);
- switch (arg->i){
- case +10000:
- case -10000:
- v += gtk_adjustment_get_page_increment(a) * (arg->i / 10000); break;
- case +20000:
- case -20000:
- default:
- v += gtk_adjustment_get_step_increment(a) * arg->i;
- }
- v = MAX(v, 0.0);
- v = MIN(v, gtk_adjustment_get_upper(a) - gtk_adjustment_get_page_size(a));
- gtk_adjustment_set_value(a, v);
+	v = gtk_adjustment_get_value(a);
+	switch (arg->i){
+	case +10000:
+	case -10000:
+		v += gtk_adjustment_get_page_increment(a) *
+			(arg->i / 10000);
+		break;
+	case +20000:
+	case -20000:
+	default:
+		v += gtk_adjustment_get_step_increment(a) * arg->i;
+	}
+
+	v = MAX(v, 0.0);
+	v = MIN(v, gtk_adjustment_get_upper(a) -
+			gtk_adjustment_get_page_size(a));
+	gtk_adjustment_set_value(a, v);
 }
 
 void
@@ -782,7 +789,8 @@ spawn(Client *c, const Arg *arg) {
 void
 eval(Client *c, const Arg *arg) {
 	WebKitWebFrame *frame = webkit_web_view_get_main_frame(c->view);
-	evalscript(webkit_web_frame_get_global_context(frame), ((char **)arg->v)[0], "");
+	evalscript(webkit_web_frame_get_global_context(frame),
+			((char **)arg->v)[0], "");
 }
 
 void
