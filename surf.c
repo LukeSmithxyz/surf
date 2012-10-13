@@ -93,6 +93,8 @@ static Client *newclient(void);
 static void newwindow(Client *c, const Arg *arg, gboolean noembed);
 static void newrequest(SoupSession *s, SoupMessage *msg, gpointer v);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
+static void populatepopup(WebKitWebView *web, GtkMenu *menu, Client *c);
+static void popupactivate(GtkMenuItem *menu, Client *);
 static void print(Client *c, const Arg *arg);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
 static void progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
@@ -513,6 +515,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "notify::progress", G_CALLBACK(progresschange), c);
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
 	g_signal_connect(G_OBJECT(c->view), "button-release-event", G_CALLBACK(buttonrelease), c);
+	g_signal_connect(G_OBJECT(c->view), "populate-popup", G_CALLBACK(populatepopup), c);
 
 	/* Indicator */
 	c->indicator = gtk_drawing_area_new();
@@ -613,6 +616,45 @@ newwindow(Client *c, const Arg *arg, gboolean noembed) {
 		cmd[i++] = uri;
 	cmd[i++] = NULL;
 	spawn(NULL, &a);
+}
+
+static void
+populatepopup(WebKitWebView *web, GtkMenu *menu, Client *c) {
+	GList *items = gtk_container_get_children(GTK_CONTAINER(menu));
+
+	for(GList *l = items; l; l = l->next) {
+		g_signal_connect(l->data, "activate", G_CALLBACK(popupactivate), c);
+	}
+
+	g_list_free(items);
+}
+
+static void
+popupactivate(GtkMenuItem *menu, Client *c) {
+	/*
+	 * context-menu-action-2000	open link
+	 * context-menu-action-1	open link in window
+	 * context-menu-action-2	download linked file
+	 * context-menu-action-3	copy link location
+	 * context-menu-action-13	reload
+	 * context-menu-action-10	back
+	 * context-menu-action-11	forward
+	 * context-menu-action-12	stop
+	 */
+
+	GtkAction *a = NULL;
+	const char *name;
+	GtkClipboard *prisel;
+
+	a = gtk_activatable_get_related_action(GTK_ACTIVATABLE(menu));
+	if(a == NULL)
+		return;
+
+	name = gtk_action_get_name(a);
+	if(!g_strcmp0(name, "context-menu-action-3")) {
+		prisel = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
+		gtk_clipboard_set_text(prisel, c->linkhover, -1);
+	}
 }
 
 void
