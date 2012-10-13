@@ -21,7 +21,7 @@
 #include <sys/file.h>
 
 #define LENGTH(x)               (sizeof x / sizeof x[0])
-#define CLEANMASK(mask)         (mask & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
+#define CLEANMASK(mask)         (mask & (GDK_SHIFT_MASK|GDK_CONTROL_MASK|GDK_MOD1_MASK|GDK_MOD2_MASK|GDK_MOD3_MASK|GDK_MOD4_MASK|GDK_MOD5_MASK))
 
 enum { AtomFind, AtomGo, AtomUri, AtomLast };
 
