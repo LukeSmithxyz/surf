@@ -66,6 +66,7 @@ static char *progname;
 static gboolean loadimage = 1, plugin = 1, script = 1;
 
 static char *buildpath(const char *path);
+static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e, GList *gl);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
 static char *copystr(char **str, const char *src);
@@ -89,7 +90,7 @@ static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
 static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
 static Client *newclient(void);
-static void newwindow(Client *c, const Arg *arg);
+static void newwindow(Client *c, const Arg *arg, gboolean noembed);
 static void newrequest(SoupSession *s, SoupMessage *msg, gpointer v);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
 static void print(Client *c, const Arg *arg);
@@ -139,6 +140,23 @@ buildpath(const char *path) {
 		fclose(f);
 	}
 	return apath;
+}
+
+static gboolean
+buttonrelease(WebKitWebView *web, GdkEventButton *e, GList *gl) {
+	WebKitHitTestResultContext context;
+	WebKitHitTestResult *result = webkit_web_view_get_hit_test_result(web, e);
+	Arg arg;
+
+	g_object_get(result, "context", &context, NULL);
+	if(context & WEBKIT_HIT_TEST_RESULT_CONTEXT_LINK) {
+		if(e->button == 2) {
+			g_object_get(result, "link-uri", &arg.v, NULL);
+			newwindow(NULL, &arg, e->state & GDK_CONTROL_MASK);
+			return true;
+		}
+	}
+	return false;
 }
 
 void
@@ -216,7 +234,7 @@ decidewindow(WebKitWebView *view, WebKitWebFrame *f, WebKitNetworkRequest *r, We
 	if(webkit_web_navigation_action_get_reason(n) == WEBKIT_WEB_NAVIGATION_REASON_LINK_CLICKED) {
 		webkit_web_policy_decision_ignore(p);
 		arg.v = (void *)webkit_network_request_get_uri(r);
-		newwindow(NULL, &arg);
+		newwindow(NULL, &arg, 0);
 		return TRUE;
 	}
 	return FALSE;
@@ -404,7 +422,7 @@ loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 		setatom(c, AtomUri, uri);
 		break;
 	case WEBKIT_LOAD_FINISHED:
-		c->progress = 0;
+		c->progress = 100;
 		update(c);
 		break;
 	default:
@@ -494,6 +512,7 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view), "notify::load-status", G_CALLBACK(loadstatuschange), c);
 	g_signal_connect(G_OBJECT(c->view), "notify::progress", G_CALLBACK(progresschange), c);
 	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
+	g_signal_connect(G_OBJECT(c->view), "button-release-event", G_CALLBACK(buttonrelease), c);
 
 	/* Indicator */
 	c->indicator = gtk_drawing_area_new();
@@ -568,14 +587,14 @@ newrequest(SoupSession *s, SoupMessage *msg, gpointer v) {
 }
 
 void
-newwindow(Client *c, const Arg *arg) {
+newwindow(Client *c, const Arg *arg, gboolean noembed) {
 	guint i = 0;
 	const char *cmd[10], *uri;
 	const Arg a = { .v = (void *)cmd };
 	char tmp[64];
 
 	cmd[i++] = progname;
-	if(embed) {
+	if(embed && !noembed) {
 		cmd[i++] = "-e";
 		snprintf(tmp, LENGTH(tmp), "%u\n", (int)embed);
 		cmd[i++] = tmp;
