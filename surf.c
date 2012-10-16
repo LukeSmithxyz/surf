@@ -783,7 +783,6 @@ setup(void) {
 		g_thread_init(NULL);
 
 	dpy = GDK_DISPLAY();
-	s = webkit_get_default_session();
 
 	/* atoms */
 	atoms[AtomFind] = XInternAtom(dpy, "_SURF_FIND", False);
