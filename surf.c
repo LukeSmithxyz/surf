@@ -21,6 +21,8 @@
 #include <sys/file.h>
 
 #define LENGTH(x)               (sizeof x / sizeof x[0])
+#define COOKIEJAR_TYPE          (cookiejar_get_type ())
+#define COOKIEJAR(obj)          (G_TYPE_CHECK_INSTANCE_CAST ((obj), COOKIEJAR_TYPE, CookieJar))
 
 enum { AtomFind, AtomGo, AtomUri, AtomLast };
 
@@ -55,6 +57,17 @@ typedef struct {
 	const Arg arg;
 } Key;
 
+typedef struct {
+	SoupCookieJarText parent_instance;
+	int lock;
+} CookieJar;
+
+typedef struct {
+	SoupCookieJarTextClass parent_class;
+} CookieJarClass;
+
+G_DEFINE_TYPE(CookieJar, cookiejar, SOUP_TYPE_COOKIE_JAR_TEXT)
+
 static Display *dpy;
 static Atom atoms[AtomLast];
 static Client *clients = NULL;
@@ -68,6 +81,10 @@ static char *buildpath(const char *path);
 static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e, GList *gl);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
+static void cookiejar_changed(SoupCookieJar *self, SoupCookie *old_cookie, SoupCookie *new_cookie);
+static void cookiejar_finalize(GObject *self);
+static SoupCookieJar *cookiejar_new(const char *filename, gboolean read_only);
+static void cookiejar_set_property(GObject *self, guint prop_id, const GValue *value, GParamSpec *pspec);
 static char *copystr(char **str, const char *src);
 static WebKitWebView *createwindow(WebKitWebView *v, WebKitWebFrame *f, Client *c);
 static gboolean decidedownload(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r, gchar *m,  WebKitWebPolicyDecision *p, Client *c);
@@ -79,9 +96,7 @@ static void drawindicator(Client *c);
 static gboolean exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c);
 static void find(Client *c, const Arg *arg);
 static const char *getatom(Client *c, int a);
-static const char *getcookies(SoupURI *uri);
 static char *geturi(Client *c);
-void gotheaders(SoupMessage *msg, gpointer user_data);
 static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
 static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
 static void linkhover(WebKitWebView *v, const char* t, const char* l, Client *c);
@@ -90,7 +105,6 @@ static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
 static Client *newclient(void);
 static void newwindow(Client *c, const Arg *arg, gboolean noembed);
-static void newrequest(SoupSession *s, SoupMessage *msg, gpointer v);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
 static void populatepopup(WebKitWebView *web, GtkMenu *menu, Client *c);
 static void popupactivate(GtkMenuItem *menu, Client *);
@@ -102,7 +116,6 @@ static void scroll_h(Client *c, const Arg *arg);
 static void scroll_v(Client *c, const Arg *arg);
 static void scroll(GtkAdjustment *a, const Arg *arg);
 static void setatom(Client *c, int a, const char *v);
-static void setcookie(SoupCookie *c);
 static void setup(void);
 static void sigchld(int unused);
 static void source(Client *c, const Arg *arg);
@@ -167,6 +180,49 @@ cleanup(void) {
 	g_free(cookiefile);
 	g_free(scriptfile);
 	g_free(stylefile);
+}
+
+static void
+cookiejar_changed(SoupCookieJar *self, SoupCookie *old_cookie, SoupCookie *new_cookie) {
+	flock(COOKIEJAR(self)->lock, LOCK_EX);
+	if(new_cookie && !new_cookie->expires && sessiontime)
+		soup_cookie_set_expires(new_cookie, soup_date_new_from_now(sessiontime));
+	SOUP_COOKIE_JAR_CLASS(cookiejar_parent_class)->changed(self, old_cookie, new_cookie);
+	flock(COOKIEJAR(self)->lock, LOCK_UN);
+}
+
+static void
+cookiejar_class_init(CookieJarClass *klass) {
+	SOUP_COOKIE_JAR_CLASS(klass)->changed = cookiejar_changed;
+	G_OBJECT_CLASS(klass)->get_property = G_OBJECT_CLASS(cookiejar_parent_class)->get_property;
+	G_OBJECT_CLASS(klass)->set_property = cookiejar_set_property;
+	G_OBJECT_CLASS(klass)->finalize = cookiejar_finalize;
+	g_object_class_override_property(G_OBJECT_CLASS(klass), 1, "filename");
+}
+
+static void
+cookiejar_finalize(GObject *self) {
+	close(COOKIEJAR(self)->lock);
+	G_OBJECT_CLASS(cookiejar_parent_class)->finalize(self);
+}
+
+static void
+cookiejar_init(CookieJar *self) {
+	self->lock = open(cookiefile, 0);
+}
+
+static SoupCookieJar *
+cookiejar_new(const char *filename, gboolean read_only) {
+	return g_object_new(COOKIEJAR_TYPE,
+	                    SOUP_COOKIE_JAR_TEXT_FILENAME, filename,
+	                    SOUP_COOKIE_JAR_READ_ONLY, read_only, NULL);
+} 
+
+static void
+cookiejar_set_property(GObject *self, guint prop_id, const GValue *value, GParamSpec *pspec) {
+	flock(COOKIEJAR(self)->lock, LOCK_SH);
+	G_OBJECT_CLASS(cookiejar_parent_class)->set_property(self, prop_id, value, pspec);
+	flock(COOKIEJAR(self)->lock, LOCK_UN);
 }
 
 void
@@ -315,15 +371,6 @@ find(Client *c, const Arg *arg) {
 }
 
 const char *
-getcookies(SoupURI *uri) {
-	const char *c;
-	SoupCookieJar *j = soup_cookie_jar_text_new(cookiefile, TRUE);
-	c = soup_cookie_jar_get_cookies(j, uri, TRUE);
-	g_object_unref(j);
-	return c;
-}
-
-const char *
 getatom(Client *c, int a) {
 	static char buf[BUFSIZ];
 	Atom adummy;
@@ -349,17 +396,6 @@ geturi(Client *c) {
 	if(!(uri = (char *)webkit_web_view_get_uri(c->view)))
 		uri = "about:blank";
 	return uri;
-}
-
-void
-gotheaders(SoupMessage *msg, gpointer v) {
-	GSList *l, *p;
-
-	for(p = l = soup_cookies_from_response(msg); p;
-		p = g_slist_next(p))  {
-		setcookie((SoupCookie *)p->data);
-	}
-	soup_cookies_free(l);
 }
 
 gboolean
@@ -576,19 +612,6 @@ newclient(void) {
 }
 
 void
-newrequest(SoupSession *s, SoupMessage *msg, gpointer v) {
-	SoupMessageHeaders *h = msg->request_headers;
-	SoupURI *uri;
-	const char *c;
-
-	soup_message_headers_remove(h, "Cookie");
-	uri = soup_message_get_uri(msg);
-	if((c = getcookies(uri)))
-		soup_message_headers_append(h, "Cookie", c);
-	g_signal_connect_after(G_OBJECT(msg), "got-headers", G_CALLBACK(gotheaders), NULL);
-}
-
-void
 newwindow(Client *c, const Arg *arg, gboolean noembed) {
 	guint i = 0;
 	const char *cmd[10], *uri;
@@ -743,25 +766,6 @@ scroll(GtkAdjustment *a, const Arg *arg) {
 }
 
 void
-setcookie(SoupCookie *c) {
-	int lock;
-
-	lock = open(cookiefile, 0);
-	flock(lock, LOCK_EX);
-	SoupDate *e;
-	SoupCookieJar *j = soup_cookie_jar_text_new(cookiefile, FALSE);
-	c = soup_cookie_copy(c);
-	if(c->expires == NULL && sessiontime) {
-		e = soup_date_new_from_time_t(time(NULL) + sessiontime);
-		soup_cookie_set_expires(c, e);
-	}
-	soup_cookie_jar_add_cookie(j, c);
-	g_object_unref(j);
-	flock(lock, LOCK_UN);
-	close(lock);
-}
-
-void
 setatom(Client *c, int a, const char *v) {
 	XSync(dpy, False);
 	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), atoms[a],
@@ -796,9 +800,9 @@ setup(void) {
 
 	/* request handler */
 	s = webkit_get_default_session();
-	soup_session_remove_feature_by_type(s, soup_cookie_get_type());
-	soup_session_remove_feature_by_type(s, soup_cookie_jar_get_type());
-	g_signal_connect_after(G_OBJECT(s), "request-started", G_CALLBACK(newrequest), NULL);
+
+	/* cookie jar */
+	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar_new(cookiefile, FALSE)));
 
 	/* ssl */
 	g_object_set(G_OBJECT(s), "ssl-ca-file", cafile, NULL);
