@@ -341,11 +341,12 @@ drawindicator(Client *c) {
 	w = c->indicator;
 	width = c->progress * w->allocation.width / 100;
 	gc = gdk_gc_new(w->window);
-	if(strstr(uri, "https://") == uri)
+	if(strstr(uri, "https://") == uri) {
 		gdk_color_parse(c->sslfailed ?
 		                progress_untrust : progress_trust, &fg);
-	else
+	} else {
 		gdk_color_parse(progress, &fg);
+	}
 	gdk_gc_set_rgb_fg_color(gc, &fg);
 	gdk_draw_rectangle(w->window,
 			w->style->bg_gc[GTK_WIDGET_STATE(w)],
@@ -554,7 +555,7 @@ newclient(void) {
 
 	/* Indicator */
 	c->indicator = gtk_drawing_area_new();
-	gtk_widget_set_size_request(c->indicator, 0, 2);
+	gtk_widget_set_size_request(c->indicator, 0, indicator_thickness);
 	g_signal_connect (G_OBJECT (c->indicator), "expose_event",
 			G_CALLBACK (exposeindicator), c);
 
@@ -569,7 +570,6 @@ newclient(void) {
 	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->scroll, TRUE, TRUE, 0, GTK_PACK_START);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
 	gtk_widget_show(c->vbox);
-	gtk_widget_show(c->indicator);
 	gtk_widget_show(c->scroll);
 	gtk_widget_show(GTK_WIDGET(c->view));
 	gtk_widget_show(c->win);
