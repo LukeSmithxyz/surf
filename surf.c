@@ -871,13 +871,16 @@ void
 update(Client *c) {
 	char *t;
 
-	if(c->linkhover)
+	if(c->linkhover) {
 		t = g_strdup(c->linkhover);
-        else if(c->progress != 100)
+	} else if(c->progress != 100) {
+		drawindicator(c);
+		gtk_widget_show(c->indicator);
 		t = g_strdup_printf("[%i%%] %s", c->progress, c->title);
-	else
+	} else {
+		gtk_widget_hide_all(c->indicator);
 		t = g_strdup(c->title);
-	drawindicator(c);
+	}
 	gtk_window_set_title(GTK_WINDOW(c->win), t);
 	g_free(t);
 }
