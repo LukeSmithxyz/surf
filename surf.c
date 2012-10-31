@@ -20,6 +20,10 @@
 #include <JavaScriptCore/JavaScript.h>
 #include <sys/file.h>
 
+#include "arg.h"
+
+char *argv0;
+
 #define LENGTH(x)               (sizeof x / sizeof x[0])
 #define COOKIEJAR_TYPE          (cookiejar_get_type ())
 #define COOKIEJAR(obj)          (G_TYPE_CHECK_INSTANCE_CAST ((obj), COOKIEJAR_TYPE, CookieJar))
@@ -74,7 +78,6 @@ static Client *clients = NULL;
 static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static char winid[64];
-static char *progname;
 static gboolean loadimage = 1, plugin = 1, script = 1, using_proxy = 0;
 
 static char *buildpath(const char *path);
@@ -138,10 +141,19 @@ buildpath(const char *path) {
 	FILE *f;
 
 	/* creating directory */
-	if(path[0] == '/')
+	if(path[0] == '/') {
 		apath = g_strdup(path);
-	else
-		apath = g_strconcat(g_get_home_dir(), "/", path, NULL);
+	} else if(path[0] == '~') {
+		if(path[1] == '/') {
+			apath = g_strconcat(g_get_home_dir(), &path[1], NULL);
+		} else {
+			apath = g_strconcat(g_get_home_dir(), "/",
+					&path[1], NULL);
+		}
+	} else {
+		apath = g_strconcat(g_get_current_dir(), "/", path, NULL);
+	}
+
 	if((p = strrchr(apath, '/'))) {
 		*p = '\0';
 		g_mkdir_with_parents(apath, 0700);
@@ -153,6 +165,7 @@ buildpath(const char *path) {
 		g_chmod(apath, 0600); /* always */
 		fclose(f);
 	}
+
 	return apath;
 }
 
@@ -216,7 +229,7 @@ cookiejar_new(const char *filename, gboolean read_only) {
 	return g_object_new(COOKIEJAR_TYPE,
 	                    SOUP_COOKIE_JAR_TEXT_FILENAME, filename,
 	                    SOUP_COOKIE_JAR_READ_ONLY, read_only, NULL);
-} 
+}
 
 static void
 cookiejar_set_property(GObject *self, guint prop_id, const GValue *value, GParamSpec *pspec) {
@@ -628,7 +641,7 @@ newwindow(Client *c, const Arg *arg, gboolean noembed) {
 	const Arg a = { .v = (void *)cmd };
 	char tmp[64];
 
-	cmd[i++] = progname;
+	cmd[i++] = argv0;
 	if(embed && !noembed) {
 		cmd[i++] = "-e";
 		snprintf(tmp, LENGTH(tmp), "%u\n", (int)embed);
@@ -905,7 +918,8 @@ updatewinid(Client *c) {
 void
 usage(void) {
 	fputs("surf - simple browser\n", stderr);
-	die("usage: surf [-e xid] [-i] [-p] [-s] [-v] [-x] [uri]\n");
+	die("usage: surf [-c cookiefile] [-e xid] [-i] [-p] [-r scriptfile]"
+		" [-s] [-t stylefile] [-v] [-x] [uri]\n");
 }
 
 void
@@ -928,49 +942,49 @@ zoom(Client *c, const Arg *arg) {
 
 int
 main(int argc, char *argv[]) {
-	int i;
 	Arg arg;
 
-	progname = argv[0];
 	/* command line args */
-	for(i = 1, arg.v = NULL; i < argc && argv[i][0] == '-' &&
-			argv[i][1] != '\0' && argv[i][2] == '\0'; i++) {
-		if(!strcmp(argv[i], "--")) {
-			i++;
-			break;
-		}
-		switch(argv[i][1]) {
-		case 'e':
-			if(++i < argc)
-				embed = strtol(argv[i], NULL, 0);
-			else
-				usage();
-			break;
-		case 'i':
-			loadimage = 0;
-			break;
-		case 'p':
-			plugin = 0;
-			break;
-		case 's':
-			script = 0;
-			break;
-		case 'x':
-			showxid = TRUE;
-			break;
-		case 'v':
-			die("surf-"VERSION", ©2009-2012 surf engineers, see LICENSE for details\n");
-		default:
-			usage();
-		}
-	}
-	if(i < argc)
-		arg.v = argv[i];
+	ARGBEGIN {
+	case 'c':
+		cookiefile = EARGF(usage());
+		break;
+	case 'e':
+		embed = strtol(EARGF(usage()), NULL, 0);
+		break;
+	case 'i':
+		loadimage = 0;
+		break;
+	case 'p':
+		plugin = 0;
+		break;
+	case 'r':
+		scriptfile = EARGF(usage());
+		break;
+	case 's':
+		script = 0;
+		break;
+	case 't':
+		stylefile = EARGF(usage());
+		break;
+	case 'x':
+		showxid = TRUE;
+		break;
+	case 'v':
+		die("surf-"VERSION", ©2009-2012 surf engineers, see LICENSE for details\n");
+	default:
+		usage();
+	} ARGEND;
+	if(argc > 0)
+		arg.v = argv[0];
+
 	setup();
 	newclient();
 	if(arg.v)
 		loaduri(clients, &arg);
 	gtk_main();
 	cleanup();
+
 	return EXIT_SUCCESS;
 }
+

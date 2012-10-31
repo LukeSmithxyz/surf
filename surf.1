@@ -3,10 +3,13 @@
 surf \- simple webkit-based browser
 .SH SYNOPSIS
 .B surf
+.RB [-c\ cookiefile]
 .RB [-e\ xid]
 .RB [-i]
 .RB [-p]
+.RB [-r\ scriptfile]
 .RB [-s]
+.RB [-t\ stylefile]
 .RB [-v]
 .RB [-x]
 .RB "URI"
@@ -17,6 +20,9 @@ which makes it possible to embed it in another application. Furthermore,
 one can point surf to another URI by setting its XProperties.
 .SH OPTIONS
 .TP
+.B \-c cookiefile 
+Specify the cookiefile to use.
+.TP
 .B \-e xid
 Reparents to window specified by xid.
 .TP
@@ -26,8 +32,14 @@ Disable Images
 .B \-p
 Disable Plugins
 .TP
+.B \-r scriptfile 
+Specify the user scriptfile.
+.TP
 .B \-s
 Disable Javascript
+.TP
+.B \-t stylefile
+Specify the user stylefile.
 .TP
 .B \-v
 Prints version information to standard output, then exits.
