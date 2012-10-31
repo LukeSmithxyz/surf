@@ -919,7 +919,7 @@ void
 usage(void) {
 	fputs("surf - simple browser\n", stderr);
 	die("usage: surf [-c cookiefile] [-e xid] [-i] [-p] [-r scriptfile]"
-		" [-s] [-t stylefile] [-v] [-x] [uri]\n");
+		" [-s] [-t stylefile] [-u useragent] [-v] [-x] [uri]\n");
 }
 
 void
@@ -966,6 +966,9 @@ main(int argc, char *argv[]) {
 		break;
 	case 't':
 		stylefile = EARGF(usage());
+		break;
+	case 'u':
+		useragent = EARGF(usage());
 		break;
 	case 'x':
 		showxid = TRUE;
