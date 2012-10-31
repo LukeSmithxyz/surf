@@ -75,7 +75,7 @@ static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static char winid[64];
 static char *progname;
-static gboolean loadimage = 1, plugin = 1, script = 1;
+static gboolean loadimage = 1, plugin = 1, script = 1, using_proxy = 0;
 
 static char *buildpath(const char *path);
 static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e, GList *gl);
@@ -333,6 +333,7 @@ void
 drawindicator(Client *c) {
 	gint width;
 	const char *uri;
+	char *colorname;
 	GtkWidget *w;
 	GdkGC *gc;
 	GdkColor fg;
@@ -342,11 +343,20 @@ drawindicator(Client *c) {
 	width = c->progress * w->allocation.width / 100;
 	gc = gdk_gc_new(w->window);
 	if(strstr(uri, "https://") == uri) {
-		gdk_color_parse(c->sslfailed ?
-		                progress_untrust : progress_trust, &fg);
+		if(using_proxy) {
+			colorname = c->sslfailed? progress_proxy_untrust : progress_proxy_trust;
+		} else {
+			colorname = c->sslfailed? progress_untrust : progress_trust;
+		}
 	} else {
-		gdk_color_parse(progress, &fg);
+		if(using_proxy) {
+			colorname = progress_proxy;
+		} else {
+			colorname = progress;
+		}
 	}
+
+	gdk_color_parse(colorname, &fg);
 	gdk_gc_set_rgb_fg_color(gc, &fg);
 	gdk_draw_rectangle(w->window,
 			w->style->bg_gc[GTK_WIDGET_STATE(w)],
@@ -816,6 +826,7 @@ setup(void) {
 		g_object_set(G_OBJECT(s), "proxy-uri", puri, NULL);
 		soup_uri_free(puri);
 		g_free(new_proxy);
+		using_proxy = 1;
 	}
 }
 
