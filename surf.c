@@ -453,8 +453,7 @@ void
 linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
 	if(l) {
 		c->linkhover = copystr(&c->linkhover, l);
-	}
-	else if(c->linkhover) {
+	} else if(c->linkhover) {
 		free(c->linkhover);
 		c->linkhover = NULL;
 	}
@@ -504,8 +503,7 @@ loaduri(Client *c, const Arg *arg) {
 	/* prevents endless loop */
 	if(c->uri && strcmp(u, c->uri) == 0) {
 		reload(c, &a);
-	}
-	else {
+	} else {
 		webkit_web_view_load_uri(c->view, u);
 		c->progress = 0;
 		c->title = copystr(&c->title, u);
@@ -905,6 +903,7 @@ update(Client *c) {
 		gtk_widget_hide_all(c->indicator);
 		t = g_strdup(c->title);
 	}
+
 	gtk_window_set_title(GTK_WINDOW(c->win), t);
 	g_free(t);
 }
@@ -943,6 +942,8 @@ zoom(Client *c, const Arg *arg) {
 int
 main(int argc, char *argv[]) {
 	Arg arg;
+
+	memset(&arg, 0, sizeof(arg));
 
 	/* command line args */
 	ARGBEGIN {
@@ -985,6 +986,7 @@ main(int argc, char *argv[]) {
 	newclient();
 	if(arg.v)
 		loaduri(clients, &arg);
+
 	gtk_main();
 	cleanup();
 
