@@ -52,5 +52,9 @@ static Key keys[] = {
     { MODKEY,               GDK_slash,  spawn,      SETPROP("_SURF_FIND", "_SURF_FIND") },
     { MODKEY,               GDK_n,      find,       { .b = TRUE } },
     { MODKEY|GDK_SHIFT_MASK,GDK_n,      find,       { .b = FALSE } },
+    { MODKEY,               GDK_v,      toggle,     { .v = "enable-plugins" } },
+    { MODKEY|GDK_SHIFT_MASK,GDK_i,      toggle,     { .v = "auto-load-images" } },
+    { MODKEY,               GDK_c,      toggle,     { .v = "enable-caret-browsing" } },
+    { MODKEY|GDK_SHIFT_MASK,GDK_s,      toggle,     { .v = "enable-scripts" } },
 };
 

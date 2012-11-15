@@ -126,6 +126,7 @@ static void spawn(Client *c, const Arg *arg);
 static void eval(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *v, WebKitWebFrame* frame, const char* title, Client *c);
+static void toggle(Client *c, const Arg *arg);
 static void update(Client *c);
 static void updatewinid(Client *c);
 static void usage(void);
@@ -887,6 +888,20 @@ void
 titlechange(WebKitWebView *v, WebKitWebFrame *f, const char *t, Client *c) {
 	c->title = copystr(&c->title, t);
 	update(c);
+}
+
+void
+toggle(Client *c, const Arg *arg) { 
+  WebKitWebSettings *settings;
+  char *name = (char *)arg->v;
+  gboolean value;
+  Arg a = { .b = FALSE };
+
+  settings = webkit_web_view_get_settings(c->view);
+  g_object_get(G_OBJECT(settings), name, &value, NULL);
+  g_object_set(G_OBJECT(settings), name, !value, NULL);
+
+  reload(c,&a);
 }
 
 void
