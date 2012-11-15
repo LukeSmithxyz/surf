@@ -892,16 +892,16 @@ titlechange(WebKitWebView *v, WebKitWebFrame *f, const char *t, Client *c) {
 
 void
 toggle(Client *c, const Arg *arg) { 
-  WebKitWebSettings *settings;
-  char *name = (char *)arg->v;
-  gboolean value;
-  Arg a = { .b = FALSE };
+	WebKitWebSettings *settings;
+	char *name = (char *)arg->v;
+	gboolean value;
+	Arg a = { .b = FALSE };
 
-  settings = webkit_web_view_get_settings(c->view);
-  g_object_get(G_OBJECT(settings), name, &value, NULL);
-  g_object_set(G_OBJECT(settings), name, !value, NULL);
+	settings = webkit_web_view_get_settings(c->view);
+	g_object_get(G_OBJECT(settings), name, &value, NULL);
+	g_object_set(G_OBJECT(settings), name, !value, NULL);
 
-  reload(c,&a);
+	reload(c,&a);
 }
 
 void
