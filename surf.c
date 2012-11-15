@@ -79,6 +79,8 @@ static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static char winid[64];
 static gboolean loadimage = 1, plugin = 1, script = 1, using_proxy = 0;
+static char togglestat[6];
+static gboolean insertmode = FALSE;
 
 static char *buildpath(const char *path);
 static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e, GList *gl);
@@ -101,6 +103,7 @@ static void find(Client *c, const Arg *arg);
 static const char *getatom(Client *c, int a);
 static char *geturi(Client *c);
 static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
+static void insert(Client *c, const Arg *arg);
 static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
 static void linkhover(WebKitWebView *v, const char* t, const char* l, Client *c);
 static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
@@ -127,6 +130,7 @@ static void eval(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *v, WebKitWebFrame* frame, const char* title, Client *c);
 static void toggle(Client *c, const Arg *arg);
+static void gettogglestat(Client *c);
 static void update(Client *c);
 static void updatewinid(Client *c);
 static void usage(void);
@@ -433,20 +437,50 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	return FALSE;
 }
 
+void
+insert(Client *c, const Arg *arg) {
+	insertmode = TRUE;
+	update(clients);
+}
+
 gboolean
 keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
-	guint i;
+	guint i, state;
 	gboolean processed = FALSE;
+
+	/* turn off insert mode */
+	if(insertmode && (ev->keyval == GDK_Escape)) {
+		insertmode = FALSE;
+		update(c);
+		return TRUE;
+	}
+
+	if(insertmode && (((ev->state & MODKEY) != MODKEY) || !MODKEY)) {
+		return FALSE;
+	}
+
+	if(ev->keyval == GDK_Escape) {
+		webkit_web_view_set_highlight_text_matches(c->view, FALSE);
+		return TRUE;
+	}
 
 	updatewinid(c);
 	for(i = 0; i < LENGTH(keys); i++) {
+		if(!insertmode && (MODKEY & keys[i].mod)) {
+			state = ev->state | MODKEY;
+		} else {
+			state = ev->state;
+		}
+
 		if(gdk_keyval_to_lower(ev->keyval) == keys[i].keyval
-				&& (ev->state & keys[i].mod) == keys[i].mod
 				&& keys[i].func) {
-			keys[i].func(c, &(keys[i].arg));
-			processed = TRUE;
+			if(state == keys[i].mod) {
+				keys[i].func(c, &(keys[i].arg));
+				processed = TRUE;
+			}
 		}
 	}
+
 	return processed;
 }
 
@@ -891,7 +925,7 @@ titlechange(WebKitWebView *v, WebKitWebFrame *f, const char *t, Client *c) {
 }
 
 void
-toggle(Client *c, const Arg *arg) { 
+toggle(Client *c, const Arg *arg) {
 	WebKitWebSettings *settings;
 	char *name = (char *)arg->v;
 	gboolean value;
@@ -905,18 +939,42 @@ toggle(Client *c, const Arg *arg) {
 }
 
 void
+gettogglestat(Client *c){
+	gboolean value;
+	WebKitWebSettings *settings = webkit_web_view_get_settings(c->view);
+
+	togglestat[4] = '\0';
+	g_object_get(G_OBJECT(settings), "auto-load-images", &value, NULL);
+	togglestat[0] = value?'I':'i';
+	g_object_get(G_OBJECT(settings), "enable-scripts", &value, NULL);
+	togglestat[1] = value?'S':'s';
+	g_object_get(G_OBJECT(settings), "enable-plugins", &value, NULL);
+	togglestat[2] = value?'V':'v';
+	g_object_get(G_OBJECT(settings), "enable-caret-browsing",
+			&value, NULL);
+	togglestat[3] = value?'C':'c';
+
+	togglestat[4] = insertmode? '+' : '-';
+	togglestat[5] = '\0';
+}
+
+
+void
 update(Client *c) {
 	char *t;
 
+	gettogglestat(c);
+
 	if(c->linkhover) {
-		t = g_strdup(c->linkhover);
+		t = g_strdup_printf("%s| %s", togglestat, c->linkhover);
 	} else if(c->progress != 100) {
 		drawindicator(c);
 		gtk_widget_show(c->indicator);
-		t = g_strdup_printf("[%i%%] %s", c->progress, c->title);
+		t = g_strdup_printf("[%i%%] %s| %s", c->progress, togglestat,
+				c->title);
 	} else {
 		gtk_widget_hide_all(c->indicator);
-		t = g_strdup(c->title);
+		t = g_strdup_printf("%s| %s", togglestat, c->title);
 	}
 
 	gtk_window_set_title(GTK_WINDOW(c->win), t);

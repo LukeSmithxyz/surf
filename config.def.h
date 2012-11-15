@@ -43,6 +43,7 @@ static Key keys[] = {
     { MODKEY,               GDK_k,           scroll_v,   { .i = -1 } },
     { MODKEY,               GDK_b,           scroll_v,   { .i = -10000 } },
     { MODKEY,               GDK_space,       scroll_v,   { .i = +10000 } },
+    { 0,                    GDK_i,      insert,     { 0 } },
     { MODKEY,               GDK_i,           scroll_h,   { .i = +1 } },
     { MODKEY,               GDK_u,           scroll_h,   { .i = -1 } },
     { 0,                    GDK_Escape, stop,       { 0 } },
