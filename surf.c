@@ -615,13 +615,13 @@ newclient(void) {
 	g_object_set(G_OBJECT(settings), "auto-load-images", loadimage, NULL);
 	g_object_set(G_OBJECT(settings), "enable-plugins", plugin, NULL);
 	g_object_set(G_OBJECT(settings), "enable-scripts", script, NULL);
-	g_object_set(G_OBJECT(settings), "enable-spatial-navigation", SPATIAL_BROWSING, NULL);
+	g_object_set(G_OBJECT(settings), "enable-spatial-navigation", spatialbrowsing, NULL);
 
 	g_free(uri);
 
 	setatom(c, AtomFind, "");
 	setatom(c, AtomUri, "about:blank");
-	if(HIDE_BACKGROUND)
+	if(hidebackground)
 		webkit_web_view_set_transparent(c->view, TRUE);
 
 	c->title = NULL;

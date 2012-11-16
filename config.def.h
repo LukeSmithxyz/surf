@@ -13,9 +13,8 @@ static time_t sessiontime   = 3600;
 static char *cafile         = "/etc/ssl/certs/ca-certificates.crt";
 static char *strictssl      = FALSE; /* Refuse untrusted SSL connections */
 static int   indicator_thickness = 2;
-
-#define HIDE_BACKGROUND FALSE
-#define SPATIAL_BROWSING TRUE
+static Bool spatialbrowsing = TRUE;
+static Bool hidebackground  = FALSE;
 
 #define SETPROP(p, q)     { .v = (char *[]){ "/bin/sh", "-c", \
 	"prop=\"`xprop -id $2 $0 | cut -d '\"' -f 2 | dmenu`\" &&" \
