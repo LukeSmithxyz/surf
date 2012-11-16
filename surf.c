@@ -532,12 +532,13 @@ newclient(void) {
 
 	if(!(c = calloc(1, sizeof(Client))))
 		die("Cannot malloc!\n");
+
 	/* Window */
 	if(embed) {
 		c->win = gtk_plug_new(embed);
-	}
-	else {
+	} else {
 		c->win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+
 		/* TA:  20091214:  Despite what the GNOME docs say, the ICCCM
 		 * is always correct, so we should still call this function.
 		 * But when doing so, we *must* differentiate between a
@@ -602,6 +603,7 @@ newclient(void) {
 	gdk_window_set_events(GTK_WIDGET(c->win)->window, GDK_ALL_EVENTS_MASK);
 	gdk_window_add_filter(GTK_WIDGET(c->win)->window, processx, c);
 	webkit_web_view_set_full_content_zoom(c->view, TRUE);
+
 	frame = webkit_web_view_get_main_frame(c->view);
 	runscript(frame);
 	settings = webkit_web_view_get_settings(c->view);
