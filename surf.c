@@ -79,8 +79,7 @@ static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static char winid[64];
 static gboolean loadimage = 1, plugin = 1, script = 1, using_proxy = 0;
-static char togglestat[6];
-static gboolean insertmode = FALSE;
+static char togglestat[5];
 
 static char *buildpath(const char *path);
 static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e, GList *gl);
@@ -103,7 +102,6 @@ static void find(Client *c, const Arg *arg);
 static const char *getatom(Client *c, int a);
 static char *geturi(Client *c);
 static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
-static void insert(Client *c, const Arg *arg);
 static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
 static void linkhover(WebKitWebView *v, const char* t, const char* l, Client *c);
 static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
@@ -437,47 +435,18 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	return FALSE;
 }
 
-void
-insert(Client *c, const Arg *arg) {
-	insertmode = TRUE;
-	update(clients);
-}
-
 gboolean
 keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
-	guint i, state;
+	guint i;
 	gboolean processed = FALSE;
-
-	/* turn off insert mode */
-	if(insertmode && (ev->keyval == GDK_Escape)) {
-		insertmode = FALSE;
-		update(c);
-		return TRUE;
-	}
-
-	if(insertmode && (((ev->state & MODKEY) != MODKEY) || !MODKEY)) {
-		return FALSE;
-	}
-
-	if(ev->keyval == GDK_Escape) {
-		webkit_web_view_set_highlight_text_matches(c->view, FALSE);
-		return TRUE;
-	}
 
 	updatewinid(c);
 	for(i = 0; i < LENGTH(keys); i++) {
-		if(!insertmode && (MODKEY & keys[i].mod)) {
-			state = ev->state | MODKEY;
-		} else {
-			state = ev->state;
-		}
-
 		if(gdk_keyval_to_lower(ev->keyval) == keys[i].keyval
+				&& (ev->state & keys[i].mod) == keys[i].mod
 				&& keys[i].func) {
-			if(state == keys[i].mod) {
-				keys[i].func(c, &(keys[i].arg));
-				processed = TRUE;
-			}
+			keys[i].func(c, &(keys[i].arg));
+			processed = TRUE;
 		}
 	}
 
@@ -953,9 +922,6 @@ gettogglestat(Client *c){
 	g_object_get(G_OBJECT(settings), "enable-caret-browsing",
 			&value, NULL);
 	togglestat[3] = value?'C':'c';
-
-	togglestat[4] = insertmode? '+' : '-';
-	togglestat[5] = '\0';
 }
 
 
