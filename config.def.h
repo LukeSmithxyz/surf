@@ -45,6 +45,7 @@ static Key keys[] = {
     { MODKEY,               GDK_space,       scroll_v,   { .i = +10000 } },
     { MODKEY,               GDK_i,           scroll_h,   { .i = +1 } },
     { MODKEY,               GDK_u,           scroll_h,   { .i = -1 } },
+    { 0,                    GDK_Escape, stop,       { 0 } },
     { MODKEY,               GDK_o,      source,     { 0 } },
     { MODKEY,               GDK_g,      spawn,      SETPROP("_SURF_URI", "_SURF_GO") },
     { MODKEY,               GDK_f,      spawn,      SETPROP("_SURF_FIND", "_SURF_FIND") },
