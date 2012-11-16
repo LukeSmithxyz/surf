@@ -13,6 +13,8 @@ static time_t sessiontime   = 3600;
 static char *cafile         = "/etc/ssl/certs/ca-certificates.crt";
 static char *strictssl      = FALSE; /* Refuse untrusted SSL connections */
 static int   indicator_thickness = 2;
+
+/* Webkit features */
 static Bool spatialbrowsing = TRUE;
 static Bool hidebackground  = FALSE;
 
