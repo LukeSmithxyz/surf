@@ -78,7 +78,8 @@ static Client *clients = NULL;
 static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static char winid[64];
-static gboolean loadimage = 1, plugin = 1, script = 1, using_proxy = 0;
+static gboolean loadimages = 1, enableplugins = 1, enablescripts = 1,
+		usingproxy = 0;
 static char togglestat[5];
 
 static char *buildpath(const char *path);
@@ -359,13 +360,13 @@ drawindicator(Client *c) {
 	width = c->progress * w->allocation.width / 100;
 	gc = gdk_gc_new(w->window);
 	if(strstr(uri, "https://") == uri) {
-		if(using_proxy) {
+		if(usingproxy) {
 			colorname = c->sslfailed? progress_proxy_untrust : progress_proxy_trust;
 		} else {
 			colorname = c->sslfailed? progress_untrust : progress_trust;
 		}
 	} else {
-		if(using_proxy) {
+		if(usingproxy) {
 			colorname = progress_proxy;
 		} else {
 			colorname = progress;
@@ -612,10 +613,11 @@ newclient(void) {
 	g_object_set(G_OBJECT(settings), "user-agent", ua, NULL);
 	uri = g_strconcat("file://", stylefile, NULL);
 	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
-	g_object_set(G_OBJECT(settings), "auto-load-images", loadimage, NULL);
-	g_object_set(G_OBJECT(settings), "enable-plugins", plugin, NULL);
-	g_object_set(G_OBJECT(settings), "enable-scripts", script, NULL);
-	g_object_set(G_OBJECT(settings), "enable-spatial-navigation", spatialbrowsing, NULL);
+	g_object_set(G_OBJECT(settings), "auto-load-images", loadimages, NULL);
+	g_object_set(G_OBJECT(settings), "enable-plugins", enableplugins, NULL);
+	g_object_set(G_OBJECT(settings), "enable-scripts", enablescripts, NULL);
+	g_object_set(G_OBJECT(settings), "enable-spatial-navigation",
+			spatialbrowsing, NULL);
 
 	g_free(uri);
 
@@ -651,11 +653,11 @@ newwindow(Client *c, const Arg *arg, gboolean noembed) {
 		snprintf(tmp, LENGTH(tmp), "%u\n", (int)embed);
 		cmd[i++] = tmp;
 	}
-	if(!script)
+	if(!enablescripts)
 		cmd[i++] = "-s";
-	if(!plugin)
+	if(!enableplugins)
 		cmd[i++] = "-p";
-	if(!loadimage)
+	if(!loadimages)
 		cmd[i++] = "-i";
 	if(showxid)
 		cmd[i++] = "-x";
@@ -843,7 +845,7 @@ setup(void) {
 		g_object_set(G_OBJECT(s), "proxy-uri", puri, NULL);
 		soup_uri_free(puri);
 		g_free(new_proxy);
-		using_proxy = 1;
+		usingproxy = 1;
 	}
 }
 
@@ -914,16 +916,20 @@ gettogglestat(Client *c){
 	gboolean value;
 	WebKitWebSettings *settings = webkit_web_view_get_settings(c->view);
 
-	togglestat[4] = '\0';
-	g_object_get(G_OBJECT(settings), "auto-load-images", &value, NULL);
-	togglestat[0] = value?'I':'i';
-	g_object_get(G_OBJECT(settings), "enable-scripts", &value, NULL);
-	togglestat[1] = value?'S':'s';
-	g_object_get(G_OBJECT(settings), "enable-plugins", &value, NULL);
-	togglestat[2] = value?'V':'v';
 	g_object_get(G_OBJECT(settings), "enable-caret-browsing",
 			&value, NULL);
-	togglestat[3] = value?'C':'c';
+	togglestat[0] = value? 'C': 'c';
+
+	g_object_get(G_OBJECT(settings), "auto-load-images", &value, NULL);
+	togglestat[1] = value? 'I': 'i';
+
+	g_object_get(G_OBJECT(settings), "enable-scripts", &value, NULL);
+	togglestat[2] = value? 'S': 's';
+
+	g_object_get(G_OBJECT(settings), "enable-plugins", &value, NULL);
+	togglestat[3] = value? 'V': 'v';
+
+	togglestat[4] = '\0';
 }
 
 
@@ -995,16 +1001,16 @@ main(int argc, char *argv[]) {
 		embed = strtol(EARGF(usage()), NULL, 0);
 		break;
 	case 'i':
-		loadimage = 0;
+		loadimages = 0;
 		break;
 	case 'p':
-		plugin = 0;
+		enableplugins = 0;
 		break;
 	case 'r':
 		scriptfile = EARGF(usage());
 		break;
 	case 's':
-		script = 0;
+		enablescripts = 0;
 		break;
 	case 't':
 		stylefile = EARGF(usage());

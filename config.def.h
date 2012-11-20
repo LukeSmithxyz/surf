@@ -20,18 +20,23 @@ static int   indicator_thickness = 2;
 static Bool spatialbrowsing = TRUE;
 static Bool hidebackground  = FALSE;
 
-#define SETPROP(p, q) { .v = (char *[]){ "/bin/sh", "-c", \
-	"prop=\"`xprop -id $2 $0 | cut -d '\"' -f 2 | dmenu`\" &&" \
-	"xprop -id $2 -f $1 8s -set $1 \"$prop\"", \
-	p, q, winid, NULL } }
+#define SETPROP(p, q) { \
+	.v = (char *[]){ "/bin/sh", "-c", \
+		"prop=\"`xprop -id $2 $0 | cut -d '\"' -f 2 | dmenu`\" &&" \
+		"xprop -id $2 -f $1 8s -set $1 \"$prop\"", \
+		p, q, winid, NULL \
+	} \
+}
 
 /* DOWNLOAD(URI, referer) */
 #define DOWNLOAD(d, r) { \
 	.v = (char *[]){ "/bin/sh", "-c", \
-	"xterm -e \"wget '$0' \
---load-cookies ~/.surf/cookies.txt \
---user-agent '$1' \
---referer '$2' ; sleep 5\"", d, useragent, NULL } }
+		"xterm -e \"wget '$0'" \
+		" --load-cookies ~/.surf/cookies.txt" \
+		" --user-agent '$1'" \
+		" --referer '$2' ; sleep 5\"", d, useragent, r, NULL \
+	} \
+}
 
 #define MODKEY GDK_CONTROL_MASK
 
@@ -61,9 +66,10 @@ static Key keys[] = {
     { MODKEY,               GDK_slash,  spawn,      SETPROP("_SURF_FIND", "_SURF_FIND") },
     { MODKEY,               GDK_n,      find,       { .b = TRUE } },
     { MODKEY|GDK_SHIFT_MASK,GDK_n,      find,       { .b = FALSE } },
-    { MODKEY,               GDK_v,      toggle,     { .v = "enable-plugins" } },
+
+    { MODKEY|GDK_SHIFT_MASK,GDK_c,      toggle,     { .v = "enable-caret-browsing" } },
     { MODKEY|GDK_SHIFT_MASK,GDK_i,      toggle,     { .v = "auto-load-images" } },
-    { MODKEY,               GDK_c,      toggle,     { .v = "enable-caret-browsing" } },
     { MODKEY|GDK_SHIFT_MASK,GDK_s,      toggle,     { .v = "enable-scripts" } },
+    { MODKEY|GDK_SHIFT_MASK,GDK_v,      toggle,     { .v = "enable-plugins" } },
 };
 
