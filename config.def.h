@@ -20,16 +20,22 @@ static int   indicator_thickness = 2;
 static Bool spatialbrowsing = TRUE;
 static Bool hidebackground  = FALSE;
 
-#define SETPROP(p, q)     { .v = (char *[]){ "/bin/sh", "-c", \
+#define SETPROP(p, q) { .v = (char *[]){ "/bin/sh", "-c", \
 	"prop=\"`xprop -id $2 $0 | cut -d '\"' -f 2 | dmenu`\" &&" \
 	"xprop -id $2 -f $1 8s -set $1 \"$prop\"", \
 	p, q, winid, NULL } }
-#define DOWNLOAD(d) {			  \
+
+/* DOWNLOAD(URI, referer) */
+#define DOWNLOAD(d, r) { \
 	.v = (char *[]){ "/bin/sh", "-c", \
 	"xterm -e \"wget '$0' \
 --load-cookies ~/.surf/cookies.txt \
---user-agent '$1' ; sleep 5\"", d, useragent, NULL } }
+--user-agent '$1' \
+--referer '$2' ; sleep 5\"", d, useragent, NULL } }
+
 #define MODKEY GDK_CONTROL_MASK
+
+/* hotkeys */
 static Key keys[] = {
     /* modifier	            keyval      function    arg             Focus */
     { MODKEY|GDK_SHIFT_MASK,GDK_r,      reload,     { .b = TRUE } },
