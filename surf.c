@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <webkit/webkit.h>
@@ -497,14 +498,23 @@ loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 
 void
 loaduri(Client *c, const Arg *arg) {
-	char *u;
+	char *u, *rp;
 	const char *uri = (char *)arg->v;
 	Arg a = { .b = FALSE };
 
 	if(strcmp(uri, "") == 0)
 		return;
-	u = g_strrstr(uri, "://") ? g_strdup(uri)
-		: g_strdup_printf("http://%s", uri);
+
+	/* In case it's a file path. */
+	if(uri[0] == '/') {
+		rp = realpath(uri, NULL);
+		u = g_strdup_printf("file://%s", rp);
+		free(rp);
+	} else {
+		u = g_strrstr(uri, "://") ? g_strdup(uri)
+			: g_strdup_printf("http://%s", uri);
+	}
+
 	/* prevents endless loop */
 	if(c->uri && strcmp(u, c->uri) == 0) {
 		reload(c, &a);
