@@ -986,11 +986,14 @@ windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObje
 void
 zoom(Client *c, const Arg *arg) {
 	c->zoomed = TRUE;
-	if(arg->i < 0)		/* zoom out */
+	if(arg->i < 0) {
+		/* zoom out */
 		webkit_web_view_zoom_out(c->view);
-	else if(arg->i > 0)	/* zoom in */
+	} else if(arg->i > 0) {
+		/* zoom in */
 		webkit_web_view_zoom_in(c->view);
-	else {			/* reset */
+	} else {
+		/* reset */
 		c->zoomed = FALSE;
 		webkit_web_view_set_zoom_level(c->view, 1.0);
 	}
