@@ -46,7 +46,7 @@ typedef struct Client {
 	gint progress;
 	gboolean sslfailed;
 	struct Client *next;
-	gboolean zoomed;
+	gboolean zoomed, fullscreen;
 } Client;
 
 typedef struct {
@@ -101,6 +101,7 @@ static void die(char *str);
 static void drawindicator(Client *c);
 static gboolean exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c);
 static void find(Client *c, const Arg *arg);
+static void fullscreen(Client *c, const Arg *arg);
 static const char *getatom(Client *c, int a);
 static char *geturi(Client *c);
 static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
@@ -397,6 +398,16 @@ find(Client *c, const Arg *arg) {
 	s = getatom(c, AtomFind);
 	gboolean forward = *(gboolean *)arg;
 	webkit_web_view_search_text(c->view, s, FALSE, forward, TRUE);
+}
+
+void
+fullscreen(Client *c, const Arg *arg) {
+	if(c->fullscreen) {
+		gtk_window_unfullscreen(GTK_WINDOW(c->win));
+	} else {
+		gtk_window_fullscreen(GTK_WINDOW(c->win));
+	}
+	c->fullscreen = !c->fullscreen;
 }
 
 const char *
