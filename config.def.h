@@ -31,7 +31,7 @@ static Bool hidebackground  = FALSE;
 /* DOWNLOAD(URI, referer) */
 #define DOWNLOAD(d, r) { \
 	.v = (char *[]){ "/bin/sh", "-c", \
-		"xterm -e \"wget '$0'" \
+		"st -e /bin/sh -c \"wget '$0'" \
 		" --load-cookies ~/.surf/cookies.txt" \
 		" --user-agent '$1'" \
 		" --referer '$2' ; sleep 5\"", d, useragent, r, NULL \
