@@ -83,18 +83,29 @@ static gboolean loadimages = 1, enableplugins = 1, enablescripts = 1,
 		usingproxy = 0;
 static char togglestat[5];
 
+static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
+		WebKitWebResource *r, WebKitNetworkRequest *req,
+		WebKitNetworkResponse *resp, gpointer d);
 static char *buildpath(const char *path);
-static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e, GList *gl);
+static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e,
+		GList *gl);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
-static void cookiejar_changed(SoupCookieJar *self, SoupCookie *old_cookie, SoupCookie *new_cookie);
+static void cookiejar_changed(SoupCookieJar *self, SoupCookie *old_cookie,
+		SoupCookie *new_cookie);
 static void cookiejar_finalize(GObject *self);
 static SoupCookieJar *cookiejar_new(const char *filename, gboolean read_only);
-static void cookiejar_set_property(GObject *self, guint prop_id, const GValue *value, GParamSpec *pspec);
+static void cookiejar_set_property(GObject *self, guint prop_id,
+		const GValue *value, GParamSpec *pspec);
 static char *copystr(char **str, const char *src);
-static WebKitWebView *createwindow(WebKitWebView *v, WebKitWebFrame *f, Client *c);
-static gboolean decidedownload(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r, gchar *m,  WebKitWebPolicyDecision *p, Client *c);
-static gboolean decidewindow(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r, WebKitWebNavigationAction *n, WebKitWebPolicyDecision *p, Client *c);
+static WebKitWebView *createwindow(WebKitWebView *v, WebKitWebFrame *f,
+		Client *c);
+static gboolean decidedownload(WebKitWebView *v, WebKitWebFrame *f,
+		WebKitNetworkRequest *r, gchar *m,  WebKitWebPolicyDecision *p,
+		Client *c);
+static gboolean decidewindow(WebKitWebView *v, WebKitWebFrame *f,
+		WebKitNetworkRequest *r, WebKitWebNavigationAction *n,
+		WebKitWebPolicyDecision *p, Client *c);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 static void die(char *str);
@@ -106,8 +117,10 @@ static const char *getatom(Client *c, int a);
 static char *geturi(Client *c);
 static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
 static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
-static void linkhover(WebKitWebView *v, const char* t, const char* l, Client *c);
-static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
+static void linkhover(WebKitWebView *v, const char* t, const char* l,
+		Client *c);
+static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec,
+		Client *c);
 static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
 static Client *newclient(void);
@@ -116,7 +129,8 @@ static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
 static void populatepopup(WebKitWebView *web, GtkMenu *menu, Client *c);
 static void popupactivate(GtkMenuItem *menu, Client *);
 static void print(Client *c, const Arg *arg);
-static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event, gpointer d);
+static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
+		gpointer d);
 static void progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
 static void reload(Client *c, const Arg *arg);
 static void scroll_h(Client *c, const Arg *arg);
@@ -129,19 +143,30 @@ static void source(Client *c, const Arg *arg);
 static void spawn(Client *c, const Arg *arg);
 static void eval(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
-static void titlechange(WebKitWebView *v, WebKitWebFrame* frame, const char* title, Client *c);
+static void titlechange(WebKitWebView *v, WebKitWebFrame *frame,
+		const char *title, Client *c);
 static void toggle(Client *c, const Arg *arg);
 static void gettogglestat(Client *c);
 static void update(Client *c);
 static void updatewinid(Client *c);
 static void usage(void);
-static void windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObjectRef win, Client *c);
+static void windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame,
+		JSContextRef js, JSObjectRef win, Client *c);
 static void zoom(Client *c, const Arg *arg);
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
 
-char *
+static void
+beforerequest(WebKitWebView *w, WebKitWebFrame *f, WebKitWebResource *r,
+		WebKitNetworkRequest *req, WebKitNetworkResponse *resp,
+		gpointer d) {
+	const gchar *uri = webkit_network_request_get_uri(req);
+	if(g_str_has_suffix(uri, "/favicon.ico"))
+		webkit_network_request_set_uri(req, "about:blank");
+}
+
+static char *
 buildpath(const char *path) {
 	char *apath, *p;
 	FILE *f;
@@ -178,7 +203,8 @@ buildpath(const char *path) {
 static gboolean
 buttonrelease(WebKitWebView *web, GdkEventButton *e, GList *gl) {
 	WebKitHitTestResultContext context;
-	WebKitHitTestResult *result = webkit_web_view_get_hit_test_result(web, e);
+	WebKitHitTestResult *result = webkit_web_view_get_hit_test_result(web,
+			e);
 	Arg arg;
 
 	g_object_get(result, "context", &context, NULL);
@@ -192,7 +218,7 @@ buttonrelease(WebKitWebView *web, GdkEventButton *e, GList *gl) {
 	return false;
 }
 
-void
+static void
 cleanup(void) {
 	while(clients)
 		destroyclient(clients);
@@ -202,18 +228,23 @@ cleanup(void) {
 }
 
 static void
-cookiejar_changed(SoupCookieJar *self, SoupCookie *old_cookie, SoupCookie *new_cookie) {
+cookiejar_changed(SoupCookieJar *self, SoupCookie *old_cookie,
+		SoupCookie *new_cookie) {
 	flock(COOKIEJAR(self)->lock, LOCK_EX);
-	if(new_cookie && !new_cookie->expires && sessiontime)
-		soup_cookie_set_expires(new_cookie, soup_date_new_from_now(sessiontime));
-	SOUP_COOKIE_JAR_CLASS(cookiejar_parent_class)->changed(self, old_cookie, new_cookie);
+	if(new_cookie && !new_cookie->expires && sessiontime) {
+		soup_cookie_set_expires(new_cookie,
+				soup_date_new_from_now(sessiontime));
+	}
+	SOUP_COOKIE_JAR_CLASS(cookiejar_parent_class)->changed(self,
+			old_cookie, new_cookie);
 	flock(COOKIEJAR(self)->lock, LOCK_UN);
 }
 
 static void
 cookiejar_class_init(CookieJarClass *klass) {
 	SOUP_COOKIE_JAR_CLASS(klass)->changed = cookiejar_changed;
-	G_OBJECT_CLASS(klass)->get_property = G_OBJECT_CLASS(cookiejar_parent_class)->get_property;
+	G_OBJECT_CLASS(klass)->get_property =
+		G_OBJECT_CLASS(cookiejar_parent_class)->get_property;
 	G_OBJECT_CLASS(klass)->set_property = cookiejar_set_property;
 	G_OBJECT_CLASS(klass)->finalize = cookiejar_finalize;
 	g_object_class_override_property(G_OBJECT_CLASS(klass), 1, "filename");
@@ -238,13 +269,15 @@ cookiejar_new(const char *filename, gboolean read_only) {
 }
 
 static void
-cookiejar_set_property(GObject *self, guint prop_id, const GValue *value, GParamSpec *pspec) {
+cookiejar_set_property(GObject *self, guint prop_id, const GValue *value,
+		GParamSpec *pspec) {
 	flock(COOKIEJAR(self)->lock, LOCK_SH);
-	G_OBJECT_CLASS(cookiejar_parent_class)->set_property(self, prop_id, value, pspec);
+	G_OBJECT_CLASS(cookiejar_parent_class)->set_property(self, prop_id,
+			value, pspec);
 	flock(COOKIEJAR(self)->lock, LOCK_UN);
 }
 
-void
+static void
 evalscript(JSContextRef js, char *script, char* scriptname) {
 	JSStringRef jsscript, jsscriptname;
 	JSValueRef exception = NULL;
@@ -256,7 +289,7 @@ evalscript(JSContextRef js, char *script, char* scriptname) {
 	JSStringRelease(jsscriptname);
 }
 
-void
+static void
 runscript(WebKitWebFrame *frame) {
 	char *script;
 	GError *error;
@@ -266,7 +299,7 @@ runscript(WebKitWebFrame *frame) {
 	}
 }
 
-void
+static void
 clipboard(Client *c, const Arg *arg) {
 	gboolean paste = *(gboolean *)arg;
 
@@ -276,7 +309,7 @@ clipboard(Client *c, const Arg *arg) {
 		gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), c->linkhover ? c->linkhover : geturi(c), -1);
 }
 
-char *
+static char *
 copystr(char **str, const char *src) {
 	char *tmp;
 	tmp = g_strdup(src);
@@ -288,14 +321,15 @@ copystr(char **str, const char *src) {
 	return tmp;
 }
 
-WebKitWebView *
+static WebKitWebView *
 createwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c) {
 	Client *n = newclient();
 	return n->view;
 }
 
-gboolean
-decidedownload(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r, gchar *m,  WebKitWebPolicyDecision *p, Client *c) {
+static gboolean
+decidedownload(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r,
+		gchar *m,  WebKitWebPolicyDecision *p, Client *c) {
 	if(!webkit_web_view_can_show_mime_type(v, m)) {
 		webkit_web_policy_decision_download(p);
 		return TRUE;
@@ -303,11 +337,14 @@ decidedownload(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r, gch
 	return FALSE;
 }
 
-gboolean
-decidewindow(WebKitWebView *view, WebKitWebFrame *f, WebKitNetworkRequest *r, WebKitWebNavigationAction *n, WebKitWebPolicyDecision *p, Client *c) {
+static gboolean
+decidewindow(WebKitWebView *view, WebKitWebFrame *f, WebKitNetworkRequest *r,
+		WebKitWebNavigationAction *n, WebKitWebPolicyDecision *p,
+		Client *c) {
 	Arg arg;
 
-	if(webkit_web_navigation_action_get_reason(n) == WEBKIT_WEB_NAVIGATION_REASON_LINK_CLICKED) {
+	if(webkit_web_navigation_action_get_reason(n) ==
+			WEBKIT_WEB_NAVIGATION_REASON_LINK_CLICKED) {
 		webkit_web_policy_decision_ignore(p);
 		arg.v = (void *)webkit_network_request_get_uri(r);
 		newwindow(NULL, &arg, 0);
@@ -316,7 +353,7 @@ decidewindow(WebKitWebView *view, WebKitWebFrame *f, WebKitNetworkRequest *r, We
 	return FALSE;
 }
 
-void
+static void
 destroyclient(Client *c) {
 	Client *p;
 
@@ -328,27 +365,28 @@ destroyclient(Client *c) {
 	gtk_widget_destroy(c->win);
 
 	for(p = clients; p && p->next != c; p = p->next);
-	if(p)
+	if(p) {
 		p->next = c->next;
-	else
+	} else {
 		clients = c->next;
+	}
 	free(c);
 	if(clients == NULL)
 		gtk_main_quit();
 }
 
-void
+static void
 destroywin(GtkWidget* w, Client *c) {
 	destroyclient(c);
 }
 
-void
+static void
 die(char *str) {
 	fputs(str, stderr);
 	exit(EXIT_FAILURE);
 }
 
-void
+static void
 drawindicator(Client *c) {
 	gint width;
 	const char *uri;
@@ -363,9 +401,11 @@ drawindicator(Client *c) {
 	gc = gdk_gc_new(w->window);
 	if(strstr(uri, "https://") == uri) {
 		if(usingproxy) {
-			colorname = c->sslfailed? progress_proxy_untrust : progress_proxy_trust;
+			colorname = c->sslfailed? progress_proxy_untrust :
+				progress_proxy_trust;
 		} else {
-			colorname = c->sslfailed? progress_untrust : progress_trust;
+			colorname = c->sslfailed? progress_untrust :
+				progress_trust;
 		}
 	} else {
 		if(usingproxy) {
@@ -385,13 +425,13 @@ drawindicator(Client *c) {
 	g_object_unref(gc);
 }
 
-gboolean
+static gboolean
 exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c) {
 	drawindicator(c);
 	return TRUE;
 }
 
-void
+static void
 find(Client *c, const Arg *arg) {
 	const char *s;
 
@@ -400,7 +440,7 @@ find(Client *c, const Arg *arg) {
 	webkit_web_view_search_text(c->view, s, FALSE, forward, TRUE);
 }
 
-void
+static void
 fullscreen(Client *c, const Arg *arg) {
 	if(c->fullscreen) {
 		gtk_window_unfullscreen(GTK_WINDOW(c->win));
@@ -410,7 +450,7 @@ fullscreen(Client *c, const Arg *arg) {
 	c->fullscreen = !c->fullscreen;
 }
 
-const char *
+static const char *
 getatom(Client *c, int a) {
 	static char buf[BUFSIZ];
 	Atom adummy;
@@ -429,7 +469,7 @@ getatom(Client *c, int a) {
 	return buf;
 }
 
-char *
+static char *
 geturi(Client *c) {
 	char *uri;
 
@@ -438,7 +478,7 @@ geturi(Client *c) {
 	return uri;
 }
 
-gboolean
+static gboolean
 initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	Arg arg;
 
@@ -448,7 +488,7 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	return FALSE;
 }
 
-gboolean
+static gboolean
 keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 	guint i;
 	gboolean processed = FALSE;
@@ -466,7 +506,7 @@ keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 	return processed;
 }
 
-void
+static void
 linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
 	if(l) {
 		c->linkhover = copystr(&c->linkhover, l);
@@ -477,7 +517,7 @@ linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
 	update(c);
 }
 
-void
+static void
 loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 	WebKitWebFrame *frame;
 	WebKitWebDataSource *src;
@@ -507,7 +547,7 @@ loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 	}
 }
 
-void
+static void
 loaduri(Client *c, const Arg *arg) {
 	char *u, *rp;
 	const char *uri = (char *)arg->v;
@@ -538,13 +578,13 @@ loaduri(Client *c, const Arg *arg) {
 	}
 }
 
-void
+static void
 navigate(Client *c, const Arg *arg) {
 	int steps = *(int *)arg;
 	webkit_web_view_go_back_or_forward(c->view, steps);
 }
 
-Client *
+static Client *
 newclient(void) {
 	Client *c;
 	WebKitWebSettings *settings;
@@ -576,8 +616,12 @@ newclient(void) {
 		gtk_window_set_role(GTK_WINDOW(c->win), "Surf");
 	}
 	gtk_window_set_default_size(GTK_WINDOW(c->win), 800, 600);
-	g_signal_connect(G_OBJECT(c->win), "destroy", G_CALLBACK(destroywin), c);
-	g_signal_connect(G_OBJECT(c->win), "key-press-event", G_CALLBACK(keypress), c);
+	g_signal_connect(G_OBJECT(c->win),
+			"destroy",
+			G_CALLBACK(destroywin), c);
+	g_signal_connect(G_OBJECT(c->win),
+			"key-press-event",
+			G_CALLBACK(keypress), c);
 
 	/* VBox */
 	c->vbox = gtk_vbox_new(FALSE, 0);
@@ -589,17 +633,42 @@ newclient(void) {
 
 	/* Webview */
 	c->view = WEBKIT_WEB_VIEW(webkit_web_view_new());
-	g_signal_connect(G_OBJECT(c->view), "title-changed", G_CALLBACK(titlechange), c);
-	g_signal_connect(G_OBJECT(c->view), "hovering-over-link", G_CALLBACK(linkhover), c);
-	g_signal_connect(G_OBJECT(c->view), "create-web-view", G_CALLBACK(createwindow), c);
-	g_signal_connect(G_OBJECT(c->view), "new-window-policy-decision-requested", G_CALLBACK(decidewindow), c);
-	g_signal_connect(G_OBJECT(c->view), "mime-type-policy-decision-requested", G_CALLBACK(decidedownload), c);
-	g_signal_connect(G_OBJECT(c->view), "window-object-cleared", G_CALLBACK(windowobjectcleared), c);
-	g_signal_connect(G_OBJECT(c->view), "notify::load-status", G_CALLBACK(loadstatuschange), c);
-	g_signal_connect(G_OBJECT(c->view), "notify::progress", G_CALLBACK(progresschange), c);
-	g_signal_connect(G_OBJECT(c->view), "download-requested", G_CALLBACK(initdownload), c);
-	g_signal_connect(G_OBJECT(c->view), "button-release-event", G_CALLBACK(buttonrelease), c);
-	g_signal_connect(G_OBJECT(c->view), "populate-popup", G_CALLBACK(populatepopup), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"title-changed",
+			G_CALLBACK(titlechange), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"hovering-over-link",
+			G_CALLBACK(linkhover), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"create-web-view",
+			G_CALLBACK(createwindow), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"new-window-policy-decision-requested",
+			G_CALLBACK(decidewindow), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"mime-type-policy-decision-requested",
+			G_CALLBACK(decidedownload), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"window-object-cleared",
+			G_CALLBACK(windowobjectcleared), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"notify::load-status",
+			G_CALLBACK(loadstatuschange), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"notify::progress",
+			G_CALLBACK(progresschange), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"download-requested",
+			G_CALLBACK(initdownload), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"button-release-event",
+			G_CALLBACK(buttonrelease), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"populate-popup",
+			G_CALLBACK(populatepopup), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"resource-request-starting",
+			G_CALLBACK(beforerequest), c);
 
 	/* Indicator */
 	c->indicator = gtk_drawing_area_new();
@@ -614,14 +683,17 @@ newclient(void) {
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->indicator);
 
 	/* Setup */
-	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->indicator, FALSE, FALSE, 0, GTK_PACK_START);
-	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->scroll, TRUE, TRUE, 0, GTK_PACK_START);
+	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->indicator, FALSE,
+			FALSE, 0, GTK_PACK_START);
+	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->scroll, TRUE,
+			TRUE, 0, GTK_PACK_START);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
 	gtk_widget_show(c->vbox);
 	gtk_widget_show(c->scroll);
 	gtk_widget_show(GTK_WIDGET(c->view));
 	gtk_widget_show(c->win);
-	gtk_window_set_geometry_hints(GTK_WINDOW(c->win), NULL, &hints, GDK_HINT_MIN_SIZE);
+	gtk_window_set_geometry_hints(GTK_WINDOW(c->win), NULL, &hints,
+			GDK_HINT_MIN_SIZE);
 	gdk_window_set_events(GTK_WIDGET(c->win)->window, GDK_ALL_EVENTS_MASK);
 	gdk_window_add_filter(GTK_WIDGET(c->win)->window, processx, c);
 	webkit_web_view_set_full_content_zoom(c->view, TRUE);
@@ -652,7 +724,8 @@ newclient(void) {
 	clients = c;
 	if(showxid) {
 		gdk_display_sync(gtk_widget_get_display(c->win));
-		printf("%u\n", (guint)GDK_WINDOW_XID(GTK_WIDGET(c->win)->window));
+		printf("%u\n",
+			(guint)GDK_WINDOW_XID(GTK_WIDGET(c->win)->window));
 		fflush(NULL);
                 if (fclose(stdout) != 0) {
 			die("Error closing stdout");
@@ -661,7 +734,7 @@ newclient(void) {
 	return c;
 }
 
-void
+static void
 newwindow(Client *c, const Arg *arg, gboolean noembed) {
 	guint i = 0;
 	const char *cmd[10], *uri;
@@ -729,19 +802,19 @@ popupactivate(GtkMenuItem *menu, Client *c) {
 	}
 }
 
-void
+static void
 pasteuri(GtkClipboard *clipboard, const char *text, gpointer d) {
 	Arg arg = {.v = text };
 	if(text != NULL)
 		loaduri((Client *) d, &arg);
 }
 
-void
+static void
 print(Client *c, const Arg *arg) {
 	webkit_web_frame_print(webkit_web_view_get_main_frame(c->view));
 }
 
-GdkFilterReturn
+static GdkFilterReturn
 processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 	Client *c = (Client *)d;
 	XPropertyEvent *ev;
@@ -765,13 +838,13 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 	return GDK_FILTER_CONTINUE;
 }
 
-void
+static void
 progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 	c->progress = webkit_web_view_get_progress(c->view) * 100;
 	update(c);
 }
 
-void
+static void
 reload(Client *c, const Arg *arg) {
 	gboolean nocache = *(gboolean *)arg;
 	if(nocache)
@@ -780,19 +853,19 @@ reload(Client *c, const Arg *arg) {
 		 webkit_web_view_reload(c->view);
 }
 
-void
+static void
 scroll_h(Client *c, const Arg *arg) {
 	scroll(gtk_scrolled_window_get_hadjustment(
 				GTK_SCROLLED_WINDOW(c->scroll)), arg);
 }
 
-void
+static void
 scroll_v(Client *c, const Arg *arg) {
 	scroll(gtk_scrolled_window_get_vadjustment(
 				GTK_SCROLLED_WINDOW(c->scroll)), arg);
 }
 
-void
+static void
 scroll(GtkAdjustment *a, const Arg *arg) {
 	gdouble v;
 
@@ -815,15 +888,15 @@ scroll(GtkAdjustment *a, const Arg *arg) {
 	gtk_adjustment_set_value(a, v);
 }
 
-void
+static void
 setatom(Client *c, int a, const char *v) {
 	XSync(dpy, False);
-	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window), atoms[a],
-			XA_STRING, 8, PropModeReplace, (unsigned char *)v,
-			strlen(v) + 1);
+	XChangeProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window),
+			atoms[a], XA_STRING, 8, PropModeReplace,
+			(unsigned char *)v, strlen(v) + 1);
 }
 
-void
+static void
 setup(void) {
 	char *proxy;
 	char *new_proxy;
@@ -852,7 +925,9 @@ setup(void) {
 	s = webkit_get_default_session();
 
 	/* cookie jar */
-	soup_session_add_feature(s, SOUP_SESSION_FEATURE(cookiejar_new(cookiefile, FALSE)));
+	soup_session_add_feature(s,
+			SOUP_SESSION_FEATURE(cookiejar_new(cookiefile,
+					FALSE)));
 
 	/* ssl */
 	g_object_set(G_OBJECT(s), "ssl-ca-file", cafile, NULL);
@@ -870,14 +945,14 @@ setup(void) {
 	}
 }
 
-void
+static void
 sigchld(int unused) {
 	if(signal(SIGCHLD, sigchld) == SIG_ERR)
 		die("Can't install SIGCHLD handler");
 	while(0 < waitpid(-1, NULL, WNOHANG));
 }
 
-void
+static void
 source(Client *c, const Arg *arg) {
 	Arg a = { .b = FALSE };
 	gboolean s;
@@ -887,7 +962,7 @@ source(Client *c, const Arg *arg) {
 	reload(c, &a);
 }
 
-void
+static void
 spawn(Client *c, const Arg *arg) {
 	if(fork() == 0) {
 		if(dpy)
@@ -900,25 +975,25 @@ spawn(Client *c, const Arg *arg) {
 	}
 }
 
-void
+static void
 eval(Client *c, const Arg *arg) {
 	WebKitWebFrame *frame = webkit_web_view_get_main_frame(c->view);
 	evalscript(webkit_web_frame_get_global_context(frame),
 			((char **)arg->v)[0], "");
 }
 
-void
+static void
 stop(Client *c, const Arg *arg) {
 	webkit_web_view_stop_loading(c->view);
 }
 
-void
+static void
 titlechange(WebKitWebView *v, WebKitWebFrame *f, const char *t, Client *c) {
 	c->title = copystr(&c->title, t);
 	update(c);
 }
 
-void
+static void
 toggle(Client *c, const Arg *arg) {
 	WebKitWebSettings *settings;
 	char *name = (char *)arg->v;
@@ -932,7 +1007,7 @@ toggle(Client *c, const Arg *arg) {
 	reload(c,&a);
 }
 
-void
+static void
 gettogglestat(Client *c){
 	gboolean value;
 	WebKitWebSettings *settings = webkit_web_view_get_settings(c->view);
@@ -954,7 +1029,7 @@ gettogglestat(Client *c){
 }
 
 
-void
+static void
 update(Client *c) {
 	char *t;
 
@@ -976,25 +1051,26 @@ update(Client *c) {
 	g_free(t);
 }
 
-void
+static void
 updatewinid(Client *c) {
 	snprintf(winid, LENGTH(winid), "%u",
 			(int)GDK_WINDOW_XID(GTK_WIDGET(c->win)->window));
 }
 
-void
+static void
 usage(void) {
 	fputs("surf - simple browser\n", stderr);
 	die("usage: surf [-c cookiefile] [-e xid] [-i] [-p] [-r scriptfile]"
 		" [-s] [-t stylefile] [-u useragent] [-v] [-x] [uri]\n");
 }
 
-void
-windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js, JSObjectRef win, Client *c) {
+static void
+windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js,
+		JSObjectRef win, Client *c) {
 	runscript(frame);
 }
 
-void
+static void
 zoom(Client *c, const Arg *arg) {
 	c->zoomed = TRUE;
 	if(arg->i < 0) {
