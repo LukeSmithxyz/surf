@@ -16,8 +16,12 @@ static char *cafile         = "/etc/ssl/certs/ca-certificates.crt";
 static char *strictssl      = FALSE; /* Refuse untrusted SSL connections */
 static int   indicator_thickness = 2;
 
-/* Webkit features */
-static Bool spatialbrowsing = TRUE;
+/* Webkit default features */
+static Bool enablespatialbrowsing = TRUE;
+static Bool enableplugins = TRUE;
+static Bool enablescripts = TRUE;
+static Bool enableinspector = TRUE;
+static Bool loadimages = TRUE;
 static Bool hidebackground  = FALSE;
 
 #define SETPROP(p, q) { \
@@ -69,6 +73,7 @@ static Key keys[] = {
     { 0,                    GDK_F11,    fullscreen, { 0 } },
     { 0,                    GDK_Escape, stop,       { 0 } },
     { MODKEY,               GDK_o,      source,     { 0 } },
+    { MODKEY|GDK_SHIFT_MASK,GDK_o,      inspector,  { 0 } },
 
     { MODKEY,               GDK_g,      spawn,      SETPROP("_SURF_URI", "_SURF_GO") },
     { MODKEY,               GDK_f,      spawn,      SETPROP("_SURF_FIND", "_SURF_FIND") },

@@ -3,16 +3,12 @@
 surf \- simple webkit-based browser
 .SH SYNOPSIS
 .B surf
+.RB [-ipnsvx]
 .RB [-c\ cookiefile]
 .RB [-e\ xid]
-.RB [-i]
-.RB [-p]
 .RB [-r\ scriptfile]
-.RB [-s]
 .RB [-t\ stylefile]
 .RB [-u\ useragent]
-.RB [-v]
-.RB [-x]
 .RB "URI"
 .SH DESCRIPTION
 surf is a simple Web browser based on WebKit/GTK+. It is able
@@ -29,6 +25,9 @@ Reparents to window specified by xid.
 .TP
 .B \-i
 Disable Images
+.TP
+.B \-n
+Disable the Web Inspector (Developer Tools).
 .TP
 .B \-p
 Disable Plugins
@@ -126,6 +125,9 @@ Copies current URI to primary selection.
 .TP
 .B Ctrl\-o
 Show the sourcecode of the current page.
+.TP
+.B Ctrl\-Shift\-o
+Open the Web Inspector (Developer Tools) window for the current page.
 .TP
 .B Ctrl\-Shift\-c
 Toggle caret browsing.

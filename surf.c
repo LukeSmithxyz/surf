@@ -20,6 +20,8 @@
 #include <glib/gstdio.h>
 #include <JavaScriptCore/JavaScript.h>
 #include <sys/file.h>
+#include <libgen.h>
+#include <stdarg.h>
 
 #include "arg.h"
 
@@ -41,12 +43,12 @@ union Arg {
 typedef struct Client {
 	GtkWidget *win, *scroll, *vbox, *indicator;
 	WebKitWebView *view;
+	WebKitWebInspector *inspector;
 	char *title, *linkhover;
 	const char *uri, *needle;
 	gint progress;
-	gboolean sslfailed;
 	struct Client *next;
-	gboolean zoomed, fullscreen;
+	gboolean zoomed, fullscreen, isinspector, sslfailed;
 } Client;
 
 typedef struct {
@@ -79,8 +81,7 @@ static Client *clients = NULL;
 static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static char winid[64];
-static gboolean loadimages = 1, enableplugins = 1, enablescripts = 1,
-		usingproxy = 0;
+static gboolean usingproxy = 0;
 static char togglestat[5];
 
 static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
@@ -91,12 +92,14 @@ static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e,
 		GList *gl);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
+
 static void cookiejar_changed(SoupCookieJar *self, SoupCookie *old_cookie,
 		SoupCookie *new_cookie);
 static void cookiejar_finalize(GObject *self);
 static SoupCookieJar *cookiejar_new(const char *filename, gboolean read_only);
 static void cookiejar_set_property(GObject *self, guint prop_id,
 		const GValue *value, GParamSpec *pspec);
+
 static char *copystr(char **str, const char *src);
 static WebKitWebView *createwindow(WebKitWebView *v, WebKitWebFrame *f,
 		Client *c);
@@ -108,14 +111,24 @@ static gboolean decidewindow(WebKitWebView *v, WebKitWebFrame *f,
 		WebKitWebPolicyDecision *p, Client *c);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
-static void die(char *str);
+static void die(const char *errstr, ...);
 static void drawindicator(Client *c);
+static void eval(Client *c, const Arg *arg);
 static gboolean exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c);
 static void find(Client *c, const Arg *arg);
 static void fullscreen(Client *c, const Arg *arg);
 static const char *getatom(Client *c, int a);
+static void gettogglestat(Client *c);
 static char *geturi(Client *c);
 static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
+
+static void inspector(Client *c, const Arg *arg);
+static WebKitWebView *inspector_new(WebKitWebInspector *i, WebKitWebView *v,
+		Client *c);
+static gboolean inspector_show(WebKitWebInspector *i, Client *c);
+static gboolean inspector_close(WebKitWebInspector *i, Client *c);
+static void inspector_finished(WebKitWebInspector *i, Client *c);
+
 static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
 static void linkhover(WebKitWebView *v, const char* t, const char* l,
 		Client *c);
@@ -141,12 +154,10 @@ static void setup(void);
 static void sigchld(int unused);
 static void source(Client *c, const Arg *arg);
 static void spawn(Client *c, const Arg *arg);
-static void eval(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *v, WebKitWebFrame *frame,
 		const char *title, Client *c);
 static void toggle(Client *c, const Arg *arg);
-static void gettogglestat(Client *c);
 static void update(Client *c);
 static void updatewinid(Client *c);
 static void usage(void);
@@ -381,8 +392,12 @@ destroywin(GtkWidget* w, Client *c) {
 }
 
 static void
-die(char *str) {
-	fputs(str, stderr);
+die(const char *errstr, ...) {
+	va_list ap;
+
+	va_start(ap, errstr);
+	vfprintf(stderr, errstr, ap);
+	va_end(ap);
 	exit(EXIT_FAILURE);
 }
 
@@ -486,6 +501,38 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 	arg = (Arg)DOWNLOAD((char *)webkit_download_get_uri(o), geturi(c));
 	spawn(c, &arg);
 	return FALSE;
+}
+
+static void
+inspector(Client *c, const Arg *arg) {
+	if(c->isinspector)
+		return;
+	webkit_web_inspector_show(c->inspector);
+}
+
+static WebKitWebView *
+inspector_new(WebKitWebInspector *i, WebKitWebView *v, Client *c) {
+	Client *n = newclient();
+	n->isinspector = true;
+
+	return n->view;
+}
+
+static gboolean
+inspector_show(WebKitWebInspector *i, Client *c) {
+	gtk_widget_show(GTK_WIDGET(webkit_web_inspector_get_web_view(i)));
+	return true;
+}
+
+static gboolean
+inspector_close(WebKitWebInspector *i, Client *c) {
+	gtk_widget_hide(GTK_WIDGET(webkit_web_inspector_get_web_view(i)));
+	return true;
+}
+
+static void
+inspector_finished(WebKitWebInspector *i, Client *c) {
+	g_free(c->inspector);
 }
 
 static gboolean
@@ -706,11 +753,30 @@ newclient(void) {
 	g_object_set(G_OBJECT(settings), "user-agent", ua, NULL);
 	uri = g_strconcat("file://", stylefile, NULL);
 	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
-	g_object_set(G_OBJECT(settings), "auto-load-images", loadimages, NULL);
-	g_object_set(G_OBJECT(settings), "enable-plugins", enableplugins, NULL);
-	g_object_set(G_OBJECT(settings), "enable-scripts", enablescripts, NULL);
+	g_object_set(G_OBJECT(settings), "auto-load-images", loadimages,
+			NULL);
+	g_object_set(G_OBJECT(settings), "enable-plugins", enableplugins,
+			NULL);
+	g_object_set(G_OBJECT(settings), "enable-scripts", enablescripts,
+			NULL);
 	g_object_set(G_OBJECT(settings), "enable-spatial-navigation",
-			spatialbrowsing, NULL);
+			enablespatialbrowsing, NULL);
+	g_object_set(G_OBJECT(settings), "enable-developer-extras",
+			enableinspector, NULL);
+
+	if(enableinspector) {
+		c->inspector = WEBKIT_WEB_INSPECTOR(
+				webkit_web_view_get_inspector(c->view));
+		g_signal_connect(G_OBJECT(c->inspector), "inspect-web-view",
+				G_CALLBACK(inspector_new), c);
+		g_signal_connect(G_OBJECT(c->inspector), "show-window",
+				G_CALLBACK(inspector_show), c);
+		g_signal_connect(G_OBJECT(c->inspector), "close-window",
+				G_CALLBACK(inspector_close), c);
+		g_signal_connect(G_OBJECT(c->inspector), "finished",
+				G_CALLBACK(inspector_finished), c);
+		c->isinspector = false;
+	}
 
 	g_free(uri);
 
@@ -1059,9 +1125,8 @@ updatewinid(Client *c) {
 
 static void
 usage(void) {
-	fputs("surf - simple browser\n", stderr);
-	die("usage: surf [-c cookiefile] [-e xid] [-i] [-p] [-r scriptfile]"
-		" [-s] [-t stylefile] [-u useragent] [-v] [-x] [uri]\n");
+	die("usage: %s [-inpsvx] [-c cookiefile] [-e xid] [-r scriptfile]"
+		" [-t stylefile] [-u useragent] [uri]\n", basename(argv0));
 }
 
 static void
@@ -1103,6 +1168,9 @@ main(int argc, char *argv[]) {
 	case 'i':
 		loadimages = 0;
 		break;
+	case 'n':
+		enableinspector = 0;
+		break;
 	case 'p':
 		enableplugins = 0;
 		break;
@@ -1118,11 +1186,12 @@ main(int argc, char *argv[]) {
 	case 'u':
 		useragent = EARGF(usage());
 		break;
+	case 'v':
+		die("surf-"VERSION", ©2009-2012 surf engineers, "
+				"see LICENSE for details\n");
 	case 'x':
 		showxid = TRUE;
 		break;
-	case 'v':
-		die("surf-"VERSION", ©2009-2012 surf engineers, see LICENSE for details\n");
 	default:
 		usage();
 	} ARGEND;
