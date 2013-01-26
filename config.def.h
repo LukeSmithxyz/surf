@@ -45,6 +45,10 @@ static Bool hidebackground  = FALSE;
 #define MODKEY GDK_CONTROL_MASK
 
 /* hotkeys */
+/*
+ * If you use anything else but MODKEY and GDK_SHIFT_MASK, don't forget to
+ * edit the CLEANMASK() macro.
+ */
 static Key keys[] = {
     /* modifier	            keyval      function    arg             Focus */
     { MODKEY|GDK_SHIFT_MASK,GDK_r,      reload,     { .b = TRUE } },

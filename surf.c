@@ -28,6 +28,7 @@
 char *argv0;
 
 #define LENGTH(x)               (sizeof x / sizeof x[0])
+#define CLEANMASK(mask)		(mask & (MODKEY|GDK_SHIFT_MASK))
 #define COOKIEJAR_TYPE          (cookiejar_get_type ())
 #define COOKIEJAR(obj)          (G_TYPE_CHECK_INSTANCE_CAST ((obj), COOKIEJAR_TYPE, CookieJar))
 
@@ -543,7 +544,7 @@ keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
 	updatewinid(c);
 	for(i = 0; i < LENGTH(keys); i++) {
 		if(gdk_keyval_to_lower(ev->keyval) == keys[i].keyval
-				&& (ev->state & keys[i].mod) == keys[i].mod
+				&& CLEANMASK(ev->state) == keys[i].mod
 				&& keys[i].func) {
 			keys[i].func(c, &(keys[i].arg));
 			processed = TRUE;
