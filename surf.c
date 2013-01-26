@@ -42,14 +42,14 @@ union Arg {
 };
 
 typedef struct Client {
-	GtkWidget *win, *scroll, *vbox, *indicator;
+	GtkWidget *win, *scroll, *vbox, *indicator, *pane;
 	WebKitWebView *view;
 	WebKitWebInspector *inspector;
 	char *title, *linkhover;
 	const char *uri, *needle;
 	gint progress;
 	struct Client *next;
-	gboolean zoomed, fullscreen, isinspector, sslfailed;
+	gboolean zoomed, fullscreen, isinspecting, sslfailed;
 } Client;
 
 typedef struct {
@@ -506,28 +506,45 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c) {
 
 static void
 inspector(Client *c, const Arg *arg) {
-	if(c->isinspector)
-		return;
-	webkit_web_inspector_show(c->inspector);
+	if(c->isinspecting) {
+		webkit_web_inspector_close(c->inspector);
+	} else {
+		webkit_web_inspector_show(c->inspector);
+	}
 }
 
 static WebKitWebView *
 inspector_new(WebKitWebInspector *i, WebKitWebView *v, Client *c) {
-	Client *n = newclient();
-	n->isinspector = true;
-
-	return n->view;
+	return WEBKIT_WEB_VIEW(webkit_web_view_new());
 }
 
 static gboolean
 inspector_show(WebKitWebInspector *i, Client *c) {
-	gtk_widget_show(GTK_WIDGET(webkit_web_inspector_get_web_view(i)));
+	WebKitWebView *w;
+
+	if(c->isinspecting)
+		return false;
+
+	w = webkit_web_inspector_get_web_view(i);
+	gtk_paned_pack2(GTK_PANED(c->pane), GTK_WIDGET(w), TRUE, TRUE);
+	gtk_widget_show(GTK_WIDGET(w));
+	c->isinspecting = true;
+
 	return true;
 }
 
 static gboolean
 inspector_close(WebKitWebInspector *i, Client *c) {
-	gtk_widget_hide(GTK_WIDGET(webkit_web_inspector_get_web_view(i)));
+	GtkWidget *w;
+
+	if(!c->isinspecting)
+		return false;
+
+	w = GTK_WIDGET(webkit_web_inspector_get_web_view(i));
+	gtk_widget_hide(w);
+	gtk_widget_destroy(w);
+	c->isinspecting = false;
+
 	return true;
 }
 
@@ -671,8 +688,12 @@ newclient(void) {
 			"key-press-event",
 			G_CALLBACK(keypress), c);
 
+	/* Pane */
+	c->pane = gtk_vpaned_new();
+
 	/* VBox */
 	c->vbox = gtk_vbox_new(FALSE, 0);
+	gtk_paned_pack1(GTK_PANED(c->pane), c->vbox, TRUE, TRUE);
 
 	/* Scrolled Window */
 	c->scroll = gtk_scrolled_window_new(NULL, NULL);
@@ -726,7 +747,7 @@ newclient(void) {
 
 	/* Arranging */
 	gtk_container_add(GTK_CONTAINER(c->scroll), GTK_WIDGET(c->view));
-	gtk_container_add(GTK_CONTAINER(c->win), c->vbox);
+	gtk_container_add(GTK_CONTAINER(c->win), c->pane);
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->scroll);
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->indicator);
 
@@ -736,6 +757,7 @@ newclient(void) {
 	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->scroll, TRUE,
 			TRUE, 0, GTK_PACK_START);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
+	gtk_widget_show(c->pane);
 	gtk_widget_show(c->vbox);
 	gtk_widget_show(c->scroll);
 	gtk_widget_show(GTK_WIDGET(c->view));
@@ -776,7 +798,7 @@ newclient(void) {
 				G_CALLBACK(inspector_close), c);
 		g_signal_connect(G_OBJECT(c->inspector), "finished",
 				G_CALLBACK(inspector_finished), c);
-		c->isinspector = false;
+		c->isinspecting = false;
 	}
 
 	g_free(uri);
@@ -789,6 +811,7 @@ newclient(void) {
 	c->title = NULL;
 	c->next = clients;
 	clients = c;
+
 	if(showxid) {
 		gdk_display_sync(gtk_widget_get_display(c->win));
 		printf("%u\n",
@@ -798,6 +821,7 @@ newclient(void) {
 			die("Error closing stdout");
                 }
 	}
+
 	return c;
 }
 
