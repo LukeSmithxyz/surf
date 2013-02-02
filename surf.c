@@ -997,8 +997,6 @@ setup(void) {
 	/* clean up any zombies immediately */
 	sigchld(0);
 	gtk_init(NULL, NULL);
-	if (!g_thread_supported())
-		g_thread_init(NULL);
 
 	dpy = GDK_DISPLAY();
 
