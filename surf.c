@@ -1064,7 +1064,13 @@ gettogglestat(Client *c){
 
 static void
 getpagestat(Client *c) {
-	pagestat[0] = c->sslfailed ? 'U' : 'T';
+	const char *uri = geturi(c);
+
+	if(strstr(uri, "https://") == uri)
+		pagestat[0] = c->sslfailed ? 'U' : 'T';
+	else
+		pagestat[0] = '-';
+
 	pagestat[1] = usingproxy ? 'P' : '-';
 }
 
