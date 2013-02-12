@@ -42,7 +42,7 @@ union Arg {
 };
 
 typedef struct Client {
-	GtkWidget *win, *scroll, *vbox, *indicator, *pane;
+	GtkWidget *win, *scroll, *vbox, *pane;
 	WebKitWebView *view;
 	WebKitWebInspector *inspector;
 	char *title, *linkhover;
@@ -84,6 +84,7 @@ static gboolean showxid = FALSE;
 static char winid[64];
 static gboolean usingproxy = 0;
 static char togglestat[5];
+static char pagestat[2];
 
 static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
 		WebKitWebResource *r, WebKitNetworkRequest *req,
@@ -113,13 +114,12 @@ static gboolean decidewindow(WebKitWebView *v, WebKitWebFrame *f,
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 static void die(const char *errstr, ...);
-static void drawindicator(Client *c);
 static void eval(Client *c, const Arg *arg);
-static gboolean exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c);
 static void find(Client *c, const Arg *arg);
 static void fullscreen(Client *c, const Arg *arg);
 static const char *getatom(Client *c, int a);
 static void gettogglestat(Client *c);
+static void getpagestat(Client *c);
 static char *geturi(Client *c);
 static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
 
@@ -370,7 +370,6 @@ destroyclient(Client *c) {
 	Client *p;
 
 	webkit_web_view_stop_loading(c->view);
-	gtk_widget_destroy(c->indicator);
 	gtk_widget_destroy(GTK_WIDGET(c->view));
 	gtk_widget_destroy(c->scroll);
 	gtk_widget_destroy(c->vbox);
@@ -400,51 +399,6 @@ die(const char *errstr, ...) {
 	vfprintf(stderr, errstr, ap);
 	va_end(ap);
 	exit(EXIT_FAILURE);
-}
-
-static void
-drawindicator(Client *c) {
-	gint width;
-	const char *uri;
-	char *colorname;
-	GtkWidget *w;
-	GdkGC *gc;
-	GdkColor fg;
-
-	uri = geturi(c);
-	w = c->indicator;
-	width = c->progress * w->allocation.width / 100;
-	gc = gdk_gc_new(w->window);
-	if(strstr(uri, "https://") == uri) {
-		if(usingproxy) {
-			colorname = c->sslfailed? progress_proxy_untrust :
-				progress_proxy_trust;
-		} else {
-			colorname = c->sslfailed? progress_untrust :
-				progress_trust;
-		}
-	} else {
-		if(usingproxy) {
-			colorname = progress_proxy;
-		} else {
-			colorname = progress;
-		}
-	}
-
-	gdk_color_parse(colorname, &fg);
-	gdk_gc_set_rgb_fg_color(gc, &fg);
-	gdk_draw_rectangle(w->window,
-			w->style->bg_gc[GTK_WIDGET_STATE(w)],
-			TRUE, 0, 0, w->allocation.width, w->allocation.height);
-	gdk_draw_rectangle(w->window, gc, TRUE, 0, 0, width,
-			w->allocation.height);
-	g_object_unref(gc);
-}
-
-static gboolean
-exposeindicator(GtkWidget *w, GdkEventExpose *e, Client *c) {
-	drawindicator(c);
-	return TRUE;
 }
 
 static void
@@ -739,21 +693,12 @@ newclient(void) {
 			"resource-request-starting",
 			G_CALLBACK(beforerequest), c);
 
-	/* Indicator */
-	c->indicator = gtk_drawing_area_new();
-	gtk_widget_set_size_request(c->indicator, 0, indicator_thickness);
-	g_signal_connect (G_OBJECT (c->indicator), "expose_event",
-			G_CALLBACK (exposeindicator), c);
-
 	/* Arranging */
 	gtk_container_add(GTK_CONTAINER(c->scroll), GTK_WIDGET(c->view));
 	gtk_container_add(GTK_CONTAINER(c->win), c->pane);
 	gtk_container_add(GTK_CONTAINER(c->vbox), c->scroll);
-	gtk_container_add(GTK_CONTAINER(c->vbox), c->indicator);
 
 	/* Setup */
-	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->indicator, FALSE,
-			FALSE, 0, GTK_PACK_START);
 	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->scroll, TRUE,
 			TRUE, 0, GTK_PACK_START);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
@@ -1117,23 +1062,26 @@ gettogglestat(Client *c){
 	togglestat[4] = '\0';
 }
 
+static void
+getpagestat(Client *c) {
+	pagestat[0] = c->sslfailed ? 'U' : 'T';
+	pagestat[1] = usingproxy ? 'P' : '-';
+}
 
 static void
 update(Client *c) {
 	char *t;
 
 	gettogglestat(c);
+	getpagestat(c);
 
 	if(c->linkhover) {
-		t = g_strdup_printf("%s| %s", togglestat, c->linkhover);
+		t = g_strdup_printf("%s:%s | %s", togglestat, pagestat, c->linkhover);
 	} else if(c->progress != 100) {
-		drawindicator(c);
-		gtk_widget_show(c->indicator);
-		t = g_strdup_printf("[%i%%] %s| %s", c->progress, togglestat,
-				c->title);
+		t = g_strdup_printf("[%i%%] %s:%s | %s", c->progress, togglestat,
+			pagestat, c->title);
 	} else {
-		gtk_widget_hide_all(c->indicator);
-		t = g_strdup_printf("%s| %s", togglestat, c->title);
+		t = g_strdup_printf("%s:%s | %s", togglestat, pagestat, c->title);
 	}
 
 	gtk_window_set_title(GTK_WINDOW(c->win), t);

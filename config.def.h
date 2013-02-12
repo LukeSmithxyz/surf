@@ -2,19 +2,12 @@
 static char *useragent      = "Mozilla/5.0 (X11; U; Unix; en-US) "
 	"AppleWebKit/537.15 (KHTML, like Gecko) Chrome/24.0.1295.0 "
 	"Safari/537.15 Surf/"VERSION;
-static char *progress       = "#0000FF";
-static char *progress_untrust = "#FF0000";
-static char *progress_trust = "#00FF00";
-static char *progress_proxy = "#FFFF00";
-static char *progress_proxy_trust = "#66FF00";
-static char *progress_proxy_untrust = "#FF6600";
 static char *stylefile      = "~/.surf/style.css";
 static char *scriptfile     = "~/.surf/script.js";
 static char *cookiefile     = "~/.surf/cookies.txt";
 static time_t sessiontime   = 3600;
 static char *cafile         = "/etc/ssl/certs/ca-certificates.crt";
 static char *strictssl      = FALSE; /* Refuse untrusted SSL connections */
-static int   indicator_thickness = 2;
 
 /* Webkit default features */
 static Bool enablespatialbrowsing = TRUE;
