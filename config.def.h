@@ -29,10 +29,9 @@ static Bool hidebackground  = FALSE;
 #define DOWNLOAD(d, r) { \
 	.v = (char *[]){ "/bin/sh", "-c", \
 		"st -e /bin/sh -c \"curl -J -O --user-agent '$1'" \
-		" --referer '$2'" \
-		" -b ~/.surf/cookies.txt -c ~/.surf/cookies.txt '$0';" \
+		" --referer '$2' -b $3 -c $3 '$0';" \
 		" sleep 5;\"", \
-		d, useragent, r, NULL \
+		d, useragent, r, cookiefile, NULL \
 	} \
 }
 
