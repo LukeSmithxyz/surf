@@ -84,7 +84,7 @@ static gboolean showxid = FALSE;
 static char winid[64];
 static gboolean usingproxy = 0;
 static char togglestat[5];
-static char pagestat[2];
+static char pagestat[3];
 
 static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
 		WebKitWebResource *r, WebKitNetworkRequest *req,
@@ -1066,12 +1066,15 @@ static void
 getpagestat(Client *c) {
 	const char *uri = geturi(c);
 
-	if(strstr(uri, "https://") == uri)
+	if(strstr(uri, "https://") == uri) {
 		pagestat[0] = c->sslfailed ? 'U' : 'T';
-	else
+	} else {
 		pagestat[0] = '-';
+	}
 
 	pagestat[1] = usingproxy ? 'P' : '-';
+	pagestat[2] = '\0';
+
 }
 
 static void
