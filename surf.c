@@ -53,12 +53,6 @@ typedef struct Client {
 } Client;
 
 typedef struct {
-	char *label;
-	void (*func)(Client *c, const Arg *arg);
-	const Arg arg;
-} Item;
-
-typedef struct {
 	guint mod;
 	guint keyval;
 	void (*func)(Client *c, const Arg *arg);
