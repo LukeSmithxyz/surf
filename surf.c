@@ -169,6 +169,7 @@ beforerequest(WebKitWebView *w, WebKitWebFrame *f, WebKitWebResource *r,
 		WebKitNetworkRequest *req, WebKitNetworkResponse *resp,
 		gpointer d) {
 	const gchar *uri = webkit_network_request_get_uri(req);
+
 	if(g_str_has_suffix(uri, "/favicon.ico"))
 		webkit_network_request_set_uri(req, "about:blank");
 }
@@ -291,7 +292,8 @@ evalscript(JSContextRef js, char *script, char* scriptname) {
 
 	jsscript = JSStringCreateWithUTF8CString(script);
 	jsscriptname = JSStringCreateWithUTF8CString(scriptname);
-	JSEvaluateScript(js, jsscript, JSContextGetGlobalObject(js), jsscriptname, 0, &exception);
+	JSEvaluateScript(js, jsscript, JSContextGetGlobalObject(js),
+			jsscriptname, 0, &exception);
 	JSStringRelease(jsscript);
 	JSStringRelease(jsscriptname);
 }
@@ -302,7 +304,8 @@ runscript(WebKitWebFrame *frame) {
 	GError *error;
 
 	if(g_file_get_contents(scriptfile, &script, NULL, &error)) {
-		evalscript(webkit_web_frame_get_global_context(frame), script, scriptfile);
+		evalscript(webkit_web_frame_get_global_context(frame),
+				script, scriptfile);
 	}
 }
 
@@ -310,10 +313,15 @@ static void
 clipboard(Client *c, const Arg *arg) {
 	gboolean paste = *(gboolean *)arg;
 
-	if(paste)
-		gtk_clipboard_request_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), pasteuri, c);
-	else
-		gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_PRIMARY), c->linkhover ? c->linkhover : geturi(c), -1);
+	if(paste) {
+		gtk_clipboard_request_text(
+				gtk_clipboard_get(GDK_SELECTION_PRIMARY),
+				pasteuri, c);
+	} else {
+		gtk_clipboard_set_text(
+				gtk_clipboard_get(GDK_SELECTION_PRIMARY),
+				c->linkhover ? c->linkhover : geturi(c), -1);
+	}
 }
 
 static char *
@@ -426,11 +434,13 @@ getatom(Client *c, int a) {
 	XGetWindowProperty(dpy, GDK_WINDOW_XID(GTK_WIDGET(c->win)->window),
 			atoms[a], 0L, BUFSIZ, False, XA_STRING,
 			&adummy, &idummy, &ldummy, &ldummy, &p);
-	if(p)
+	if(p) {
 		strncpy(buf, (char *)p, LENGTH(buf)-1);
-	else
+	} else {
 		buf[0] = '\0';
+	}
 	XFree(p);
+
 	return buf;
 }
 
@@ -878,10 +888,11 @@ progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 static void
 reload(Client *c, const Arg *arg) {
 	gboolean nocache = *(gboolean *)arg;
-	if(nocache)
+	if(nocache) {
 		 webkit_web_view_reload_bypass_cache(c->view);
-	else
+	} else {
 		 webkit_web_view_reload(c->view);
+	}
 }
 
 static void
@@ -1037,6 +1048,19 @@ toggle(Client *c, const Arg *arg) {
 }
 
 static void
+togglestyle(Client *c, const Arg *arg) {
+	WebKitWebSettings *settings;
+	char *uri;
+
+	settings = webkit_web_view_get_settings(c->view);
+	g_object_get(G_OBJECT(settings), "user-stylesheet-uri", &uri, NULL);
+	uri = uri[0] ? g_strdup("") : g_strconcat("file://", stylefile, NULL);
+	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
+
+	update(c);
+}
+
+static void
 gettogglestat(Client *c){
 	gboolean value;
 	char *uri;
@@ -1188,15 +1212,3 @@ main(int argc, char *argv[]) {
 	return EXIT_SUCCESS;
 }
 
-static void
-togglestyle(Client *c, const Arg *arg) {
-	WebKitWebSettings *settings;
-	char *uri;
-
-	settings = webkit_web_view_get_settings(c->view);
-	g_object_get(G_OBJECT(settings), "user-stylesheet-uri", &uri, NULL);
-	uri = uri[0] ? g_strdup("") : g_strconcat("file://", stylefile, NULL);
-	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
-
-	update(c);
-}
