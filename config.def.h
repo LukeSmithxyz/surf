@@ -83,5 +83,6 @@ static Key keys[] = {
     { MODKEY|GDK_SHIFT_MASK,GDK_i,      toggle,     { .v = "auto-load-images" } },
     { MODKEY|GDK_SHIFT_MASK,GDK_s,      toggle,     { .v = "enable-scripts" } },
     { MODKEY|GDK_SHIFT_MASK,GDK_v,      toggle,     { .v = "enable-plugins" } },
+    { MODKEY|GDK_SHIFT_MASK,GDK_m,      togglestyle,{ 0 } },
 };
 

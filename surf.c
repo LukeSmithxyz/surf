@@ -77,7 +77,7 @@ static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static char winid[64];
 static gboolean usingproxy = 0;
-static char togglestat[5];
+static char togglestat[6];
 static char pagestat[3];
 
 static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
@@ -153,6 +153,7 @@ static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *v, WebKitWebFrame *frame,
 		const char *title, Client *c);
 static void toggle(Client *c, const Arg *arg);
+static void togglestyle(Client *c, const Arg *arg);
 static void update(Client *c);
 static void updatewinid(Client *c);
 static void usage(void);
@@ -1038,6 +1039,7 @@ toggle(Client *c, const Arg *arg) {
 static void
 gettogglestat(Client *c){
 	gboolean value;
+	char *uri;
 	WebKitWebSettings *settings = webkit_web_view_get_settings(c->view);
 
 	g_object_get(G_OBJECT(settings), "enable-caret-browsing",
@@ -1053,7 +1055,10 @@ gettogglestat(Client *c){
 	g_object_get(G_OBJECT(settings), "enable-plugins", &value, NULL);
 	togglestat[3] = value? 'V': 'v';
 
-	togglestat[4] = '\0';
+	g_object_get(G_OBJECT(settings), "user-stylesheet-uri", &uri, NULL);
+	togglestat[4] = uri[0] ? 'M': 'm';
+
+	togglestat[5] = '\0';
 }
 
 static void
@@ -1183,3 +1188,15 @@ main(int argc, char *argv[]) {
 	return EXIT_SUCCESS;
 }
 
+static void
+togglestyle(Client *c, const Arg *arg) {
+	WebKitWebSettings *settings;
+	char *uri;
+
+	settings = webkit_web_view_get_settings(c->view);
+	g_object_get(G_OBJECT(settings), "user-stylesheet-uri", &uri, NULL);
+	uri = uri[0] ? g_strdup("") : g_strconcat("file://", stylefile, NULL);
+	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
+
+	update(c);
+}
