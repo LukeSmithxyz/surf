@@ -153,6 +153,7 @@ static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *v, WebKitWebFrame *frame,
 		const char *title, Client *c);
 static void toggle(Client *c, const Arg *arg);
+static void togglescrollbars(Client *c, const Arg *arg);
 static void togglestyle(Client *c, const Arg *arg);
 static void update(Client *c);
 static void updatewinid(Client *c);
@@ -654,13 +655,9 @@ newclient(void) {
 	c->vbox = gtk_vbox_new(FALSE, 0);
 	gtk_paned_pack1(GTK_PANED(c->pane), c->vbox, TRUE, TRUE);
 
-	/* Scrolled Window */
-	c->scroll = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(c->scroll),
-			GTK_POLICY_NEVER, GTK_POLICY_NEVER);
-
 	/* Webview */
 	c->view = WEBKIT_WEB_VIEW(webkit_web_view_new());
+
 	g_signal_connect(G_OBJECT(c->view),
 			"title-changed",
 			G_CALLBACK(titlechange), c);
@@ -698,6 +695,21 @@ newclient(void) {
 			"resource-request-starting",
 			G_CALLBACK(beforerequest), c);
 
+	/* Scrolled Window */
+	c->scroll = gtk_scrolled_window_new(NULL, NULL);
+
+	frame = webkit_web_view_get_main_frame(WEBKIT_WEB_VIEW(c->view));
+	g_signal_connect(G_OBJECT(frame), "scrollbars-policy-changed",
+			G_CALLBACK(gtk_true), NULL);
+
+	if(!enablescrollbars) {
+		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(c->scroll),
+				GTK_POLICY_NEVER, GTK_POLICY_NEVER);
+	} else {
+		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(c->scroll),
+				GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	}
+
 	/* Arranging */
 	gtk_container_add(GTK_CONTAINER(c->scroll), GTK_WIDGET(c->view));
 	gtk_container_add(GTK_CONTAINER(c->win), c->pane);
@@ -718,8 +730,8 @@ newclient(void) {
 	gdk_window_add_filter(GTK_WIDGET(c->win)->window, processx, c);
 	webkit_web_view_set_full_content_zoom(c->view, TRUE);
 
-	frame = webkit_web_view_get_main_frame(c->view);
 	runscript(frame);
+
 	settings = webkit_web_view_get_settings(c->view);
 	if(!(ua = getenv("SURF_USERAGENT")))
 		ua = useragent;
@@ -778,22 +790,24 @@ newclient(void) {
 static void
 newwindow(Client *c, const Arg *arg, gboolean noembed) {
 	guint i = 0;
-	const char *cmd[10], *uri;
+	const char *cmd[11], *uri;
 	const Arg a = { .v = (void *)cmd };
 	char tmp[64];
 
 	cmd[i++] = argv0;
+	if(!enablescrollbars)
+		cmd[i++] = "-b";
 	if(embed && !noembed) {
 		cmd[i++] = "-e";
 		snprintf(tmp, LENGTH(tmp), "%u\n", (int)embed);
 		cmd[i++] = tmp;
 	}
-	if(!enablescripts)
-		cmd[i++] = "-s";
-	if(!enableplugins)
-		cmd[i++] = "-p";
 	if(!loadimages)
 		cmd[i++] = "-i";
+	if(!enableplugins)
+		cmd[i++] = "-p";
+	if(!enablescripts)
+		cmd[i++] = "-s";
 	if(showxid)
 		cmd[i++] = "-x";
 	cmd[i++] = "--";
@@ -1048,6 +1062,44 @@ toggle(Client *c, const Arg *arg) {
 }
 
 static void
+twitch(Client *c, const Arg *arg) {
+	GtkAdjustment *a;
+	gdouble v;
+
+	a = gtk_scrolled_window_get_vadjustment(
+			GTK_SCROLLED_WINDOW(c->scroll));
+
+	v = gtk_adjustment_get_value(a);
+
+	v += arg->i;
+
+	v = MAX(v, 0.0);
+	v = MIN(v, gtk_adjustment_get_upper(a) -
+			gtk_adjustment_get_page_size(a));
+	gtk_adjustment_set_value(a, v);
+}
+
+static void
+togglescrollbars(Client *c, const Arg *arg) {
+	GtkPolicyType vspolicy;
+	Arg a;
+
+	gtk_scrolled_window_get_policy(GTK_SCROLLED_WINDOW(c->scroll), NULL, &vspolicy);
+
+	if(vspolicy == GTK_POLICY_AUTOMATIC) {
+		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(c->scroll),
+				GTK_POLICY_NEVER, GTK_POLICY_NEVER);
+	} else {
+		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(c->scroll),
+				GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+		a.i = +1;
+		twitch(c, &a);
+		a.i = -1;
+		twitch(c, &a);
+	}
+}
+
+static void
 togglestyle(Client *c, const Arg *arg) {
 	WebKitWebSettings *settings;
 	char *uri;
@@ -1128,7 +1180,7 @@ updatewinid(Client *c) {
 
 static void
 usage(void) {
-	die("usage: %s [-inpsvx] [-c cookiefile] [-e xid] [-r scriptfile]"
+	die("usage: %s [-binpsvx] [-c cookiefile] [-e xid] [-r scriptfile]"
 		" [-t stylefile] [-u useragent] [uri]\n", basename(argv0));
 }
 
@@ -1162,6 +1214,9 @@ main(int argc, char *argv[]) {
 
 	/* command line args */
 	ARGBEGIN {
+	case 'b':
+		enablescrollbars = 0;
+		break;
 	case 'c':
 		cookiefile = EARGF(usage());
 		break;

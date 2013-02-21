@@ -10,6 +10,7 @@ static char *cafile         = "/etc/ssl/certs/ca-certificates.crt";
 static char *strictssl      = FALSE; /* Refuse untrusted SSL connections */
 
 /* Webkit default features */
+static Bool enablescrollbars = TRUE;
 static Bool enablespatialbrowsing = TRUE;
 static Bool enableplugins = TRUE;
 static Bool enablescripts = TRUE;
@@ -84,5 +85,6 @@ static Key keys[] = {
     { MODKEY|GDK_SHIFT_MASK,GDK_s,      toggle,     { .v = "enable-scripts" } },
     { MODKEY|GDK_SHIFT_MASK,GDK_v,      toggle,     { .v = "enable-plugins" } },
     { MODKEY|GDK_SHIFT_MASK,GDK_m,      togglestyle,{ 0 } },
+    { MODKEY|GDK_SHIFT_MASK,GDK_b,      togglescrollbars,{ 0 } },
 };
 

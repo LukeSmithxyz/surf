@@ -3,7 +3,7 @@
 surf \- simple webkit-based browser
 .SH SYNOPSIS
 .B surf
-.RB [-ipnsvx]
+.RB [-bipnsvx]
 .RB [-c\ cookiefile]
 .RB [-e\ xid]
 .RB [-r\ scriptfile]
@@ -16,6 +16,9 @@ to display websites and follow links. It supports the XEmbed protocol
 which makes it possible to embed it in another application. Furthermore,
 one can point surf to another URI by setting its XProperties.
 .SH OPTIONS
+.TP
+.B \-b
+Disable Scrollbars
 .TP
 .B \-c cookiefile 
 Specify the
@@ -127,8 +130,8 @@ Copies current URI to primary selection.
 .B Ctrl\-o
 Show the sourcecode of the current page.
 .TP
-.B Ctrl\-Shift\-o
-Open the Web Inspector (Developer Tools) window for the current page.
+.B Ctrl\-Shift\-b
+Toggle scrollbars
 .TP
 .B Ctrl\-Shift\-c
 Toggle caret browsing.
@@ -140,6 +143,9 @@ Toggle auto-loading of images.
 Toggle if the
 .I stylefile 
 file should be loaded.
+.TP
+.B Ctrl\-Shift\-o
+Open the Web Inspector (Developer Tools) window for the current page.
 .TP
 .B Ctrl\-Shift\-s
 Toggle script execution.
