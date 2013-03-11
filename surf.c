@@ -644,9 +644,11 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->win),
 			"destroy",
 			G_CALLBACK(destroywin), c);
-	g_signal_connect(G_OBJECT(c->win),
-			"key-press-event",
-			G_CALLBACK(keypress), c);
+	if(!kioskmode) {
+		g_signal_connect(G_OBJECT(c->win),
+				"key-press-event",
+				G_CALLBACK(keypress), c);
+	}
 
 	/* Pane */
 	c->pane = gtk_vpaned_new();
@@ -748,6 +750,8 @@ newclient(void) {
 			enablespatialbrowsing, NULL);
 	g_object_set(G_OBJECT(settings), "enable-developer-extras",
 			enableinspector, NULL);
+	g_object_set(G_OBJECT(settings), "enable-default-context-menu",
+			kioskmode ^ 1, NULL);
 
 	if(enableinspector) {
 		c->inspector = WEBKIT_WEB_INSPECTOR(
@@ -790,7 +794,7 @@ newclient(void) {
 static void
 newwindow(Client *c, const Arg *arg, gboolean noembed) {
 	guint i = 0;
-	const char *cmd[11], *uri;
+	const char *cmd[12], *uri;
 	const Arg a = { .v = (void *)cmd };
 	char tmp[64];
 
@@ -804,6 +808,8 @@ newwindow(Client *c, const Arg *arg, gboolean noembed) {
 	}
 	if(!loadimages)
 		cmd[i++] = "-i";
+	if(!kioskmode)
+		cmd[i++] = "-k";
 	if(!enableplugins)
 		cmd[i++] = "-p";
 	if(!enablescripts)
@@ -1180,7 +1186,7 @@ updatewinid(Client *c) {
 
 static void
 usage(void) {
-	die("usage: %s [-binpsvx] [-c cookiefile] [-e xid] [-r scriptfile]"
+	die("usage: %s [-biknpsvx] [-c cookiefile] [-e xid] [-r scriptfile]"
 		" [-t stylefile] [-u useragent] [uri]\n", basename(argv0));
 }
 
@@ -1225,6 +1231,9 @@ main(int argc, char *argv[]) {
 		break;
 	case 'i':
 		loadimages = 0;
+		break;
+	case 'k':
+		kioskmode = 1;
 		break;
 	case 'n':
 		enableinspector = 0;

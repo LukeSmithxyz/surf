@@ -8,6 +8,7 @@ static char *cookiefile     = "~/.surf/cookies.txt";
 static time_t sessiontime   = 3600;
 static char *cafile         = "/etc/ssl/certs/ca-certificates.crt";
 static char *strictssl      = FALSE; /* Refuse untrusted SSL connections */
+static Bool kioskmode	    = FALSE; /* Ignore shortcuts */
 
 /* Webkit default features */
 static Bool enablescrollbars = TRUE;
