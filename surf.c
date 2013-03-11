@@ -808,7 +808,7 @@ newwindow(Client *c, const Arg *arg, gboolean noembed) {
 	}
 	if(!loadimages)
 		cmd[i++] = "-i";
-	if(!kioskmode)
+	if(kioskmode)
 		cmd[i++] = "-k";
 	if(!enableplugins)
 		cmd[i++] = "-p";
