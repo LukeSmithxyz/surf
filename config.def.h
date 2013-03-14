@@ -10,6 +10,8 @@ static char *cafile         = "/etc/ssl/certs/ca-certificates.crt";
 static char *strictssl      = FALSE; /* Refuse untrusted SSL connections */
 static Bool kioskmode	    = FALSE; /* Ignore shortcuts */
 
+static guint defaultfontsize = 12;
+
 /* Webkit default features */
 static Bool enablescrollbars = TRUE;
 static Bool enablespatialbrowsing = TRUE;

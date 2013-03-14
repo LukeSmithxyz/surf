@@ -752,6 +752,8 @@ newclient(void) {
 			enableinspector, NULL);
 	g_object_set(G_OBJECT(settings), "enable-default-context-menu",
 			kioskmode ^ 1, NULL);
+	g_object_set(G_OBJECT(settings), "default-font-size",
+			defaultfontsize, NULL);
 
 	if(enableinspector) {
 		c->inspector = WEBKIT_WEB_INSPECTOR(
