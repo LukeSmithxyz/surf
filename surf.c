@@ -577,12 +577,13 @@ loaduri(Client *c, const Arg *arg) {
 	char *u, *rp;
 	const char *uri = (char *)arg->v;
 	Arg a = { .b = FALSE };
+	struct stat st;
 
 	if(strcmp(uri, "") == 0)
 		return;
 
 	/* In case it's a file path. */
-	if(uri[0] == '/') {
+	if(stat(uri, &st) == 0) {
 		rp = realpath(uri, NULL);
 		u = g_strdup_printf("file://%s", rp);
 		free(rp);
@@ -889,11 +890,12 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 			if(ev->atom == atoms[AtomFind]) {
 				arg.b = TRUE;
 				find(c, &arg);
+
 				return GDK_FILTER_REMOVE;
-			}
-			else if(ev->atom == atoms[AtomGo]) {
+			} else if(ev->atom == atoms[AtomGo]) {
 				arg.v = getatom(c, AtomGo);
 				loaduri(c, &arg);
+
 				return GDK_FILTER_REMOVE;
 			}
 		}
