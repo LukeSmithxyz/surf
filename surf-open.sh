@@ -21,12 +21,12 @@ then
 	runtabbed
 else
 	xid=$(cat "$xidfile")
-	xprop -id "$xid" 2>&1 >/dev/null
+	xprop -id "$xid" >/dev/null 2>&1
 	if [ $? -gt 0 ];
 	then
 		runtabbed
 	else
-		surf -e "$xid" "$uri" 2>&1 >/dev/null &
+		surf -e "$xid" "$uri" >/dev/null 2>&1 &
 	fi
 fi
 
