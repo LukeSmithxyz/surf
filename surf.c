@@ -80,6 +80,7 @@ static gboolean usingproxy = 0;
 static char togglestat[6];
 static char pagestat[3];
 
+static void add_accels(Client *c);
 static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
 		WebKitWebResource *r, WebKitNetworkRequest *req,
 		WebKitNetworkResponse *resp, gpointer d);
@@ -124,7 +125,9 @@ static gboolean inspector_show(WebKitWebInspector *i, Client *c);
 static gboolean inspector_close(WebKitWebInspector *i, Client *c);
 static void inspector_finished(WebKitWebInspector *i, Client *c);
 
-static gboolean keypress(GtkWidget *w, GdkEventKey *ev, Client *c);
+static gboolean keypress(GtkAccelGroup *group,
+		GObject *obj, guint key, GdkModifierType mods,
+		Client *c);
 static void linkhover(WebKitWebView *v, const char* t, const char* l,
 		Client *c);
 static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec,
@@ -164,6 +167,18 @@ static void zoom(Client *c, const Arg *arg);
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
+
+static void
+add_accels(Client *c) {
+	int i;
+	GtkAccelGroup *group = gtk_accel_group_new();
+	for(i = 0; i < LENGTH(keys); i++) {
+		GClosure *closure = g_cclosure_new(G_CALLBACK(keypress), c, NULL);
+		gtk_accel_group_connect(group, keys[i].keyval, keys[i].mod,
+				0, closure);
+	}
+	gtk_window_add_accel_group(GTK_WINDOW(c->win), group);
+}
 
 static void
 beforerequest(WebKitWebView *w, WebKitWebFrame *f, WebKitWebResource *r,
@@ -514,14 +529,17 @@ inspector_finished(WebKitWebInspector *i, Client *c) {
 }
 
 static gboolean
-keypress(GtkWidget* w, GdkEventKey *ev, Client *c) {
+keypress(GtkAccelGroup *group, GObject *obj,
+		guint key, GdkModifierType mods, Client *c) {
 	guint i;
 	gboolean processed = FALSE;
 
+	mods = CLEANMASK(mods);
+	key = gdk_keyval_to_lower(key);
 	updatewinid(c);
 	for(i = 0; i < LENGTH(keys); i++) {
-		if(gdk_keyval_to_lower(ev->keyval) == keys[i].keyval
-				&& CLEANMASK(ev->state) == keys[i].mod
+		if(key == keys[i].keyval
+				&& mods == keys[i].mod
 				&& keys[i].func) {
 			keys[i].func(c, &(keys[i].arg));
 			processed = TRUE;
@@ -646,9 +664,7 @@ newclient(void) {
 			"destroy",
 			G_CALLBACK(destroywin), c);
 	if(!kioskmode) {
-		g_signal_connect(G_OBJECT(c->win),
-				"key-press-event",
-				G_CALLBACK(keypress), c);
+		add_accels(c);
 	}
 
 	/* Pane */
