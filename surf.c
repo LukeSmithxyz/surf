@@ -80,7 +80,7 @@ static gboolean usingproxy = 0;
 static char togglestat[6];
 static char pagestat[3];
 
-static void add_accels(Client *c);
+static void addaccelgroup(Client *c);
 static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
 		WebKitWebResource *r, WebKitNetworkRequest *req,
 		WebKitNetworkResponse *resp, gpointer d);
@@ -169,11 +169,13 @@ static void zoom(Client *c, const Arg *arg);
 #include "config.h"
 
 static void
-add_accels(Client *c) {
+addaccelgroup(Client *c) {
 	int i;
 	GtkAccelGroup *group = gtk_accel_group_new();
+	GClosure *closure;
+
 	for(i = 0; i < LENGTH(keys); i++) {
-		GClosure *closure = g_cclosure_new(G_CALLBACK(keypress), c, NULL);
+		closure = g_cclosure_new(G_CALLBACK(keypress), c, NULL);
 		gtk_accel_group_connect(group, keys[i].keyval, keys[i].mod,
 				0, closure);
 	}
@@ -663,9 +665,9 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->win),
 			"destroy",
 			G_CALLBACK(destroywin), c);
-	if(!kioskmode) {
-		add_accels(c);
-	}
+
+	if(!kioskmode)
+		addaccelgroup(c);
 
 	/* Pane */
 	c->pane = gtk_vpaned_new();
