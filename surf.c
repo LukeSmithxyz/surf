@@ -106,6 +106,8 @@ static gboolean decidedownload(WebKitWebView *v, WebKitWebFrame *f,
 static gboolean decidewindow(WebKitWebView *v, WebKitWebFrame *f,
 		WebKitNetworkRequest *r, WebKitWebNavigationAction *n,
 		WebKitWebPolicyDecision *p, Client *c);
+static gboolean deletion_interface(WebKitWebView *view,
+		WebKitDOMHTMLElement *arg1, Client *c);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 static void die(const char *errstr, ...);
@@ -383,6 +385,12 @@ decidewindow(WebKitWebView *view, WebKitWebFrame *f, WebKitNetworkRequest *r,
 		newwindow(NULL, &arg, 0);
 		return TRUE;
 	}
+	return FALSE;
+}
+
+static gboolean
+deletion_interface(WebKitWebView *view,
+		WebKitDOMHTMLElement *arg1, Client *c) {
 	return FALSE;
 }
 
@@ -715,6 +723,9 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view),
 			"resource-request-starting",
 			G_CALLBACK(beforerequest), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"should-show-delete-interface-for-element",
+			G_CALLBACK(deletion_interface), c);
 
 	/* Scrolled Window */
 	c->scroll = gtk_scrolled_window_new(NULL, NULL);
