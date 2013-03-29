@@ -23,7 +23,7 @@ static Bool hidebackground  = FALSE;
 
 #define SETPROP(p, q) { \
 	.v = (char *[]){ "/bin/sh", "-c", \
-		"prop=\"`xprop -id $2 $0 | cut -d '\"' -f 2 | xargs -0 printf | dmenu`\" &&" \
+		"prop=\"`xprop -id $2 $0 | cut -d '\"' -f 2 | xargs -0 printf %b | dmenu`\" &&" \
 		"xprop -id $2 -f $1 8s -set $1 \"$prop\"", \
 		p, q, winid, NULL \
 	} \
