@@ -9,6 +9,7 @@ static time_t sessiontime   = 3600;
 static char *cafile         = "/etc/ssl/certs/ca-certificates.crt";
 static char *strictssl      = FALSE; /* Refuse untrusted SSL connections */
 static Bool kioskmode	    = FALSE; /* Ignore shortcuts */
+static Bool showindicators  = TRUE;  /* Show indicators in window title */
 
 static guint defaultfontsize = 12;
 

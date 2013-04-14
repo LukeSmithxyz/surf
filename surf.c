@@ -158,7 +158,7 @@ static void titlechange(WebKitWebView *v, WebKitWebFrame *frame,
 static void toggle(Client *c, const Arg *arg);
 static void togglescrollbars(Client *c, const Arg *arg);
 static void togglestyle(Client *c, const Arg *arg);
-static void update(Client *c);
+static void updatetitle(Client *c);
 static void updatewinid(Client *c);
 static void usage(void);
 static void windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame,
@@ -559,7 +559,7 @@ linkhover(WebKitWebView *v, const char* t, const char* l, Client *c) {
 		free(c->linkhover);
 		c->linkhover = NULL;
 	}
-	update(c);
+	updatetitle(c);
 }
 
 static void
@@ -585,7 +585,7 @@ loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 		break;
 	case WEBKIT_LOAD_FINISHED:
 		c->progress = 100;
-		update(c);
+		updatetitle(c);
 		break;
 	default:
 		break;
@@ -620,7 +620,7 @@ loaduri(Client *c, const Arg *arg) {
 		c->progress = 0;
 		c->title = copystr(&c->title, u);
 		g_free(u);
-		update(c);
+		updatetitle(c);
 	}
 }
 
@@ -924,7 +924,7 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d) {
 static void
 progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 	c->progress = webkit_web_view_get_progress(c->view) * 100;
-	update(c);
+	updatetitle(c);
 }
 
 static void
@@ -1072,7 +1072,7 @@ stop(Client *c, const Arg *arg) {
 static void
 titlechange(WebKitWebView *v, WebKitWebFrame *f, const char *t, Client *c) {
 	c->title = copystr(&c->title, t);
-	update(c);
+	updatetitle(c);
 }
 
 static void
@@ -1137,7 +1137,7 @@ togglestyle(Client *c, const Arg *arg) {
 	uri = uri[0] ? g_strdup("") : g_strconcat("file://", stylefile, NULL);
 	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
 
-	update(c);
+	updatetitle(c);
 }
 
 static void
@@ -1181,23 +1181,29 @@ getpagestat(Client *c) {
 }
 
 static void
-update(Client *c) {
+updatetitle(Client *c) {
 	char *t;
 
-	gettogglestat(c);
-	getpagestat(c);
+	if(showindicators) {
+		gettogglestat(c);
+		getpagestat(c);
 
-	if(c->linkhover) {
-		t = g_strdup_printf("%s:%s | %s", togglestat, pagestat, c->linkhover);
-	} else if(c->progress != 100) {
-		t = g_strdup_printf("[%i%%] %s:%s | %s", c->progress, togglestat,
-			pagestat, c->title);
+		if(c->linkhover) {
+			t = g_strdup_printf("%s:%s | %s", togglestat,
+					pagestat, c->linkhover);
+		} else if(c->progress != 100) {
+			t = g_strdup_printf("[%i%%] %s:%s | %s", c->progress,
+					togglestat, pagestat, c->title);
+		} else {
+			t = g_strdup_printf("%s:%s | %s", togglestat, pagestat,
+					c->title);
+		}
+
+		gtk_window_set_title(GTK_WINDOW(c->win), t);
+		g_free(t);
 	} else {
-		t = g_strdup_printf("%s:%s | %s", togglestat, pagestat, c->title);
+		gtk_window_set_title(GTK_WINDOW(c->win), c->title);
 	}
-
-	gtk_window_set_title(GTK_WINDOW(c->win), t);
-	g_free(t);
 }
 
 static void
