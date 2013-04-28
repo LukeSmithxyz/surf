@@ -77,7 +77,7 @@ static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static char winid[64];
 static gboolean usingproxy = 0;
-static char togglestat[6];
+static char togglestat[7];
 static char pagestat[3];
 
 static void addaccelgroup(Client *c);
@@ -114,6 +114,8 @@ static void die(const char *errstr, ...);
 static void eval(Client *c, const Arg *arg);
 static void find(Client *c, const Arg *arg);
 static void fullscreen(Client *c, const Arg *arg);
+static void geopolicyrequested(WebKitWebView *v, WebKitWebFrame *f,
+		WebKitGeolocationPolicyDecision *d, Client *c);
 static const char *getatom(Client *c, int a);
 static void gettogglestat(Client *c);
 static void getpagestat(Client *c);
@@ -158,6 +160,7 @@ static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *v, WebKitWebFrame *frame,
 		const char *title, Client *c);
 static void toggle(Client *c, const Arg *arg);
+static void togglegeolocation(Client *c, const Arg *arg);
 static void togglescrollbars(Client *c, const Arg *arg);
 static void togglestyle(Client *c, const Arg *arg);
 static void updatetitle(Client *c);
@@ -449,6 +452,16 @@ fullscreen(Client *c, const Arg *arg) {
 	c->fullscreen = !c->fullscreen;
 }
 
+static void
+geopolicyrequested(WebKitWebView *v, WebKitWebFrame *f,
+		WebKitGeolocationPolicyDecision *d, Client *c) {
+	if(allowgeolocation) {
+		webkit_geolocation_policy_allow(d);
+	} else {
+		webkit_geolocation_policy_deny(d);
+	}
+}
+
 static const char *
 getatom(Client *c, int a) {
 	static char buf[BUFSIZ];
@@ -693,6 +706,9 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->view),
 			"hovering-over-link",
 			G_CALLBACK(linkhover), c);
+	g_signal_connect(G_OBJECT(c->view),
+			"geolocation-policy-decision-requested",
+			G_CALLBACK(geopolicyrequested), c);
 	g_signal_connect(G_OBJECT(c->view),
 			"create-web-view",
 			G_CALLBACK(createwindow), c);
@@ -1097,7 +1113,7 @@ toggle(Client *c, const Arg *arg) {
 	g_object_get(G_OBJECT(settings), name, &value, NULL);
 	g_object_set(G_OBJECT(settings), name, !value, NULL);
 
-	reload(c,&a);
+	reload(c, &a);
 }
 
 static void
@@ -1116,6 +1132,15 @@ twitch(Client *c, const Arg *arg) {
 	v = MIN(v, gtk_adjustment_get_upper(a) -
 			gtk_adjustment_get_page_size(a));
 	gtk_adjustment_set_value(a, v);
+}
+
+static void
+togglegeolocation(Client *c, const Arg *arg) {
+	Arg a = { .b = FALSE };
+
+	allowgeolocation ^= 1;
+
+	reload(c, &a);
 }
 
 static void
@@ -1161,19 +1186,21 @@ gettogglestat(Client *c){
 			&value, NULL);
 	togglestat[0] = value? 'C': 'c';
 
+	togglestat[1] = allowgeolocation? 'G': 'g';
+
 	g_object_get(G_OBJECT(settings), "auto-load-images", &value, NULL);
-	togglestat[1] = value? 'I': 'i';
+	togglestat[2] = value? 'I': 'i';
 
 	g_object_get(G_OBJECT(settings), "enable-scripts", &value, NULL);
-	togglestat[2] = value? 'S': 's';
+	togglestat[3] = value? 'S': 's';
 
 	g_object_get(G_OBJECT(settings), "enable-plugins", &value, NULL);
-	togglestat[3] = value? 'V': 'v';
+	togglestat[4] = value? 'V': 'v';
 
 	g_object_get(G_OBJECT(settings), "user-stylesheet-uri", &uri, NULL);
-	togglestat[4] = uri[0] ? 'M': 'm';
+	togglestat[5] = uri[0] ? 'M': 'm';
 
-	togglestat[5] = '\0';
+	togglestat[6] = '\0';
 }
 
 static void
@@ -1267,6 +1294,9 @@ main(int argc, char *argv[]) {
 		break;
 	case 'e':
 		embed = strtol(EARGF(usage()), NULL, 0);
+		break;
+	case 'g':
+		allowgeolocation = 0;
 		break;
 	case 'i':
 		loadimages = 0;
