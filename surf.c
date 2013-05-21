@@ -2,6 +2,7 @@
  *
  * To understand surf, start reading main().
  */
+
 #include <signal.h>
 #include <X11/X.h>
 #include <X11/Xatom.h>
@@ -1289,6 +1290,9 @@ main(int argc, char *argv[]) {
 	case 'b':
 		enablescrollbars = 0;
 		break;
+	case 'B':
+		enablescrollbars = 1;
+		break;
 	case 'c':
 		cookiefile = EARGF(usage());
 		break;
@@ -1298,23 +1302,41 @@ main(int argc, char *argv[]) {
 	case 'g':
 		allowgeolocation = 0;
 		break;
+	case 'G':
+		allowgeolocation = 1;
+		break;
 	case 'i':
 		loadimages = 0;
 		break;
+	case 'I':
+		loadimages = 1;
+		break;
 	case 'k':
+		kioskmode = 0;
+		break;
+	case 'K':
 		kioskmode = 1;
 		break;
 	case 'n':
 		enableinspector = 0;
 		break;
+	case 'N':
+		enableinspector = 1;
+		break;
 	case 'p':
 		enableplugins = 0;
+		break;
+	case 'P':
+		enableplugins = 1;
 		break;
 	case 'r':
 		scriptfile = EARGF(usage());
 		break;
 	case 's':
 		enablescripts = 0;
+		break;
+	case 'S':
+		enablescripts = 1;
 		break;
 	case 't':
 		stylefile = EARGF(usage());

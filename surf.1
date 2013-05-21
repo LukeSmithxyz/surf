@@ -3,7 +3,7 @@
 surf \- simple webkit-based browser
 .SH SYNOPSIS
 .B surf
-.RB [-bgiknpsvx]
+.RB [-bBgGiIkKnNpPsSvx]
 .RB [-c\ cookiefile]
 .RB [-e\ xid]
 .RB [-r\ scriptfile]
@@ -20,6 +20,9 @@ one can point surf to another URI by setting its XProperties.
 .B \-b
 Disable Scrollbars
 .TP
+.B \-B
+Enable Scrollbars
+.TP
 .B \-c cookiefile 
 Specify the
 .I cookiefile
@@ -32,17 +35,32 @@ Reparents to window specified by
 .B \-g
 Disable giving the geolocation to websites.
 .TP
+.B \-G
+Enable giving the geolocation to websites.
+.TP
 .B \-i
 Disable Images
 .TP
+.B \-I
+Enable Images
+.TP
 .B \-k
+Disable kiosk mode (disable key strokes and right click)
+.TP
+.B \-K
 Enable kiosk mode (disable key strokes and right click)
 .TP
 .B \-n
 Disable the Web Inspector (Developer Tools).
 .TP
+.B \-N
+Enable the Web Inspector (Developer Tools).
+.TP
 .B \-p
 Disable Plugins
+.TP
+.B \-P
+Enable Plugins
 .TP
 .B \-r scriptfile 
 Specify the user
@@ -50,6 +68,9 @@ Specify the user
 .TP
 .B \-s
 Disable Javascript
+.TP
+.B \-S
+Enable Javascript
 .TP
 .B \-t stylefile
 Specify the user
