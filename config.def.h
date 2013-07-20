@@ -10,6 +10,7 @@ static char *cafile         = "/etc/ssl/certs/ca-certificates.crt";
 static char *strictssl      = FALSE; /* Refuse untrusted SSL connections */
 static Bool kioskmode	    = FALSE; /* Ignore shortcuts */
 static Bool showindicators  = TRUE;  /* Show indicators in window title */
+static Bool zoomto96dpi     = TRUE;  /* Zoom pages to always emulate 96dpi */
 
 static guint defaultfontsize = 12;
 
