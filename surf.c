@@ -804,9 +804,11 @@ newclient(void) {
 	g_object_set(G_OBJECT(settings), "default-font-size",
 			defaultfontsize, NULL);
 
-	/* While stupid, CSS specifies that a pixel represents 1/96 of an inch.
+	/*
+	 * While stupid, CSS specifies that a pixel represents 1/96 of an inch.
 	 * This ensures websites are not unusably small with a high DPI screen.
-	 * It is equivalent to firefox's "layout.css.devPixelsPerPx" setting. */
+	 * It is equivalent to firefox's "layout.css.devPixelsPerPx" setting.
+	 */
 	if(zoomto96dpi) {
 		screen = gdk_window_get_screen(GTK_WIDGET(c->win)->window);
 		dpi = gdk_screen_get_resolution(screen);
