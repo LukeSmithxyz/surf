@@ -833,6 +833,11 @@ newclient(void) {
 		c->isinspecting = false;
 	}
 
+	if(runinfullscreen) {
+		c->fullscreen = 0;
+		fullscreen(c, NULL);
+	}
+
 	g_free(uri);
 
 	setatom(c, AtomFind, "");
@@ -1317,6 +1322,9 @@ main(int argc, char *argv[]) {
 		break;
 	case 'e':
 		embed = strtol(EARGF(usage()), NULL, 0);
+		break;
+	case 'f':
+		runinfullscreen = 1;
 		break;
 	case 'g':
 		allowgeolocation = 0;
