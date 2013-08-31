@@ -1277,7 +1277,8 @@ updatewinid(Client *c) {
 
 static void
 usage(void) {
-	die("usage: %s [-biknpsvx] [-c cookiefile] [-e xid] [-r scriptfile]"
+	die("usage: %s [-bBfFgGiIkKnNpPsSvx]"
+		" [-c cookiefile] [-e xid] [-r scriptfile]"
 		" [-t stylefile] [-u useragent] [uri]\n", basename(argv0));
 }
 
@@ -1325,6 +1326,9 @@ main(int argc, char *argv[]) {
 		break;
 	case 'f':
 		runinfullscreen = 1;
+		break;
+	case 'F':
+		runinfullscreen = 0;
 		break;
 	case 'g':
 		allowgeolocation = 0;
