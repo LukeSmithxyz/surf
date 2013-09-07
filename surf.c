@@ -241,7 +241,8 @@ buttonrelease(WebKitWebView *web, GdkEventButton *e, GList *gl) {
 
 	g_object_get(result, "context", &context, NULL);
 	if(context & WEBKIT_HIT_TEST_RESULT_CONTEXT_LINK) {
-		if(e->button == 2) {
+		if(e->button == 2 ||
+				(e->button == 1 && CLEANMASK(e->state) == CLEANMASK(MODKEY))) {
 			g_object_get(result, "link-uri", &arg.v, NULL);
 			newwindow(NULL, &arg, e->state & GDK_CONTROL_MASK);
 			return true;
