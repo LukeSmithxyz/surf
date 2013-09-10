@@ -47,7 +47,7 @@ typedef struct Client {
 	WebKitWebView *view;
 	WebKitWebInspector *inspector;
 	char *title, *linkhover;
-	const char *uri, *needle;
+	const char *needle;
 	gint progress;
 	struct Client *next;
 	gboolean zoomed, fullscreen, isinspecting, sslfailed;
@@ -636,7 +636,7 @@ loaduri(Client *c, const Arg *arg) {
 	}
 
 	/* prevents endless loop */
-	if(c->uri && strcmp(u, c->uri) == 0) {
+	if(strcmp(u, geturi(c)) == 0) {
 		reload(c, &a);
 	} else {
 		webkit_web_view_load_uri(c->view, u);
