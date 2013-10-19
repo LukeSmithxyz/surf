@@ -819,6 +819,9 @@ newclient(void) {
 			webkit_web_view_set_zoom_level(c->view, dpi/96);
 		}
 	}
+	/* This might conflict with _zoomto96dpi_. */
+	if(zoomlevel != 1.0)
+		webkit_web_view_set_zoom_level(c->view, zoomlevel);
 
 	if(enableinspector) {
 		c->inspector = WEBKIT_WEB_INSPECTOR(
@@ -1280,7 +1283,8 @@ static void
 usage(void) {
 	die("usage: %s [-bBfFgGiIkKnNpPsSvx]"
 		" [-c cookiefile] [-e xid] [-r scriptfile]"
-		" [-t stylefile] [-u useragent] [uri]\n", basename(argv0));
+		" [-t stylefile] [-u useragent] [-z zoomlevel]"
+		" [uri]\n", basename(argv0));
 }
 
 static void
@@ -1381,6 +1385,9 @@ main(int argc, char *argv[]) {
 				"see LICENSE for details\n");
 	case 'x':
 		showxid = TRUE;
+		break;
+	case 'z':
+		zoomlevel = strtof(EARGF(usage()), NULL);
 		break;
 	default:
 		usage();

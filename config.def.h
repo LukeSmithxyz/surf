@@ -13,7 +13,8 @@ static Bool showindicators  = TRUE;  /* Show indicators in window title */
 static Bool zoomto96dpi     = TRUE;  /* Zoom pages to always emulate 96dpi */
 static Bool runinfullscreen = FALSE; /* Run in fullscreen mode by default */
 
-static guint defaultfontsize = 12;
+static guint defaultfontsize = 12;   /* Default font size */
+static gfloat zoomlevel = 1.0;       /* Default zoom level */
 
 /* Webkit default features */
 static Bool enablescrollbars = TRUE;
