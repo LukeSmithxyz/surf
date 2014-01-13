@@ -635,6 +635,8 @@ loaduri(Client *c, const Arg *arg) {
 			: g_strdup_printf("http://%s", uri);
 	}
 
+	setatom(c, AtomUri, uri);
+
 	/* prevents endless loop */
 	if(strcmp(u, geturi(c)) == 0) {
 		reload(c, &a);
