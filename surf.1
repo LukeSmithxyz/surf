@@ -4,6 +4,7 @@ surf \- simple webkit-based browser
 .SH SYNOPSIS
 .B surf
 .RB [-bBfFgGiIkKnNpPsSvx]
+.RB [-a\ cookiepolicies]
 .RB [-c\ cookiefile]
 .RB [-e\ xid]
 .RB [-r\ scriptfile]
@@ -17,6 +18,16 @@ to display websites and follow links. It supports the XEmbed protocol
 which makes it possible to embed it in another application. Furthermore,
 one can point surf to another URI by setting its XProperties.
 .SH OPTIONS
+.TP
+.B \-a cookiepolicies
+Define the order of
+.I cookie policies.
+The default is "Aa@" but could be
+redefined in the
+.I config.h,
+with "A" meaning to
+accept all cookies, "a" to deny all cookies and "@", which tells surf to
+accept all third party cookies.
 .TP
 .B \-b
 Disable Scrollbars
@@ -158,7 +169,7 @@ Calls Printpage Dialog.
 Reloads the website.
 .TP
 .B Ctrl\-Shift\-r
-Reloads the website without using cache.
+Reloads the website without using the cache.
 .TP
 .B Ctrl\-y
 Copies current URI to primary selection.
@@ -166,28 +177,34 @@ Copies current URI to primary selection.
 .B Ctrl\-o
 Show the sourcecode of the current page.
 .TP
+.B Ctrl\-Shift\-a
+Toggle through the the
+.I cookie policies.
+This will not reload the page.
+.TP
 .B Ctrl\-Shift\-b
-Toggle scrollbars
+Toggle scrollbars. This will reload the page.
 .TP
 .B Ctrl\-Shift\-c
-Toggle caret browsing.
+Toggle caret browsing. This will reload the page.
 .TP
 .B Ctrl\-Shift\-i
-Toggle auto-loading of images.
+Toggle auto-loading of images. This will reload the page.
 .TP
 .B Ctrl\-Shift\-m
 Toggle if the
 .I stylefile 
-file should be loaded.
+file should be loaded. This will reload the page.
 .TP
 .B Ctrl\-Shift\-o
 Open the Web Inspector (Developer Tools) window for the current page.
 .TP
 .B Ctrl\-Shift\-s
-Toggle script execution.
+Toggle script execution. This will reload the page.
 .TP
 .B Ctrl\-Shift\-v
-Toggle the enabling of plugins on that surf instance.
+Toggle the enabling of plugins on that surf instance. This will reload the
+page.
 .TP
 .B F11
 Toggle fullscreen mode.

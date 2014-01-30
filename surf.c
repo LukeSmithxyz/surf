@@ -78,9 +78,10 @@ static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static char winid[64];
 static gboolean usingproxy = 0;
-static char togglestat[7];
+static char togglestat[8];
 static char pagestat[3];
 static GTlsDatabase *tlsdb;
+static int policysel = 0;
 
 static void addaccelgroup(Client *c);
 static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
@@ -92,12 +93,16 @@ static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e,
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
 
+/* Cookiejar implementation */
 static void cookiejar_changed(SoupCookieJar *self, SoupCookie *old_cookie,
 		SoupCookie *new_cookie);
 static void cookiejar_finalize(GObject *self);
-static SoupCookieJar *cookiejar_new(const char *filename, gboolean read_only);
+static SoupCookieJarAcceptPolicy cookiepolicy_get(void);
+static SoupCookieJar *cookiejar_new(const char *filename, gboolean read_only,
+		SoupCookieJarAcceptPolicy policy);
 static void cookiejar_set_property(GObject *self, guint prop_id,
 		const GValue *value, GParamSpec *pspec);
+static char cookiepolicy_set(const SoupCookieJarAcceptPolicy p);
 
 static char *copystr(char **str, const char *src);
 static WebKitWebView *createwindow(WebKitWebView *v, WebKitWebFrame *f,
@@ -162,6 +167,7 @@ static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *v, WebKitWebFrame *frame,
 		const char *title, Client *c);
 static void toggle(Client *c, const Arg *arg);
+static void togglecookiepolicy(Client *c, const Arg *arg);
 static void togglegeolocation(Client *c, const Arg *arg);
 static void togglescrollbars(Client *c, const Arg *arg);
 static void togglestyle(Client *c, const Arg *arg);
@@ -296,10 +302,12 @@ cookiejar_init(CookieJar *self) {
 }
 
 static SoupCookieJar *
-cookiejar_new(const char *filename, gboolean read_only) {
+cookiejar_new(const char *filename, gboolean read_only,
+		SoupCookieJarAcceptPolicy policy) {
 	return g_object_new(COOKIEJAR_TYPE,
 	                    SOUP_COOKIE_JAR_TEXT_FILENAME, filename,
-	                    SOUP_COOKIE_JAR_READ_ONLY, read_only, NULL);
+	                    SOUP_COOKIE_JAR_READ_ONLY, read_only,
+			    SOUP_COOKIE_JAR_ACCEPT_POLICY, policy, NULL);
 }
 
 static void
@@ -309,6 +317,36 @@ cookiejar_set_property(GObject *self, guint prop_id, const GValue *value,
 	G_OBJECT_CLASS(cookiejar_parent_class)->set_property(self, prop_id,
 			value, pspec);
 	flock(COOKIEJAR(self)->lock, LOCK_UN);
+}
+
+static SoupCookieJarAcceptPolicy
+cookiepolicy_get(void) {
+	switch(cookiepolicies[policysel]) {
+	case 'a':
+		return SOUP_COOKIE_JAR_ACCEPT_NEVER;
+	case '@':
+		return SOUP_COOKIE_JAR_ACCEPT_NO_THIRD_PARTY;
+	case 'A':
+	default:
+		break;
+	}
+
+	return SOUP_COOKIE_JAR_ACCEPT_ALWAYS;
+}
+
+static char
+cookiepolicy_set(const SoupCookieJarAcceptPolicy ep) {
+	switch(ep) {
+	case SOUP_COOKIE_JAR_ACCEPT_NEVER:
+		return 'a';
+	case SOUP_COOKIE_JAR_ACCEPT_NO_THIRD_PARTY:
+		return '@';
+	case SOUP_COOKIE_JAR_ACCEPT_ALWAYS:
+	default:
+		break;
+	}
+
+	return 'A';
 }
 
 static void
@@ -1013,7 +1051,7 @@ scroll(GtkAdjustment *a, const Arg *arg) {
 	gdouble v;
 
 	v = gtk_adjustment_get_value(a);
-	switch (arg->i){
+	switch(arg->i) {
 	case +10000:
 	case -10000:
 		v += gtk_adjustment_get_page_increment(a) *
@@ -1068,13 +1106,13 @@ setup(void) {
 
 	/* cookie jar */
 	soup_session_add_feature(s,
-			SOUP_SESSION_FEATURE(cookiejar_new(cookiefile,
-					FALSE)));
+			SOUP_SESSION_FEATURE(cookiejar_new(cookiefile, FALSE,
+					cookiepolicy_get())));
 
 	/* ssl */
 	tlsdb = g_tls_file_database_new(cafile, &error);
 
-	if (error) {
+	if(error) {
 		g_warning("Error loading SSL database %s: %s", cafile, error->message);
 		g_error_free(error);
 	}
@@ -1156,6 +1194,37 @@ toggle(Client *c, const Arg *arg) {
 }
 
 static void
+togglecookiepolicy(Client *c, const Arg *arg) {
+	SoupCookieJar *jar;
+	SoupCookieJarAcceptPolicy policy;
+
+	jar = SOUP_COOKIE_JAR(
+			soup_session_get_feature(
+				webkit_get_default_session(),
+				SOUP_TYPE_COOKIE_JAR));
+	g_object_get(G_OBJECT(jar), "accept-policy", &policy, NULL);
+
+	policysel++;
+	if(policysel >= strlen(cookiepolicies))
+		policysel = 0;
+
+	g_object_set(G_OBJECT(jar), "accept-policy",
+			cookiepolicy_get(), NULL);
+
+	updatetitle(c);
+	/* Do not reload. */
+}
+
+static void
+togglegeolocation(Client *c, const Arg *arg) {
+	Arg a = { .b = FALSE };
+
+	allowgeolocation ^= 1;
+
+	reload(c, &a);
+}
+
+static void
 twitch(Client *c, const Arg *arg) {
 	GtkAdjustment *a;
 	gdouble v;
@@ -1171,15 +1240,6 @@ twitch(Client *c, const Arg *arg) {
 	v = MIN(v, gtk_adjustment_get_upper(a) -
 			gtk_adjustment_get_page_size(a));
 	gtk_adjustment_set_value(a, v);
-}
-
-static void
-togglegeolocation(Client *c, const Arg *arg) {
-	Arg a = { .b = FALSE };
-
-	allowgeolocation ^= 1;
-
-	reload(c, &a);
 }
 
 static void
@@ -1219,27 +1279,30 @@ static void
 gettogglestat(Client *c){
 	gboolean value;
 	char *uri;
+	int p = 0;
 	WebKitWebSettings *settings = webkit_web_view_get_settings(c->view);
+
+	togglestat[p++] = cookiepolicy_set(cookiepolicy_get());
 
 	g_object_get(G_OBJECT(settings), "enable-caret-browsing",
 			&value, NULL);
-	togglestat[0] = value? 'C': 'c';
+	togglestat[p++] = value? 'C': 'c';
 
-	togglestat[1] = allowgeolocation? 'G': 'g';
+	togglestat[p++] = allowgeolocation? 'G': 'g';
 
 	g_object_get(G_OBJECT(settings), "auto-load-images", &value, NULL);
-	togglestat[2] = value? 'I': 'i';
+	togglestat[p++] = value? 'I': 'i';
 
 	g_object_get(G_OBJECT(settings), "enable-scripts", &value, NULL);
-	togglestat[3] = value? 'S': 's';
+	togglestat[p++] = value? 'S': 's';
 
 	g_object_get(G_OBJECT(settings), "enable-plugins", &value, NULL);
-	togglestat[4] = value? 'V': 'v';
+	togglestat[p++] = value? 'V': 'v';
 
 	g_object_get(G_OBJECT(settings), "user-stylesheet-uri", &uri, NULL);
-	togglestat[5] = uri[0] ? 'M': 'm';
+	togglestat[p++] = uri[0] ? 'M': 'm';
 
-	togglestat[6] = '\0';
+	togglestat[p] = '\0';
 }
 
 static void
@@ -1292,6 +1355,7 @@ updatewinid(Client *c) {
 static void
 usage(void) {
 	die("usage: %s [-bBfFgGiIkKnNpPsSvx]"
+		" [-a cookiepolicies ] "
 		" [-c cookiefile] [-e xid] [-r scriptfile]"
 		" [-t stylefile] [-u useragent] [-z zoomlevel]"
 		" [uri]\n", basename(argv0));
