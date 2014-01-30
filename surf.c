@@ -601,8 +601,8 @@ loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 			src = webkit_web_frame_get_data_source(frame);
 			request = webkit_web_data_source_get_request(src);
 			msg = webkit_network_request_get_message(request);
-			c->sslfailed = soup_message_get_flags(msg)
-			               ^ SOUP_MESSAGE_CERTIFICATE_TRUSTED;
+			c->sslfailed = !(soup_message_get_flags(msg)
+			                & SOUP_MESSAGE_CERTIFICATE_TRUSTED);
 		}
 		setatom(c, AtomUri, uri);
 		break;
