@@ -1391,6 +1391,9 @@ main(int argc, char *argv[]) {
 
 	/* command line args */
 	ARGBEGIN {
+	case 'a':
+		cookiepolicies = EARGF(usage());
+		break;
 	case 'b':
 		enablescrollbars = 0;
 		break;
