@@ -80,6 +80,7 @@ static char winid[64];
 static gboolean usingproxy = 0;
 static char togglestat[7];
 static char pagestat[3];
+static GTlsDatabase *tlsdb;
 
 static void addaccelgroup(Client *c);
 static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
@@ -1044,6 +1045,7 @@ setup(void) {
 	char *new_proxy;
 	SoupURI *puri;
 	SoupSession *s;
+	GError *error = NULL;
 
 	/* clean up any zombies immediately */
 	sigchld(0);
@@ -1070,7 +1072,13 @@ setup(void) {
 					FALSE)));
 
 	/* ssl */
-	g_object_set(G_OBJECT(s), "ssl-ca-file", cafile, NULL);
+	tlsdb = g_tls_file_database_new(cafile, &error);
+
+	if (error) {
+		g_warning("Error loading SSL database %s: %s", cafile, error->message);
+		g_error_free(error);
+	}
+	g_object_set(G_OBJECT(s), "tls-database", tlsdb, NULL);
 	g_object_set(G_OBJECT(s), "ssl-strict", strictssl, NULL);
 
 	/* proxy */
