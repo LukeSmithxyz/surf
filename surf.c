@@ -707,6 +707,9 @@ newclient(void) {
 	if(!(c = calloc(1, sizeof(Client))))
 		die("Cannot malloc!\n");
 
+	c->title = NULL;
+	c->progress = 100;
+
 	/* Window */
 	if(embed) {
 		c->win = gtk_plug_new(embed);
@@ -890,9 +893,6 @@ newclient(void) {
 	if(hidebackground)
 		webkit_web_view_set_transparent(c->view, TRUE);
 
-	c->title = "";
-	c->progress = 100;
-	updatetitle(c);
 	c->next = clients;
 	clients = c;
 
@@ -1337,16 +1337,18 @@ updatetitle(Client *c) {
 					pagestat, c->linkhover);
 		} else if(c->progress != 100) {
 			t = g_strdup_printf("[%i%%] %s:%s | %s", c->progress,
-					togglestat, pagestat, c->title);
+					togglestat, pagestat,
+					(c->title == NULL)? "" : c->title);
 		} else {
 			t = g_strdup_printf("%s:%s | %s", togglestat, pagestat,
-					c->title);
+					(c->title == NULL)? "" : c->title);
 		}
 
 		gtk_window_set_title(GTK_WINDOW(c->win), t);
 		g_free(t);
 	} else {
-		gtk_window_set_title(GTK_WINDOW(c->win), c->title);
+		gtk_window_set_title(GTK_WINDOW(c->win),
+				(c->title == NULL)? "" : c->title);
 	}
 }
 
@@ -1390,6 +1392,7 @@ zoom(Client *c, const Arg *arg) {
 int
 main(int argc, char *argv[]) {
 	Arg arg;
+	Client *c;
 
 	memset(&arg, 0, sizeof(arg));
 
@@ -1462,7 +1465,7 @@ main(int argc, char *argv[]) {
 		useragent = EARGF(usage());
 		break;
 	case 'v':
-		die("surf-"VERSION", ©2009-2012 surf engineers, "
+		die("surf-"VERSION", ©2009-2014 surf engineers, "
 				"see LICENSE for details\n");
 	case 'x':
 		showxid = TRUE;
@@ -1477,9 +1480,12 @@ main(int argc, char *argv[]) {
 		arg.v = argv[0];
 
 	setup();
-	newclient();
-	if(arg.v)
+	c = newclient();
+	if(arg.v) {
 		loaduri(clients, &arg);
+	} else {
+		updatetitle(c);
+	}
 
 	gtk_main();
 	cleanup();
