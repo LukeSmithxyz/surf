@@ -910,11 +910,13 @@ newclient(void) {
 static void
 newwindow(Client *c, const Arg *arg, gboolean noembed) {
 	guint i = 0;
-	const char *cmd[14], *uri;
+	const char *cmd[16], *uri;
 	const Arg a = { .v = (void *)cmd };
 	char tmp[64];
 
 	cmd[i++] = argv0;
+	cmd[i++] = "-a";
+	cmd[i++] = cookiepolicies;
 	if(!enablescrollbars)
 		cmd[i++] = "-b";
 	if(embed && !noembed) {
