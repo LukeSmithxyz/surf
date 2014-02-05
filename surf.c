@@ -890,7 +890,9 @@ newclient(void) {
 	if(hidebackground)
 		webkit_web_view_set_transparent(c->view, TRUE);
 
-	c->title = NULL;
+	c->title = "";
+	c->progress = 100;
+	updatetitle(c);
 	c->next = clients;
 	clients = c;
 
