@@ -685,8 +685,7 @@ loaduri(Client *c, const Arg *arg) {
 		c->title = copystr(&c->title, u);
 		updatetitle(c);
 	}
-	if(u != NULL)
-		g_free(u);
+	g_free(u);
 }
 
 static void
