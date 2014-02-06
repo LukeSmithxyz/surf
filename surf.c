@@ -164,8 +164,7 @@ static void sigchld(int unused);
 static void source(Client *c, const Arg *arg);
 static void spawn(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
-static void titlechange(WebKitWebView *v, WebKitWebFrame *frame,
-		const char *title, Client *c);
+static void titlechange(WebKitWebView *view, GParamSpec *pspec, Client *c);
 static void toggle(Client *c, const Arg *arg);
 static void togglecookiepolicy(Client *c, const Arg *arg);
 static void togglegeolocation(Client *c, const Arg *arg);
@@ -749,7 +748,7 @@ newclient(void) {
 	c->view = WEBKIT_WEB_VIEW(webkit_web_view_new());
 
 	g_signal_connect(G_OBJECT(c->view),
-			"title-changed",
+			"notify::title",
 			G_CALLBACK(titlechange), c);
 	g_signal_connect(G_OBJECT(c->view),
 			"hovering-over-link",
@@ -1178,7 +1177,8 @@ stop(Client *c, const Arg *arg) {
 }
 
 static void
-titlechange(WebKitWebView *v, WebKitWebFrame *f, const char *t, Client *c) {
+titlechange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
+	const gchar *t = webkit_web_view_get_title(view);
 	c->title = copystr(&c->title, t);
 	updatetitle(c);
 }
