@@ -656,7 +656,7 @@ loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 
 static void
 loaduri(Client *c, const Arg *arg) {
-	char *u, *rp;
+	char *u = NULL, *rp;
 	const char *uri = (char *)arg->v;
 	Arg a = { .b = FALSE };
 	struct stat st;
@@ -683,9 +683,10 @@ loaduri(Client *c, const Arg *arg) {
 		webkit_web_view_load_uri(c->view, u);
 		c->progress = 0;
 		c->title = copystr(&c->title, u);
-		g_free(u);
 		updatetitle(c);
 	}
+	if(u != NULL)
+		g_free(u);
 }
 
 static void
