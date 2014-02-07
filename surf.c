@@ -29,7 +29,7 @@
 char *argv0;
 
 #define LENGTH(x)               (sizeof x / sizeof x[0])
-#define CLEANMASK(mask)		(mask & (MODKEY|GDK_SHIFT_MASK))
+#define CLEANMASK(mask)         (mask & (MODKEY|GDK_SHIFT_MASK))
 #define COOKIEJAR_TYPE          (cookiejar_get_type ())
 #define COOKIEJAR(obj)          (G_TYPE_CHECK_INSTANCE_CAST ((obj), COOKIEJAR_TYPE, CookieJar))
 
@@ -148,8 +148,9 @@ static void navigate(Client *c, const Arg *arg);
 static Client *newclient(void);
 static void newwindow(Client *c, const Arg *arg, gboolean noembed);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
-static void populatepopup(WebKitWebView *web, GtkMenu *menu, Client *c);
-static void popupactivate(GtkMenuItem *menu, Client *);
+static gboolean contextmenu(WebKitWebView *view, GtkWidget *menu,
+		WebKitHitTestResult *target, gboolean keyboard, Client *c);
+static void menuactivate(GtkMenuItem *item, Client *c);
 static void print(Client *c, const Arg *arg);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
 		gpointer d);
@@ -781,8 +782,8 @@ newclient(void) {
 			"button-release-event",
 			G_CALLBACK(buttonrelease), c);
 	g_signal_connect(G_OBJECT(c->view),
-			"populate-popup",
-			G_CALLBACK(populatepopup), c);
+			"context-menu",
+			G_CALLBACK(contextmenu), c);
 	g_signal_connect(G_OBJECT(c->view),
 			"resource-request-starting",
 			G_CALLBACK(beforerequest), c);
@@ -945,19 +946,21 @@ newwindow(Client *c, const Arg *arg, gboolean noembed) {
 	spawn(NULL, &a);
 }
 
-static void
-populatepopup(WebKitWebView *web, GtkMenu *menu, Client *c) {
-	GList *items = gtk_container_get_children(GTK_CONTAINER(menu));
+static gboolean
+contextmenu(WebKitWebView *view, GtkWidget *menu, WebKitHitTestResult *target,
+		gboolean keyboard, Client *c) {
+	GList *items = gtk_container_get_children(GTK_CONTAINER(GTK_MENU(menu)));
 
 	for(GList *l = items; l; l = l->next) {
-		g_signal_connect(l->data, "activate", G_CALLBACK(popupactivate), c);
+		g_signal_connect(l->data, "activate", G_CALLBACK(menuactivate), c);
 	}
 
 	g_list_free(items);
+	return FALSE;
 }
 
 static void
-popupactivate(GtkMenuItem *menu, Client *c) {
+menuactivate(GtkMenuItem *item, Client *c) {
 	/*
 	 * context-menu-action-2000	open link
 	 * context-menu-action-1	open link in window
@@ -973,7 +976,7 @@ popupactivate(GtkMenuItem *menu, Client *c) {
 	const char *name;
 	GtkClipboard *prisel;
 
-	a = gtk_activatable_get_related_action(GTK_ACTIVATABLE(menu));
+	a = gtk_activatable_get_related_action(GTK_ACTIVATABLE(item));
 	if(a == NULL)
 		return;
 
