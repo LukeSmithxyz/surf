@@ -1179,8 +1179,10 @@ stop(Client *c, const Arg *arg) {
 static void
 titlechange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 	const gchar *t = webkit_web_view_get_title(view);
-	c->title = copystr(&c->title, t);
-	updatetitle(c);
+	if (t) {
+		c->title = copystr(&c->title, t);
+		updatetitle(c);
+	}
 }
 
 static void
