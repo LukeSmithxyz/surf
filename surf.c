@@ -848,6 +848,8 @@ newclient(void) {
 			kioskmode ^ 1, NULL);
 	g_object_set(G_OBJECT(settings), "default-font-size",
 			defaultfontsize, NULL);
+	g_object_set(G_OBJECT(settings), "resizable-text-areas",
+			1, NULL);
 
 	/*
 	 * While stupid, CSS specifies that a pixel represents 1/96 of an inch.
