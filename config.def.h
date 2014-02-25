@@ -5,7 +5,7 @@ static char *useragent      = "Mozilla/5.0 (X11; U; Unix; en-US) "
 static char *stylefile      = "~/.surf/style.css";
 static char *scriptfile     = "~/.surf/script.js";
 
-static Bool kioskmode	    = FALSE; /* Ignore shortcuts */
+static Bool kioskmode       = FALSE; /* Ignore shortcuts */
 static Bool showindicators  = TRUE;  /* Show indicators in window title */
 static Bool zoomto96dpi     = TRUE;  /* Zoom pages to always emulate 96dpi */
 static Bool runinfullscreen = FALSE; /* Run in fullscreen mode by default */
@@ -16,7 +16,7 @@ static gfloat zoomlevel = 1.0;       /* Default zoom level */
 /* Soup default features */
 static char *cookiefile     = "~/.surf/cookies.txt";
 static char *cookiepolicies = "Aa@"; /* A: accept all; a: accept nothing,
-					@: accept no third party */
+                                        @: accept no third party */
 static char *cafile         = "/etc/ssl/certs/ca-certificates.crt";
 static char *strictssl      = FALSE; /* Refuse untrusted SSL connections */
 static time_t sessiontime   = 3600;
@@ -74,12 +74,12 @@ static Key keys[] = {
     { MODKEY,               GDK_l,      navigate,   { .i = +1 } },
     { MODKEY,               GDK_h,      navigate,   { .i = -1 } },
 
-    { MODKEY,               GDK_j,           scroll_v,   { .i = +1 } },
-    { MODKEY,               GDK_k,           scroll_v,   { .i = -1 } },
-    { MODKEY,               GDK_b,           scroll_v,   { .i = -10000 } },
-    { MODKEY,               GDK_space,       scroll_v,   { .i = +10000 } },
-    { MODKEY,               GDK_i,           scroll_h,   { .i = +1 } },
-    { MODKEY,               GDK_u,           scroll_h,   { .i = -1 } },
+    { MODKEY,               GDK_j,      scroll_v,   { .i = +1 } },
+    { MODKEY,               GDK_k,      scroll_v,   { .i = -1 } },
+    { MODKEY,               GDK_b,      scroll_v,   { .i = -10000 } },
+    { MODKEY,               GDK_space,  scroll_v,   { .i = +10000 } },
+    { MODKEY,               GDK_i,      scroll_h,   { .i = +1 } },
+    { MODKEY,               GDK_u,      scroll_h,   { .i = -1 } },
 
     { 0,                    GDK_F11,    fullscreen, { 0 } },
     { 0,                    GDK_Escape, stop,       { 0 } },
