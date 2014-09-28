@@ -968,6 +968,7 @@ menuactivate(GtkMenuItem *item, Client *c) {
 	 * context-menu-action-1	open link in window
 	 * context-menu-action-2	download linked file
 	 * context-menu-action-3	copy link location
+	 * context-menu-action-7	copy image address
 	 * context-menu-action-13	reload
 	 * context-menu-action-10	back
 	 * context-menu-action-11	forward
@@ -975,8 +976,8 @@ menuactivate(GtkMenuItem *item, Client *c) {
 	 */
 
 	GtkAction *a = NULL;
-	const char *name;
-	GtkClipboard *prisel;
+	const char *name, *uri;
+	GtkClipboard *prisel, *clpbrd;
 
 	a = gtk_activatable_get_related_action(GTK_ACTIVATABLE(item));
 	if(a == NULL)
@@ -986,7 +987,13 @@ menuactivate(GtkMenuItem *item, Client *c) {
 	if(!g_strcmp0(name, "context-menu-action-3")) {
 		prisel = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
 		gtk_clipboard_set_text(prisel, c->linkhover, -1);
-	}
+	} else if(!g_strcmp0(name, "context-menu-action-7")) {
+		prisel = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
+		clpbrd = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+		uri = gtk_clipboard_wait_for_text(clpbrd);
+		if(uri)
+			gtk_clipboard_set_text(prisel, uri, -1);
+  }
 }
 
 static void
