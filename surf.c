@@ -993,7 +993,7 @@ menuactivate(GtkMenuItem *item, Client *c) {
 		uri = gtk_clipboard_wait_for_text(clpbrd);
 		if(uri)
 			gtk_clipboard_set_text(prisel, uri, -1);
-  }
+	}
 }
 
 static void
