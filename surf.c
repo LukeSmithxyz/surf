@@ -957,9 +957,11 @@ newwindow(Client *c, const Arg *arg, gboolean noembed) {
 		cmd[i++] = "-b";
 	if(embed && !noembed) {
 		cmd[i++] = "-e";
-		snprintf(tmp, LENGTH(tmp), "%u\n", (int)embed);
+		snprintf(tmp, LENGTH(tmp), "%u", (int)embed);
 		cmd[i++] = tmp;
 	}
+	if(!allowgeolocation)
+		cmd[i++] = "-g";
 	if(!loadimages)
 		cmd[i++] = "-i";
 	if(kioskmode)
