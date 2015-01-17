@@ -85,11 +85,12 @@ static GdkNativeWindow embed = 0;
 static gboolean showxid = FALSE;
 static char winid[64];
 static gboolean usingproxy = 0;
-static char togglestat[8];
+static char togglestat[9];
 static char pagestat[3];
 static GTlsDatabase *tlsdb;
 static int policysel = 0;
 static char *stylefile = NULL;
+static SoupCache *diskcache = NULL;
 
 static void addaccelgroup(Client *c);
 static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
@@ -270,6 +271,10 @@ buttonrelease(WebKitWebView *web, GdkEventButton *e, GList *gl) {
 
 static void
 cleanup(void) {
+	if (diskcache) {
+		soup_cache_flush(diskcache);
+		soup_cache_dump(diskcache);
+	}
 	while(clients)
 		destroyclient(clients);
 	g_free(cookiefile);
@@ -677,6 +682,10 @@ loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 	case WEBKIT_LOAD_FINISHED:
 		c->progress = 100;
 		updatetitle(c);
+		if (diskcache) {
+			soup_cache_flush(diskcache);
+			soup_cache_dump(diskcache);
+		}
 		break;
 	default:
 		break;
@@ -972,6 +981,8 @@ newwindow(Client *c, const Arg *arg, gboolean noembed) {
 		cmd[i++] = "-s";
 	if(showxid)
 		cmd[i++] = "-x";
+	if(enablediskcache)
+		cmd[i++] = "-D";
 	cmd[i++] = "-c";
 	cmd[i++] = cookiefile;
 	cmd[i++] = "--";
@@ -1149,6 +1160,7 @@ setup(void) {
 	/* dirs and files */
 	cookiefile = buildpath(cookiefile);
 	scriptfile = buildpath(scriptfile);
+	cachefolder = buildpath(cachefolder);
 	styledir = buildpath(styledir);
 	if(stylefile == NULL && enablestyles) {
 		for(i = 0; i < LENGTH(styles); i++) {
@@ -1174,6 +1186,14 @@ setup(void) {
 	soup_session_add_feature(s,
 			SOUP_SESSION_FEATURE(cookiejar_new(cookiefile, FALSE,
 					cookiepolicy_get())));
+
+	/* disk cache */
+	if(enablediskcache) {
+		diskcache = soup_cache_new(cachefolder, SOUP_CACHE_SINGLE_USER);
+		soup_cache_set_max_size(diskcache, diskcachebytes);
+		soup_cache_load(diskcache);
+		soup_session_add_feature(s, SOUP_SESSION_FEATURE(diskcache));
+	}
 
 	/* ssl */
 	tlsdb = g_tls_file_database_new(cafile, &error);
@@ -1363,6 +1383,8 @@ gettogglestat(Client *c){
 
 	togglestat[p++] = allowgeolocation? 'G': 'g';
 
+	togglestat[p++] = enablediskcache? 'D': 'd';
+
 	g_object_get(G_OBJECT(settings), "auto-load-images", &value, NULL);
 	togglestat[p++] = value? 'I': 'i';
 
@@ -1478,6 +1500,12 @@ main(int argc, char *argv[]) {
 		break;
 	case 'c':
 		cookiefile = EARGF(usage());
+		break;
+	case 'd':
+		enablediskcache = 0;
+		break;
+	case 'D':
+		enablediskcache = 1;
 		break;
 	case 'e':
 		embed = strtol(EARGF(usage()), NULL, 0);
