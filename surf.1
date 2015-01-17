@@ -3,7 +3,7 @@
 surf \- simple webkit-based browser
 .SH SYNOPSIS
 .B surf
-.RB [-bBfFgGiIkKnNpPsSvx]
+.RB [-bBfFgGiIkKmMnNpPsSvx]
 .RB [-a\ cookiepolicies]
 .RB [-c\ cookiefile]
 .RB [-e\ xid]
@@ -68,6 +68,12 @@ Disable kiosk mode (disable key strokes and right click)
 .B \-K
 Enable kiosk mode (disable key strokes and right click)
 .TP
+.B \-m
+Disable the site-specific styles.
+.TP
+.B \-M
+Enable the site-specific styles.
+.TP
 .B \-n
 Disable the Web Inspector (Developer Tools).
 .TP
@@ -93,6 +99,7 @@ Enable Javascript
 .B \-t stylefile
 Specify the user
 .I stylefile.
+This does disable the site-specific styles.
 .TP
 .B \-u useragent 
 Specify the
