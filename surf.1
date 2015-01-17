@@ -3,7 +3,7 @@
 surf \- simple webkit-based browser
 .SH SYNOPSIS
 .B surf
-.RB [-bBfFgGiIkKmMnNpPsSvx]
+.RB [-bBdDfFgGiIkKmMnNpPsSvx]
 .RB [-a\ cookiepolicies]
 .RB [-c\ cookiefile]
 .RB [-e\ xid]
@@ -39,6 +39,12 @@ Enable Scrollbars
 Specify the
 .I cookiefile
 to use.
+.TP
+.B \-d
+Disable the disk cache.
+.TP
+.B \-D
+Enable the disk cache.
 .TP
 .B \-e xid
 Reparents to window specified by
