@@ -955,7 +955,7 @@ newclient(void) {
 static void
 newwindow(Client *c, const Arg *arg, gboolean noembed) {
 	guint i = 0;
-	const char *cmd[16], *uri;
+	const char *cmd[18], *uri;
 	const Arg a = { .v = (void *)cmd };
 	char tmp[64];
 
