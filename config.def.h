@@ -54,6 +54,10 @@ static Bool allowgeolocation      = TRUE;
 }
 
 /* styles */
+/*
+ * The iteration will stop at the first match, beginning at the beginning of
+ * the list.
+ */
 static SiteStyle styles[] = {
 	/* regexp		file in $styledir */
 	{ ".*",			"default.css" },
