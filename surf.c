@@ -220,6 +220,7 @@ beforerequest(WebKitWebView *w, WebKitWebFrame *f, WebKitWebResource *r,
 	if(!g_str_has_prefix(uri, "http://") \
 			&& !g_str_has_prefix(uri, "https://") \
 			&& !g_str_has_prefix(uri, "about:") \
+			&& !g_str_has_prefix(uri, "file://") \
 			&& strlen(uri) > 0) {
 		handleplumb(c, w, uri);
 	}
