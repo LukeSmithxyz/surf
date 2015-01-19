@@ -54,6 +54,9 @@ static Bool allowgeolocation      = TRUE;
 }
 
 /* PLUMB(URI) */
+/* This called when some URI which does not begin with "about:",
+ * "http://" or "https://" should be opened.
+ */
 #define PLUMB(u) {\
 	.v = (char *[]){ "/bin/sh", "-c", \
 		"xdg-open \"$0\"", u, NULL \
