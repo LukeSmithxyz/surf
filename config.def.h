@@ -53,6 +53,13 @@ static Bool allowgeolocation      = TRUE;
 	} \
 }
 
+/* PLUMB(URI) */
+#define PLUMB(u) {\
+	.v = (char *[]){ "/bin/sh", "-c", \
+		"xdg-open \"$0\"", u, NULL \
+	} \
+}
+
 /* styles */
 /*
  * The iteration will stop at the first match, beginning at the beginning of

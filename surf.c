@@ -95,7 +95,7 @@ static SoupCache *diskcache = NULL;
 static void addaccelgroup(Client *c);
 static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
 		WebKitWebResource *r, WebKitNetworkRequest *req,
-		WebKitNetworkResponse *resp, gpointer d);
+		WebKitNetworkResponse *resp, Client *c);
 static char *buildpath(const char *path);
 static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e,
 		GList *gl);
@@ -137,6 +137,8 @@ static void gettogglestat(Client *c);
 static void getpagestat(Client *c);
 static char *geturi(Client *c);
 static gchar *getstyle(const char *uri);
+
+static void handleplumb(Client *c, WebKitWebView *w, const gchar *uri);
 
 static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
 
@@ -209,11 +211,19 @@ addaccelgroup(Client *c) {
 static void
 beforerequest(WebKitWebView *w, WebKitWebFrame *f, WebKitWebResource *r,
 		WebKitNetworkRequest *req, WebKitNetworkResponse *resp,
-		gpointer d) {
+		Client *c) {
 	const gchar *uri = webkit_network_request_get_uri(req);
 
 	if(g_str_has_suffix(uri, "/favicon.ico"))
 		webkit_network_request_set_uri(req, "about:blank");
+
+	if(!g_str_has_prefix(uri, "http://") \
+			&& !g_str_has_prefix(uri, "https://") \
+			&& !g_str_has_prefix(uri, "about:") \
+			&& strlen(uri) > 0) {
+		printf("Handle plumb: %s\n", uri);
+		handleplumb(c, w, uri);
+	}
 }
 
 static char *
@@ -559,6 +569,15 @@ getstyle(const char *uri) {
 		}
 	}
 	return g_strdup("");
+}
+
+static void
+handleplumb(Client *c, WebKitWebView *w, const gchar *uri) {
+	Arg arg;
+
+	webkit_web_view_stop_loading(w);
+	arg = (Arg)PLUMB((char *)uri);
+	spawn(c, &arg);
 }
 
 static gboolean
