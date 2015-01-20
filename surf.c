@@ -213,6 +213,7 @@ beforerequest(WebKitWebView *w, WebKitWebFrame *f, WebKitWebResource *r,
 		WebKitNetworkRequest *req, WebKitNetworkResponse *resp,
 		Client *c) {
 	const gchar *uri = webkit_network_request_get_uri(req);
+	int i, isascii = 1;
 
 	if(g_str_has_suffix(uri, "/favicon.ico"))
 		webkit_network_request_set_uri(req, "about:blank");
@@ -224,7 +225,15 @@ beforerequest(WebKitWebView *w, WebKitWebFrame *f, WebKitWebResource *r,
 			&& !g_str_has_prefix(uri, "data:") \
 			&& !g_str_has_prefix(uri, "blob:") \
 			&& strlen(uri) > 0) {
-		handleplumb(c, w, uri);
+
+		for(i = 0; i < strlen(uri); i++) {
+			if(!g_ascii_isprint(uri[i])) {
+				isascii = 0;
+				break;
+			}
+		}
+		if(isascii)
+			handleplumb(c, w, uri);
 	}
 }
 
