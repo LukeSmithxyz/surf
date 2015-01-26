@@ -223,6 +223,56 @@ page.
 .TP
 .B F11
 Toggle fullscreen mode.
+.SH INDICATORS OF OPERATION
+For all indicators, unless otherwsie specified, a lower case letter means disabled and an upper case letter means enabled.
+.TP
+.B A
+all cookies accepted
+.TP
+.B a
+no cookies accepted
+.TP
+.B @
+all except third-party cookies accepted
+.TP
+.B c C
+caret browsing
+.TP
+.B g G
+geolocation
+.TP
+.B d D
+disk cache
+.TP
+.B i I
+images
+.TP
+.B s S
+scripts
+.TP
+.B v V
+plugins
+.TP
+.B m M
+styles
+.SH INDICATORS OF WEB PAGE
+.SS First character: encryption
+.TP
+.B -
+unencrypted
+.TP
+.B T
+encrypted (SSL)
+.TP
+.B U
+attempted encryption but failed
+.SS Second character: proxying
+.TP
+.B -
+no proxy
+.TP
+.B P
+using proxy
 .SH ENVIRONMENT
 .B SURF_USERAGENT
 If this variable is set upon startup, surf will use it as the
