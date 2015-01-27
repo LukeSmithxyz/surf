@@ -179,6 +179,7 @@ static void source(Client *c, const Arg *arg);
 static void spawn(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *view, GParamSpec *pspec, Client *c);
+static void titlechangeleave(void *a, void *b, Client *c);
 static void toggle(Client *c, const Arg *arg);
 static void togglecookiepolicy(Client *c, const Arg *arg);
 static void togglegeolocation(Client *c, const Arg *arg);
@@ -805,6 +806,9 @@ newclient(void) {
 	g_signal_connect(G_OBJECT(c->win),
 			"destroy",
 			G_CALLBACK(destroywin), c);
+	g_signal_connect(G_OBJECT(c->win),
+			"leave_notify_event",
+			G_CALLBACK(titlechangeleave), c);
 
 	if(!kioskmode)
 		addaccelgroup(c);
@@ -1296,6 +1300,12 @@ titlechange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 		c->title = copystr(&c->title, t);
 		updatetitle(c);
 	}
+}
+
+static void
+titlechangeleave(void *a, void *b, Client *c) {
+	c->linkhover = NULL;
+	updatetitle(c);
 }
 
 static void
