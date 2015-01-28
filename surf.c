@@ -35,6 +35,15 @@ char *argv0;
 #define COOKIEJAR(obj)          (G_TYPE_CHECK_INSTANCE_CAST ((obj), COOKIEJAR_TYPE, CookieJar))
 
 enum { AtomFind, AtomGo, AtomUri, AtomLast };
+enum {
+	ClkDoc   = WEBKIT_HIT_TEST_RESULT_CONTEXT_DOCUMENT,
+	ClkLink  = WEBKIT_HIT_TEST_RESULT_CONTEXT_LINK,
+	ClkImg   = WEBKIT_HIT_TEST_RESULT_CONTEXT_IMAGE,
+	ClkMedia = WEBKIT_HIT_TEST_RESULT_CONTEXT_MEDIA,
+	ClkSel   = WEBKIT_HIT_TEST_RESULT_CONTEXT_SELECTION,
+	ClkEdit  = WEBKIT_HIT_TEST_RESULT_CONTEXT_EDITABLE,
+	ClkAny   = ClkDoc | ClkLink | ClkImg | ClkMedia | ClkSel | ClkEdit,
+};
 
 typedef union Arg Arg;
 union Arg {
@@ -60,6 +69,14 @@ typedef struct {
 	void (*func)(Client *c, const Arg *arg);
 	const Arg arg;
 } Key;
+
+typedef struct {
+	unsigned int click;
+	unsigned int mask;
+	guint button;
+	void (*func)(Client *c, const Arg *arg);
+	const Arg arg;
+} Button;
 
 typedef struct {
 	SoupCookieJarText parent_instance;
@@ -97,8 +114,7 @@ static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
 		WebKitWebResource *r, WebKitNetworkRequest *req,
 		WebKitNetworkResponse *resp, Client *c);
 static char *buildpath(const char *path);
-static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e,
-		GList *gl);
+static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e, Client *c);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
 
@@ -168,6 +184,8 @@ static void print(Client *c, const Arg *arg);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
 		gpointer d);
 static void progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
+static void linkopen(Client *c, const Arg *arg);
+static void linkopenembed(Client *c, const Arg *arg);
 static void reload(Client *c, const Arg *arg);
 static void scroll_h(Client *c, const Arg *arg);
 static void scroll_v(Client *c, const Arg *arg);
@@ -273,18 +291,20 @@ buildpath(const char *path) {
 }
 
 static gboolean
-buttonrelease(WebKitWebView *web, GdkEventButton *e, GList *gl) {
+buttonrelease(WebKitWebView *web, GdkEventButton *e, Client *c) {
 	WebKitHitTestResultContext context;
 	WebKitHitTestResult *result = webkit_web_view_get_hit_test_result(web,
 			e);
 	Arg arg;
+	unsigned int i;
 
 	g_object_get(result, "context", &context, NULL);
-	if(context & WEBKIT_HIT_TEST_RESULT_CONTEXT_LINK) {
-		if(e->button == 2 ||
-				(e->button == 1 && CLEANMASK(e->state) == CLEANMASK(MODKEY))) {
-			g_object_get(result, "link-uri", &arg.v, NULL);
-			newwindow(NULL, &arg, e->state & GDK_CONTROL_MASK);
+	g_object_get(result, "link-uri", &arg.v, NULL);
+	printf("%d %d\n", context, e->button);
+	for(i = 0; i < LENGTH(buttons); i++) {
+		if(context & buttons[i].click && e->button == buttons[i].button &&
+		CLEANMASK(e->state) == CLEANMASK(buttons[i].mask) && buttons[i].func) {
+			buttons[i].func(c, buttons[i].click == ClkLink && buttons[i].arg.i == 0 ? &arg : &buttons[i].arg);
 			return true;
 		}
 	}
@@ -1116,6 +1136,16 @@ static void
 progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 	c->progress = webkit_web_view_get_progress(c->view) * 100;
 	updatetitle(c);
+}
+
+static void
+linkopen(Client *c, const Arg *arg) {
+	newwindow(NULL, arg, 1);
+}
+
+static void
+linkopenembed(Client *c, const Arg *arg) {
+	newwindow(NULL, arg, 0);
 }
 
 static void

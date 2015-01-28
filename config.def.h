@@ -127,3 +127,13 @@ static Key keys[] = {
     { MODKEY|GDK_SHIFT_MASK,GDK_g,      togglegeolocation, { 0 } },
 };
 
+/* button definitions */
+/* click can be ClkDoc, ClkLink, ClkImg, ClkMedia, ClkSel, ClkEdit, ClkAny */
+static Button buttons[] = {
+    /* click                event mask  button  function        argument */
+    { ClkLink,              0,          2,      linkopenembed,  { 0 } },
+    { ClkLink,              MODKEY,     2,      linkopen,       { 0 } },
+    { ClkLink,              MODKEY,     1,      linkopen,       { 0 } },
+    { ClkAny,               0,          8,      navigate,       { .i = -1 } },
+    { ClkAny,               0,          9,      navigate,       { .i = +1 } },
+};
