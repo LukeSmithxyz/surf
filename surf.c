@@ -292,7 +292,7 @@ buttonrelease(WebKitWebView *web, GdkEventButton *e, GList *gl) {
 
 static void
 cleanup(void) {
-	if (diskcache) {
+	if(diskcache) {
 		soup_cache_flush(diskcache);
 		soup_cache_dump(diskcache);
 	}
@@ -715,7 +715,7 @@ loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c) {
 	case WEBKIT_LOAD_FINISHED:
 		c->progress = 100;
 		updatetitle(c);
-		if (diskcache) {
+		if(diskcache) {
 			soup_cache_flush(diskcache);
 			soup_cache_dump(diskcache);
 		}
