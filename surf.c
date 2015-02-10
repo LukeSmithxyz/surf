@@ -300,7 +300,6 @@ buttonrelease(WebKitWebView *web, GdkEventButton *e, Client *c) {
 
 	g_object_get(result, "context", &context, NULL);
 	g_object_get(result, "link-uri", &arg.v, NULL);
-	printf("%d %d\n", context, e->button);
 	for(i = 0; i < LENGTH(buttons); i++) {
 		if(context & buttons[i].click && e->button == buttons[i].button &&
 		CLEANMASK(e->state) == CLEANMASK(buttons[i].mask) && buttons[i].func) {
