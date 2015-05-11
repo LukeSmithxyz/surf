@@ -10,8 +10,8 @@ MANPREFIX = ${PREFIX}/share/man
 X11INC = /usr/X11R6/include
 X11LIB = /usr/X11R6/lib
 
-GTKINC = `pkg-config --cflags gtk+-2.0 webkit-1.0`
-GTKLIB = `pkg-config --libs gtk+-2.0 webkit-1.0`
+GTKINC = `pkg-config --cflags gtk+-3.0 webkitgtk-3.0`
+GTKLIB = `pkg-config --libs gtk+-3.0 webkitgtk-3.0`
 
 # includes and libs
 INCS = -I. -I/usr/include -I${X11INC} ${GTKINC}
