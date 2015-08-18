@@ -1270,8 +1270,12 @@ setup(void) {
 
 	/* proxy */
 	if((proxy = getenv("http_proxy")) && strcmp(proxy, "")) {
-		new_proxy = g_strrstr(proxy, "http://") ? g_strdup(proxy) :
-			g_strdup_printf("http://%s", proxy);
+		new_proxy = g_strrstr(proxy, "http://")
+            || g_strrstr(proxy, "socks://")
+            || g_strrstr(proxy, "socks4://")
+            || g_strrstr(proxy, "socks5://")
+            ? g_strdup(proxy)
+            : g_strdup_printf("http://%s", proxy);
 		puri = soup_uri_new(new_proxy);
 		g_object_set(G_OBJECT(s), "proxy-uri", puri, NULL);
 		soup_uri_free(puri);
