@@ -24,6 +24,8 @@
 #include <libgen.h>
 #include <stdarg.h>
 #include <regex.h>
+#include <pwd.h>
+#include <string.h>
 
 #include "arg.h"
 
@@ -113,6 +115,7 @@ static void addaccelgroup(Client *c);
 static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
 		WebKitWebResource *r, WebKitNetworkRequest *req,
 		WebKitNetworkResponse *resp, Client *c);
+static char *buildfile(const char *path);
 static char *buildpath(const char *path);
 static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e, Client *c);
 static void cleanup(void);
@@ -257,37 +260,63 @@ beforerequest(WebKitWebView *w, WebKitWebFrame *f, WebKitWebResource *r,
 }
 
 static char *
-buildpath(const char *path) {
-	char *apath, *p;
+buildfile(const char *path) {
+	char *dname, *bname, *bpath, *fpath;
 	FILE *f;
 
-	/* creating directory */
-	if(path[0] == '/') {
-		apath = g_strdup(path);
-	} else if(path[0] == '~') {
-		if(path[1] == '/') {
-			apath = g_strconcat(g_get_home_dir(), &path[1], NULL);
+	dname = g_path_get_dirname(path);
+	bname = g_path_get_basename(path);
+
+	bpath = buildpath(dname);
+	g_free(dname);
+
+	fpath = g_build_filename(bpath, bname, NULL);
+	g_free(bname);
+
+
+	if(!(f = fopen(fpath, "a")))
+		die("Could not open file: %s\n", fpath);
+
+	g_chmod(fpath, 0600); /* always */
+	fclose(f);
+
+	return fpath;
+}
+
+static char *
+buildpath(const char *path) {
+	struct passwd *pw;
+	char *apath, *name, *p, *fpath;
+
+	if(path[0] == '~') {
+		if(path[1] == '/' || path[1] == '\0') {
+			p = (char *)&path[1];
+			pw = getpwuid(getuid());
 		} else {
-			apath = g_strconcat(g_get_home_dir(), "/",
-					&path[1], NULL);
+			if((p = strchr(path, '/')))
+				name = g_strndup(&path[1], --p - path);
+			else
+				name = g_strdup(&path[1]);
+
+			if(!(pw = getpwnam(name))) {
+				die("Can't get user %s home directory: %s.\n",
+						name, path);
+			}
+			g_free(name);
 		}
+		apath = g_build_filename(pw->pw_dir, p, NULL);
 	} else {
-		apath = g_strconcat(g_get_current_dir(), "/", path, NULL);
+		apath = g_strdup(path);
 	}
 
-	if((p = strrchr(apath, '/'))) {
-		*p = '\0';
-		g_mkdir_with_parents(apath, 0700);
-		g_chmod(apath, 0700); /* in case it existed */
-		*p = '/';
-	}
-	/* creating file (gives error when apath ends with "/") */
-	if((f = fopen(apath, "a"))) {
-		g_chmod(apath, 0600); /* always */
-		fclose(f);
-	}
+	/* creating directory */
+	if (g_mkdir_with_parents(apath, 0700) < 0)
+		die("Could not access directory: %s\n", apath);
 
-	return apath;
+	fpath = realpath(apath, NULL);
+	g_free(apath);
+
+	return fpath;
 }
 
 static gboolean
@@ -1221,8 +1250,8 @@ setup(void) {
 	atoms[AtomUri] = XInternAtom(dpy, "_SURF_URI", False);
 
 	/* dirs and files */
-	cookiefile = buildpath(cookiefile);
-	scriptfile = buildpath(scriptfile);
+	cookiefile = buildfile(cookiefile);
+	scriptfile = buildfile(scriptfile);
 	cachefolder = buildpath(cachefolder);
 	styledir = buildpath(styledir);
 	if(stylefile == NULL) {
@@ -1234,12 +1263,12 @@ setup(void) {
 					styles[i].regex);
 				styles[i].regex = NULL;
 			}
-			styles[i].style = buildpath(
+			styles[i].style = buildfile(
 					g_strconcat(styledir,
 						styles[i].style, NULL));
 		}
 	} else {
-		stylefile = buildpath(stylefile);
+		stylefile = buildfile(stylefile);
 	}
 
 	/* request handler */
