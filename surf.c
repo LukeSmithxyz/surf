@@ -273,7 +273,6 @@ buildfile(const char *path) {
 	fpath = g_build_filename(bpath, bname, NULL);
 	g_free(bname);
 
-
 	if(!(f = fopen(fpath, "a")))
 		die("Could not open file: %s\n", fpath);
 
@@ -310,7 +309,7 @@ buildpath(const char *path) {
 	}
 
 	/* creating directory */
-	if (g_mkdir_with_parents(apath, 0700) < 0)
+	if(g_mkdir_with_parents(apath, 0700) < 0)
 		die("Could not access directory: %s\n", apath);
 
 	fpath = realpath(apath, NULL);
