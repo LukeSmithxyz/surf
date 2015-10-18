@@ -391,7 +391,7 @@ cookiejar_new(const char *filename, gboolean read_only,
 	return g_object_new(COOKIEJAR_TYPE,
 	                    SOUP_COOKIE_JAR_TEXT_FILENAME, filename,
 	                    SOUP_COOKIE_JAR_READ_ONLY, read_only,
-			    SOUP_COOKIE_JAR_ACCEPT_POLICY, policy, NULL);
+	                    SOUP_COOKIE_JAR_ACCEPT_POLICY, policy, NULL);
 }
 
 static void
@@ -956,7 +956,7 @@ newclient(void) {
 	g_object_set(G_OBJECT(settings), "user-agent", ua, NULL);
 	if (enablestyles) {
 		g_object_set(G_OBJECT(settings), "user-stylesheet-uri",
-					 getstyle("about:blank"), NULL);
+		             getstyle("about:blank"), NULL);
 	}
 	g_object_set(G_OBJECT(settings), "auto-load-images", loadimages,
 			NULL);
@@ -1090,15 +1090,15 @@ contextmenu(WebKitWebView *view, GtkWidget *menu, WebKitHitTestResult *target,
 static void
 menuactivate(GtkMenuItem *item, Client *c) {
 	/*
-	 * context-menu-action-2000	open link
-	 * context-menu-action-1	open link in window
-	 * context-menu-action-2	download linked file
-	 * context-menu-action-3	copy link location
-	 * context-menu-action-7	copy image address
-	 * context-menu-action-13	reload
-	 * context-menu-action-10	back
-	 * context-menu-action-11	forward
-	 * context-menu-action-12	stop
+	 * context-menu-action-2000 open link
+	 * context-menu-action-1    open link in window
+	 * context-menu-action-2    download linked file
+	 * context-menu-action-3    copy link location
+	 * context-menu-action-7    copy image address
+	 * context-menu-action-13   reload
+	 * context-menu-action-10   back
+	 * context-menu-action-11   forward
+	 * context-menu-action-12   stop
 	 */
 
 	GtkAction *a = NULL;
@@ -1179,9 +1179,9 @@ static void
 reload(Client *c, const Arg *arg) {
 	gboolean nocache = *(gboolean *)arg;
 	if(nocache) {
-		 webkit_web_view_reload_bypass_cache(c->view);
+		webkit_web_view_reload_bypass_cache(c->view);
 	} else {
-		 webkit_web_view_reload(c->view);
+		webkit_web_view_reload(c->view);
 	}
 }
 
