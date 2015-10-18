@@ -1263,7 +1263,7 @@ setup(void) {
 				styles[i].regex = NULL;
 			}
 			styles[i].style = buildfile(
-					g_strconcat(styledir,
+					g_strconcat(styledir, "/",
 						styles[i].style, NULL));
 		}
 	} else {
