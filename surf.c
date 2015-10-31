@@ -155,6 +155,7 @@ static void gettogglestat(Client *c);
 static void getpagestat(Client *c);
 static char *geturi(Client *c);
 static const gchar *getstyle(const char *uri);
+static void setstyle(Client *c, const char *style);
 
 static void handleplumb(Client *c, WebKitWebView *w, const gchar *uri);
 
@@ -663,6 +664,14 @@ getstyle(const char *uri)
 }
 
 void
+setstyle(Client *c, const char *style)
+{
+	WebKitWebSettings *settings = webkit_web_view_get_settings(c->view);
+
+	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", style, NULL);
+}
+
+void
 handleplumb(Client *c, WebKitWebView *w, const gchar *uri)
 {
 	Arg arg;
@@ -776,7 +785,6 @@ loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c)
 	WebKitWebFrame *frame;
 	WebKitWebDataSource *src;
 	WebKitNetworkRequest *request;
-	WebKitWebSettings *set = webkit_web_view_get_settings(c->view);
 	SoupMessage *msg;
 	char *uri;
 
@@ -793,10 +801,8 @@ loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c)
 		}
 		setatom(c, AtomUri, uri);
 
-		if (enablestyles) {
-			g_object_set(G_OBJECT(set), "user-stylesheet-uri",
-			             getstyle(uri), NULL);
-		}
+		if (enablestyles)
+			setstyle(c, getstyle(uri));
 		break;
 	case WEBKIT_LOAD_FINISHED:
 		c->progress = 100;
@@ -997,11 +1003,6 @@ newclient(void)
 	if (!(ua = getenv("SURF_USERAGENT")))
 		ua = useragent;
 	g_object_set(G_OBJECT(settings), "user-agent", ua, NULL);
-	if (enablestyles) {
-		g_object_set(G_OBJECT(settings),
-		             "user-stylesheet-uri", getstyle("about:blank"),
-			     NULL);
-	}
 	g_object_set(G_OBJECT(settings),
 	             "auto-load-images", loadimages, NULL);
 	g_object_set(G_OBJECT(settings),
@@ -1018,6 +1019,8 @@ newclient(void)
 	             "default-font-size", defaultfontsize, NULL);
 	g_object_set(G_OBJECT(settings),
 	             "resizable-text-areas", 1, NULL);
+	if (enablestyles)
+		setstyle(c, getstyle("about:blank"));
 
 	/*
 	 * While stupid, CSS specifies that a pixel represents 1/96 of an inch.
@@ -1531,11 +1534,8 @@ togglescrollbars(Client *c, const Arg *arg)
 void
 togglestyle(Client *c, const Arg *arg)
 {
-	WebKitWebSettings *settings = webkit_web_view_get_settings(c->view);
-
 	enablestyles = !enablestyles;
-	g_object_set(G_OBJECT(settings), "user-stylesheet-uri",
-	             enablestyles ? getstyle(geturi(c)) : "", NULL);
+	setstyle(c, enablestyles ? getstyle(geturi(c)) : "");
 
 	updatetitle(c);
 }
