@@ -154,7 +154,7 @@ static const char *getatom(Client *c, int a);
 static void gettogglestat(Client *c);
 static void getpagestat(Client *c);
 static char *geturi(Client *c);
-static gchar *getstyle(const char *uri);
+static const gchar *getstyle(const char *uri);
 
 static void handleplumb(Client *c, WebKitWebView *w, const gchar *uri);
 
@@ -645,20 +645,21 @@ geturi(Client *c)
 	return uri;
 }
 
-gchar *
+const gchar *
 getstyle(const char *uri)
 {
 	int i;
 
 	if (stylefile != NULL)
-		return g_strconcat("file://", stylefile, NULL);
+		return stylefile;
 
 	for (i = 0; i < LENGTH(styles); i++) {
 		if (styles[i].regex && !regexec(&(styles[i].re), uri, 0,
 		    NULL, 0))
-			return g_strconcat("file://", styles[i].style, NULL);
+			return styles[i].style;
 	}
-	return g_strdup("");
+
+	return "";
 }
 
 void
@@ -1285,8 +1286,8 @@ void
 setup(void)
 {
 	int i;
-	char *proxy;
-	char *new_proxy;
+	char *proxy, *new_proxy;
+	char *styledirfile, *stylepath;
 	SoupURI *puri;
 	SoupSession *s;
 	GError *error = NULL;
@@ -1306,8 +1307,8 @@ setup(void)
 	cookiefile = buildfile(cookiefile);
 	scriptfile = buildfile(scriptfile);
 	cachefolder = buildpath(cachefolder);
-	styledir = buildpath(styledir);
 	if (stylefile == NULL) {
+		styledir = buildpath(styledir);
 		for (i = 0; i < LENGTH(styles); i++) {
 			if (regcomp(&(styles[i].re), styles[i].regex,
 			    REG_EXTENDED)) {
@@ -1316,11 +1317,19 @@ setup(void)
 				        styles[i].regex);
 				styles[i].regex = NULL;
 			}
-			styles[i].style = buildfile(g_strconcat(styledir, "/",
-			                            styles[i].style, NULL));
+			styledirfile    = g_strconcat(styledir, "/",
+			                              styles[i].style, NULL);
+			stylepath       = buildfile(styledirfile);
+			styles[i].style = g_strconcat("file://", stylepath,
+			                              NULL);
+			g_free(styledirfile);
+			g_free(stylepath);
 		}
+		g_free(styledir);
 	} else {
-		stylefile = buildfile(stylefile);
+		stylepath = buildfile(stylefile);
+		stylefile = g_strconcat("file://", stylepath, NULL);
+		g_free(stylepath);
 	}
 
 	/* request handler */
@@ -1523,11 +1532,10 @@ void
 togglestyle(Client *c, const Arg *arg)
 {
 	WebKitWebSettings *settings = webkit_web_view_get_settings(c->view);
-	char *uri;
 
 	enablestyles = !enablestyles;
-	uri = enablestyles ? getstyle(geturi(c)) : g_strdup("");
-	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", uri, NULL);
+	g_object_set(G_OBJECT(settings), "user-stylesheet-uri",
+	             enablestyles ? getstyle(geturi(c)) : "", NULL);
 
 	updatetitle(c);
 }
