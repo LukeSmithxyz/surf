@@ -695,10 +695,12 @@ initdownload(WebKitWebView *view, WebKitDownload *o, Client *c)
 void
 inspector(Client *c, const Arg *arg)
 {
-	if (c->isinspecting)
-		webkit_web_inspector_close(c->inspector);
-	else
-		webkit_web_inspector_show(c->inspector);
+	if (enableinspector) {
+		if (c->isinspecting)
+			webkit_web_inspector_close(c->inspector);
+		else
+			webkit_web_inspector_show(c->inspector);
+	}
 }
 
 WebKitWebView *
