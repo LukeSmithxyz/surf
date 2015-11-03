@@ -1053,10 +1053,8 @@ newclient(void)
 		c->isinspecting = false;
 	}
 
-	if (runinfullscreen) {
-		c->fullscreen = 0;
+	if (runinfullscreen)
 		fullscreen(c, NULL);
-	}
 
 	setatom(c, AtomFind, "");
 	setatom(c, AtomUri, "about:blank");
@@ -1685,10 +1683,10 @@ main(int argc, char *argv[])
 		embed = strtol(EARGF(usage()), NULL, 0);
 		break;
 	case 'f':
-		runinfullscreen = 1;
+		runinfullscreen = 0;
 		break;
 	case 'F':
-		runinfullscreen = 0;
+		runinfullscreen = 1;
 		break;
 	case 'g':
 		allowgeolocation = 0;
