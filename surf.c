@@ -1622,7 +1622,7 @@ updatewinid(Client *c)
 void
 usage(void)
 {
-	die("usage: %s [-bBfFgGiIkKnNpPsSvx] [-a cookiepolicies ] "
+	die("usage: %s [-bBdDfFgGiIkKmMnNpPsSvx] [-a cookiepolicies ] "
 	    "[-c cookiefile] [-e xid] [-r scriptfile] [-t stylefile] "
 	    "[-u useragent] [-z zoomlevel] [uri]\n", basename(argv0));
 }
