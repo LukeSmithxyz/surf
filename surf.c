@@ -803,7 +803,7 @@ loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c)
 		}
 		setatom(c, AtomUri, uri);
 
-		if (enablestyles)
+		if (enablestyle)
 			setstyle(c, getstyle(uri));
 		break;
 	case WEBKIT_LOAD_FINISHED:
@@ -1021,7 +1021,7 @@ newclient(void)
 	             "default-font-size", defaultfontsize, NULL);
 	g_object_set(G_OBJECT(settings),
 	             "resizable-text-areas", 1, NULL);
-	if (enablestyles)
+	if (enablestyle)
 		setstyle(c, getstyle("about:blank"));
 
 	/*
@@ -1534,8 +1534,8 @@ togglescrollbars(Client *c, const Arg *arg)
 void
 togglestyle(Client *c, const Arg *arg)
 {
-	enablestyles = !enablestyles;
-	setstyle(c, enablestyles ? getstyle(geturi(c)) : "");
+	enablestyle = !enablestyle;
+	setstyle(c, enablestyle ? getstyle(geturi(c)) : "");
 
 	updatetitle(c);
 }
@@ -1566,7 +1566,7 @@ gettogglestat(Client *c)
 	g_object_get(G_OBJECT(settings), "enable-plugins", &value, NULL);
 	togglestat[p++] = value? 'V': 'v';
 
-	togglestat[p++] = enablestyles ? 'M': 'm';
+	togglestat[p++] = enablestyle ? 'M': 'm';
 
 	togglestat[p] = '\0';
 }
@@ -1709,10 +1709,10 @@ main(int argc, char *argv[])
 		kioskmode = 1;
 		break;
 	case 'm':
-		enablestyles = 0;
+		enablestyle = 0;
 		break;
 	case 'M':
-		enablestyles = 1;
+		enablestyle = 1;
 		break;
 	case 'n':
 		enableinspector = 0;
