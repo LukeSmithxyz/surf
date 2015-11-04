@@ -273,6 +273,7 @@ buildfile(const char *path)
 	g_free(dname);
 
 	fpath = g_build_filename(bpath, bname, NULL);
+	g_free(bpath);
 	g_free(bname);
 
 	if (!(f = fopen(fpath, "a")))
