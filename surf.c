@@ -57,7 +57,7 @@ typedef struct Client {
 	Window xid;
 	WebKitWebView *view;
 	WebKitWebInspector *inspector;
-	char *title, *linkhover;
+	const char *title, *linkhover;
 	const char *needle;
 	gint progress;
 	struct Client *next;
@@ -179,7 +179,7 @@ static void setup(void);
 static void sigchld(int unused);
 static void spawn(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
-static void titlechange(WebKitWebView *view, GParamSpec *pspec, Client *c);
+static void titlechanged(WebKitWebView *view, GParamSpec *ps, Client *c);
 static void titlechangeleave(void *a, void *b, Client *c);
 static void toggle(Client *c, const Arg *arg);
 static void togglecookiepolicy(Client *c, const Arg *arg);
@@ -865,7 +865,7 @@ newview(Client *c, WebKitWebView *rv)
 
 	g_signal_connect(G_OBJECT(v),
 	                 "notify::title",
-			 G_CALLBACK(titlechange), c);
+			 G_CALLBACK(titlechanged), c);
 	g_signal_connect(G_OBJECT(v),
 	                 "hovering-over-link",
 			 G_CALLBACK(linkhover), c);
@@ -1277,13 +1277,10 @@ stop(Client *c, const Arg *arg)
 }
 
 void
-titlechange(WebKitWebView *view, GParamSpec *pspec, Client *c)
+titlechanged(WebKitWebView *view, GParamSpec *ps, Client *c)
 {
-	const gchar *t = webkit_web_view_get_title(view);
-	if (t) {
-		c->title = copystr(&c->title, t);
-		updatetitle(c);
-	}
+	c->title = webkit_web_view_get_title(c->view);
+	updatetitle(c);
 }
 
 void
