@@ -141,7 +141,10 @@ static void setstyle(Client *c, const char *style);
 
 static void handleplumb(Client *c, WebKitWebView *w, const gchar *uri);
 
-static gboolean initdownload(WebKitWebView *v, WebKitDownload *o, Client *c);
+static void downloadstarted(WebKitWebContext *wc, WebKitDownload *d,
+		Client *c);
+static void responsereceived(WebKitDownload *d, GParamSpec *ps, Client *c);
+static void download(Client *c, WebKitURIResponse *r);
 
 static void inspector(Client *c, const Arg *arg);
 static WebKitWebView *inspector_new(WebKitWebInspector *i, WebKitWebView *v,
@@ -698,15 +701,27 @@ handleplumb(Client *c, WebKitWebView *w, const gchar *uri)
 	spawn(c, &arg);
 }
 
-gboolean
-initdownload(WebKitWebView *view, WebKitDownload *o, Client *c)
+void
+downloadstarted(WebKitWebContext *wc, WebKitDownload *d, Client *c)
 {
-	Arg arg;
+	g_signal_connect(G_OBJECT(d), "notify::response",
+	    G_CALLBACK(responsereceived), c);
+}
 
-	updatewinid(c);
-	arg = (Arg)DOWNLOAD((char *)webkit_download_get_uri(o), geturi(c));
-	spawn(c, &arg);
-	return FALSE;
+void
+responsereceived(WebKitDownload *d, GParamSpec *ps, Client *c)
+{
+	download(c, webkit_download_get_response(d));
+	webkit_download_cancel(d);
+}
+
+void
+download(Client *c, WebKitURIResponse *r)
+{
+	Arg a;
+
+	a = (Arg)DOWNLOAD(webkit_uri_response_get_uri(r), geturi(c));
+	spawn(c, &a);
 }
 
 void
@@ -962,6 +977,9 @@ newview(Client *c, WebKitWebView *rv)
 		    webkit_web_context_get_cookie_manager(context),
 		    cookiepolicy_get());
 
+		g_signal_connect(G_OBJECT(context), "download-started",
+		    G_CALLBACK(downloadstarted), c);
+
 		v = g_object_new(WEBKIT_TYPE_WEB_VIEW,
 		    "settings", settings,
 		    "user-content-manager", contentmanager,
@@ -995,9 +1013,6 @@ newview(Client *c, WebKitWebView *rv)
 	g_signal_connect(G_OBJECT(v),
 	                 "notify::estimated-load-progress",
 			 G_CALLBACK(progresschanged), c);
-	g_signal_connect(G_OBJECT(v),
-	                 "download-requested",
-			 G_CALLBACK(initdownload), c);
 	g_signal_connect(G_OBJECT(v),
 	                 "button-release-event",
 			 G_CALLBACK(buttonrelease), c);
