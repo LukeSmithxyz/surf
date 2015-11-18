@@ -60,11 +60,12 @@ typedef struct Client {
 	WebKitWebView *view;
 	WebKitWebInspector *inspector;
 	WebKitHitTestResult *mousepos;
+	GTlsCertificateFlags tlsflags;
 	const char *title, *targeturi;
 	const char *needle;
 	gint progress;
 	struct Client *next;
-	gboolean zoomed, fullscreen, isinspecting, sslfailed;
+	gboolean zoomed, fullscreen, isinspecting;
 } Client;
 
 typedef struct {
@@ -896,6 +897,7 @@ newclient(Client *rc)
 	clients = c;
 
 	c->view = newview(c, rc ? rc->view : NULL);
+	c->tlsflags = G_TLS_CERTIFICATE_VALIDATE_ALL + 1;
 
 	return c;
 }
@@ -1518,11 +1520,8 @@ getpagestat(Client *c)
 {
 	const char *uri = geturi(c);
 
-	if (strstr(uri, "https://") == uri)
-		pagestat[0] = c->sslfailed ? 'U' : 'T';
-	else
-		pagestat[0] = '-';
-
+	pagestats[0] = c->tlsflags > G_TLS_CERTIFICATE_VALIDATE_ALL ? '-' :
+	    c->tlsflags > 0 ? 'U' : 'T';
 	pagestat[1] = '\0';
 }
 
