@@ -156,6 +156,7 @@ static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec,
 static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
 static Client *newclient(void);
+static void showview(WebKitWebView *v, Client *c);
 static void newwindow(Client *c, const Arg *arg, gboolean noembed);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
 static gboolean contextmenu(WebKitWebView *view, GtkWidget *menu,
@@ -778,9 +779,6 @@ newclient(void)
 {
 	Client *c;
 	WebKitWebSettings *settings;
-	GdkGeometry hints = { 1, 1 };
-	GdkScreen *screen;
-	GdkWindow *gwin;
 	gdouble dpi;
 	char *ua;
 
@@ -789,6 +787,103 @@ newclient(void)
 
 	c->title = NULL;
 	c->progress = 100;
+
+	/* Webview */
+	c->view = WEBKIT_WEB_VIEW(webkit_web_view_new());
+
+	g_signal_connect(G_OBJECT(c->view),
+	                 "notify::title",
+			 G_CALLBACK(titlechange), c);
+	g_signal_connect(G_OBJECT(c->view),
+	                 "hovering-over-link",
+			 G_CALLBACK(linkhover), c);
+	g_signal_connect(G_OBJECT(c->view),
+	                 "geolocation-policy-decision-requested",
+			 G_CALLBACK(geopolicyrequested), c);
+	g_signal_connect(G_OBJECT(c->view),
+	                 "create-web-view",
+			 G_CALLBACK(createwindow), c);
+	g_signal_connect(G_OBJECT(v), "ready-to-show",
+			 G_CALLBACK(showview), c);
+	g_signal_connect(G_OBJECT(c->view),
+	                 "new-window-policy-decision-requested",
+			 G_CALLBACK(decidewindow), c);
+	g_signal_connect(G_OBJECT(c->view),
+	                 "mime-type-policy-decision-requested",
+			 G_CALLBACK(decidedownload), c);
+	g_signal_connect(G_OBJECT(c->view),
+	                 "window-object-cleared",
+			 G_CALLBACK(windowobjectcleared), c);
+	g_signal_connect(G_OBJECT(c->view),
+	                 "notify::load-status",
+			 G_CALLBACK(loadstatuschange), c);
+	g_signal_connect(G_OBJECT(c->view),
+	                 "notify::progress",
+			 G_CALLBACK(progresschange), c);
+	g_signal_connect(G_OBJECT(c->view),
+	                 "download-requested",
+			 G_CALLBACK(initdownload), c);
+	g_signal_connect(G_OBJECT(c->view),
+	                 "button-release-event",
+			 G_CALLBACK(buttonrelease), c);
+	g_signal_connect(G_OBJECT(c->view),
+	                 "context-menu",
+			 G_CALLBACK(contextmenu), c);
+	g_signal_connect(G_OBJECT(c->view),
+	                 "resource-request-starting",
+			 G_CALLBACK(beforerequest), c);
+	g_signal_connect(G_OBJECT(c->view),
+	                 "should-show-delete-interface-for-element",
+			 G_CALLBACK(deletion_interface), c);
+
+	settings = webkit_web_view_get_settings(c->view);
+	if (!(ua = getenv("SURF_USERAGENT")))
+		ua = useragent;
+	g_object_set(G_OBJECT(settings), "user-agent", ua, NULL);
+	g_object_set(G_OBJECT(settings),
+	             "auto-load-images", loadimages, NULL);
+	g_object_set(G_OBJECT(settings),
+	             "enable-plugins", enableplugins, NULL);
+	g_object_set(G_OBJECT(settings),
+	             "enable-scripts", enablescripts, NULL);
+	g_object_set(G_OBJECT(settings),
+		     "enable-spatial-navigation", enablespatialbrowsing, NULL);
+	g_object_set(G_OBJECT(settings),
+	             "enable-developer-extras", enableinspector, NULL);
+	g_object_set(G_OBJECT(settings),
+	             "enable-default-context-menu", kioskmode ^ 1, NULL);
+	g_object_set(G_OBJECT(settings),
+	             "default-font-size", defaultfontsize, NULL);
+	g_object_set(G_OBJECT(settings),
+	             "resizable-text-areas", 1, NULL);
+	if (enablestyle)
+		setstyle(c, getstyle("about:blank"));
+
+	if (enableinspector) {
+		c->inspector = webkit_web_view_get_inspector(c->view);
+		g_signal_connect(G_OBJECT(c->inspector), "inspect-web-view",
+		                 G_CALLBACK(inspector_new), c);
+		g_signal_connect(G_OBJECT(c->inspector), "show-window",
+		                 G_CALLBACK(inspector_show), c);
+		g_signal_connect(G_OBJECT(c->inspector), "close-window",
+		                 G_CALLBACK(inspector_close), c);
+		g_signal_connect(G_OBJECT(c->inspector), "finished",
+		                 G_CALLBACK(inspector_finished), c);
+		c->isinspecting = false;
+	}
+
+	c->next = clients;
+	clients = c;
+
+	return c;
+}
+
+void
+showview(WebKitWebView *v, Client *c)
+{
+	GdkGeometry hints = { 1, 1 };
+	GdkRGBA bgcolor = { 0 };
+	GdkWindow *gwin;
 
 	/* Window */
 	if (embed) {
@@ -821,52 +916,6 @@ newclient(void)
 	if (!kioskmode)
 		addaccelgroup(c);
 
-	/* Webview */
-	c->view = WEBKIT_WEB_VIEW(webkit_web_view_new());
-
-	g_signal_connect(G_OBJECT(c->view),
-	                 "notify::title",
-			 G_CALLBACK(titlechange), c);
-	g_signal_connect(G_OBJECT(c->view),
-	                 "hovering-over-link",
-			 G_CALLBACK(linkhover), c);
-	g_signal_connect(G_OBJECT(c->view),
-	                 "geolocation-policy-decision-requested",
-			 G_CALLBACK(geopolicyrequested), c);
-	g_signal_connect(G_OBJECT(c->view),
-	                 "create-web-view",
-			 G_CALLBACK(createwindow), c);
-	g_signal_connect(G_OBJECT(c->view),
-	                 "new-window-policy-decision-requested",
-			 G_CALLBACK(decidewindow), c);
-	g_signal_connect(G_OBJECT(c->view),
-	                 "mime-type-policy-decision-requested",
-			 G_CALLBACK(decidedownload), c);
-	g_signal_connect(G_OBJECT(c->view),
-	                 "window-object-cleared",
-			 G_CALLBACK(windowobjectcleared), c);
-	g_signal_connect(G_OBJECT(c->view),
-	                 "notify::load-status",
-			 G_CALLBACK(loadstatuschange), c);
-	g_signal_connect(G_OBJECT(c->view),
-	                 "notify::progress",
-			 G_CALLBACK(progresschange), c);
-	g_signal_connect(G_OBJECT(c->view),
-	                 "download-requested",
-			 G_CALLBACK(initdownload), c);
-	g_signal_connect(G_OBJECT(c->view),
-	                 "button-release-event",
-			 G_CALLBACK(buttonrelease), c);
-	g_signal_connect(G_OBJECT(c->view),
-	                 "context-menu",
-			 G_CALLBACK(contextmenu), c);
-	g_signal_connect(G_OBJECT(c->view),
-	                 "resource-request-starting",
-			 G_CALLBACK(beforerequest), c);
-	g_signal_connect(G_OBJECT(c->view),
-	                 "should-show-delete-interface-for-element",
-			 G_CALLBACK(deletion_interface), c);
-
 	/* Arranging */
 	gtk_container_add(GTK_CONTAINER(c->win), GTK_WIDGET(c->view));
 
@@ -880,49 +929,12 @@ newclient(void)
 				      GDK_HINT_MIN_SIZE);
 	gdk_window_set_events(gwin, GDK_ALL_EVENTS_MASK);
 	gdk_window_add_filter(gwin, processx, c);
-	webkit_web_view_set_full_content_zoom(c->view, TRUE);
 
 	runscript(frame);
-
-	settings = webkit_web_view_get_settings(c->view);
-	if (!(ua = getenv("SURF_USERAGENT")))
-		ua = useragent;
-	g_object_set(G_OBJECT(settings), "user-agent", ua, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "auto-load-images", loadimages, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "enable-plugins", enableplugins, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "enable-scripts", enablescripts, NULL);
-	g_object_set(G_OBJECT(settings),
-		     "enable-spatial-navigation", enablespatialbrowsing, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "enable-developer-extras", enableinspector, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "enable-default-context-menu", kioskmode ^ 1, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "default-font-size", defaultfontsize, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "resizable-text-areas", 1, NULL);
-	if (enablestyle)
-		setstyle(c, getstyle("about:blank"));
 
 	/* This might conflict with _zoomto96dpi_. */
 	if (zoomlevel != 1.0)
 		webkit_web_view_set_zoom_level(c->view, zoomlevel);
-
-	if (enableinspector) {
-		c->inspector = webkit_web_view_get_inspector(c->view);
-		g_signal_connect(G_OBJECT(c->inspector), "inspect-web-view",
-		                 G_CALLBACK(inspector_new), c);
-		g_signal_connect(G_OBJECT(c->inspector), "show-window",
-		                 G_CALLBACK(inspector_show), c);
-		g_signal_connect(G_OBJECT(c->inspector), "close-window",
-		                 G_CALLBACK(inspector_close), c);
-		g_signal_connect(G_OBJECT(c->inspector), "finished",
-		                 G_CALLBACK(inspector_finished), c);
-		c->isinspecting = false;
-	}
 
 	if (runinfullscreen)
 		fullscreen(c, NULL);
@@ -930,10 +942,7 @@ newclient(void)
 	setatom(c, AtomFind, "");
 	setatom(c, AtomUri, "about:blank");
 	if (hidebackground)
-		webkit_web_view_set_transparent(c->view, TRUE);
-
-	c->next = clients;
-	clients = c;
+		webkit_web_view_set_background_color(c->view, &bgcolor);
 
 	if (showxid) {
 		gdk_display_sync(gtk_widget_get_display(c->win));
@@ -943,8 +952,6 @@ newclient(void)
 			die("Error closing stdout");
                 }
 	}
-
-	return c;
 }
 
 void
