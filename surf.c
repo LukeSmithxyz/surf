@@ -104,7 +104,6 @@ static Client *clients = NULL;
 static Window embed = 0;
 static gboolean showxid = FALSE;
 static char winid[64];
-static gboolean usingproxy = 0;
 static char togglestat[9];
 static char pagestat[3];
 static GTlsDatabase *tlsdb;
@@ -1292,9 +1291,7 @@ void
 setup(void)
 {
 	int i;
-	char *proxy, *new_proxy;
 	char *styledirfile, *stylepath;
-	SoupURI *puri;
 	SoupSession *s;
 	GError *error = NULL;
 
@@ -1365,21 +1362,6 @@ setup(void)
 	}
 	g_object_set(G_OBJECT(s), "tls-database", tlsdb, NULL);
 	g_object_set(G_OBJECT(s), "ssl-strict", strictssl, NULL);
-
-	/* proxy */
-	if ((proxy = getenv("http_proxy")) && strcmp(proxy, "")) {
-		new_proxy = g_strrstr(proxy, "http://")
-		            || g_strrstr(proxy, "socks://")
-		            || g_strrstr(proxy, "socks4://")
-		            || g_strrstr(proxy, "socks5://")
-		            ? g_strdup(proxy)
-		            : g_strdup_printf("http://%s", proxy);
-		puri = soup_uri_new(new_proxy);
-		g_object_set(G_OBJECT(s), "proxy-uri", puri, NULL);
-		soup_uri_free(puri);
-		g_free(new_proxy);
-		usingproxy = 1;
-	}
 }
 
 void
@@ -1584,8 +1566,7 @@ getpagestat(Client *c)
 	else
 		pagestat[0] = '-';
 
-	pagestat[1] = usingproxy ? 'P' : '-';
-	pagestat[2] = '\0';
+	pagestat[1] = '\0';
 }
 
 void
