@@ -4,7 +4,7 @@ static char *useragent      = "Mozilla/5.0 (X11; U; Unix; en-US) "
                               "Chrome/24.0.1295.0 Safari/537.15 Surf/"VERSION;
 static char *scriptfile     = "~/.surf/script.js";
 static char *styledir       = "~/.surf/styles/";
-static char *cachefolder    = "~/.surf/cache/";
+static char *cachedir       = "~/.surf/cache/";
 
 static Bool kioskmode       = FALSE; /* Ignore shortcuts */
 static Bool showindicators  = TRUE;  /* Show indicators in window title */

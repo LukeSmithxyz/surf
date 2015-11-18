@@ -334,6 +334,7 @@ cleanup(void)
 	g_free(cookiefile);
 	g_free(scriptfile);
 	g_free(stylefile);
+	g_free(cachedir);
 }
 
 WebKitCookieAcceptPolicy
@@ -800,6 +801,8 @@ newview(Client *c, WebKitWebView *rv)
 {
 	WebKitWebView *v;
 	WebKitSettings *settings;
+	WebKitUserContentManager *contentmanager;
+	WebKitWebContext *context;
 	char *ua;
 
 	/* Webview */
@@ -807,43 +810,57 @@ newview(Client *c, WebKitWebView *rv)
 		v = WEBKIT_WEB_VIEW(
 		    webkit_web_view_new_with_related_view(rv));
 	} else {
-		v = WEBKIT_WEB_VIEW(webkit_web_view_new());
-
-		settings = webkit_web_view_get_settings(v);
+		settings = webkit_settings_new_with_settings(
+		    "auto-load-images", loadimages,
+		    "default-font-size", defaultfontsize,
+		    "enable-caret-browsing", enablecaretbrowsing,
+		    "enable-developer-extras", enableinspector,
+		    "enable-dns-prefetching", enablednsprefetching,
+		    "enable-frame-flattening", enableframeflattening,
+		    "enable-html5-database", enablecache,
+		    "enable-html5-local-storage", enablecache,
+		    "enable-javascript", enablescripts,
+		    "enable-plugins", enableplugins,
+		    NULL);
 		if (!(ua = getenv("SURF_USERAGENT")))
 			ua = useragent;
-		g_object_set(G_OBJECT(settings), "user-agent", ua, NULL);
-		g_object_set(G_OBJECT(settings),
-			     "auto-load-images", loadimages, NULL);
-		g_object_set(G_OBJECT(settings),
-			     "enable-plugins", enableplugins, NULL);
-		g_object_set(G_OBJECT(settings),
-			     "enable-scripts", enablescripts, NULL);
-		g_object_set(G_OBJECT(settings),
-			     "enable-spatial-navigation", enablespatialbrowsing, NULL);
-		g_object_set(G_OBJECT(settings),
-			     "enable-developer-extras", enableinspector, NULL);
-		g_object_set(G_OBJECT(settings),
-			     "enable-default-context-menu", kioskmode ^ 1, NULL);
-		g_object_set(G_OBJECT(settings),
-			     "default-font-size", defaultfontsize, NULL);
-		g_object_set(G_OBJECT(settings),
-			     "resizable-text-areas", 1, NULL);
-		if (enablestyle)
-			setstyle(c, getstyle("about:blank"));
+		webkit_settings_set_user_agent(settings, ua);
+		/* Have a look at http://webkitgtk.org/reference/webkit2gtk/stable/WebKitSettings.html
+		 * for more interesting settings */
 
-		if (enableinspector) {
-			c->inspector = webkit_web_view_get_inspector(v);
-			g_signal_connect(G_OBJECT(c->inspector), "inspect-web-view",
-					 G_CALLBACK(inspector_new), c);
-			g_signal_connect(G_OBJECT(c->inspector), "show-window",
-					 G_CALLBACK(inspector_show), c);
-			g_signal_connect(G_OBJECT(c->inspector), "close-window",
-					 G_CALLBACK(inspector_close), c);
-			g_signal_connect(G_OBJECT(c->inspector), "finished",
-					 G_CALLBACK(inspector_finished), c);
-			c->isinspecting = false;
-		}
+		contentmanager = webkit_user_content_manager_new();
+
+		context = webkit_web_context_new_with_website_data_manager(
+		    webkit_website_data_manager_new(
+		    "base-cache-directory", cachedir,
+		    "base-data-directory", cachedir,
+		    NULL));
+
+		/* rendering process model, can be a shared unique one or one for each
+		 * view */
+		webkit_web_context_set_process_model(context,
+		    WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
+		/* ssl */
+		webkit_web_context_set_tls_errors_policy(context, strictssl ?
+		    WEBKIT_TLS_ERRORS_POLICY_FAIL : WEBKIT_TLS_ERRORS_POLICY_IGNORE);
+		/* disk cache */
+		webkit_web_context_set_cache_model(context, enablecache ?
+		    WEBKIT_CACHE_MODEL_WEB_BROWSER : WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
+
+		/* Currently only works with text file to be compatible with curl */
+		webkit_cookie_manager_set_persistent_storage(
+		    webkit_web_context_get_cookie_manager(context), cookiefile,
+		    WEBKIT_COOKIE_PERSISTENT_STORAGE_TEXT);
+		/* cookie policy */
+		webkit_cookie_manager_set_accept_policy(
+		    webkit_web_context_get_cookie_manager(context),
+		    cookiepolicy_get());
+
+		v = g_object_new(WEBKIT_TYPE_WEB_VIEW,
+		    "settings", settings,
+		    "user-content-manager", contentmanager,
+		    "web-context", context,
+		    NULL);
 	}
 
 	g_signal_connect(G_OBJECT(v),
@@ -1196,7 +1213,7 @@ setup(void)
 	/* dirs and files */
 	cookiefile = buildfile(cookiefile);
 	scriptfile = buildfile(scriptfile);
-	cachefolder = buildpath(cachefolder);
+	cachedir   = buildpath(cachedir);
 	if (stylefile == NULL) {
 		styledir = buildpath(styledir);
 		for (i = 0; i < LENGTH(styles); i++) {
@@ -1221,29 +1238,6 @@ setup(void)
 		stylefile = g_strconcat("file://", stylepath, NULL);
 		g_free(stylepath);
 	}
-
-	/* cookie policy */
-	webkit_cookie_manager_set_persistent_storage(
-	    webkit_web_context_get_cookie_manager(context), cookiefile,
-	    WEBKIT_COOKIE_PERSISTENT_STORAGE_TEXT);
-	webkit_cookie_manager_set_accept_policy(
-	    webkit_web_context_get_cookie_manager(context),
-	    cookiepolicy_get());
-
-	/* rendering process model, can be a shared unique one or one for each
-	 * view */
-	webkit_web_context_set_process_model(context,
-	    WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
-
-	/* disk cache */
-	webkit_web_context_set_cache_model(context, enablecache ?
-	    WEBKIT_CACHE_MODEL_WEB_BROWSER :
-	    WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
-
-	/* ssl */
-	webkit_web_context_set_tls_errors_policy(context, strictssl ?
-	    WEBKIT_TLS_ERRORS_POLICY_FAIL :
-	    WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 }
 
 void
