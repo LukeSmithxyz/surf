@@ -169,7 +169,7 @@ static void menuactivate(GtkMenuItem *item, Client *c);
 static void print(Client *c, const Arg *arg);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
                                 gpointer d);
-static void progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c);
+static void progresschanged(WebKitWebView *v, GParamSpec *ps, Client *c);
 static void linkopen(Client *c, const Arg *arg);
 static void linkopenembed(Client *c, const Arg *arg);
 static void reload(Client *c, const Arg *arg);
@@ -993,8 +993,8 @@ newview(Client *c, WebKitWebView *rv)
 	                 "load-changed",
 			 G_CALLBACK(loadchanged), c);
 	g_signal_connect(G_OBJECT(v),
-	                 "notify::progress",
-			 G_CALLBACK(progresschange), c);
+	                 "notify::estimated-load-progress",
+			 G_CALLBACK(progresschanged), c);
 	g_signal_connect(G_OBJECT(v),
 	                 "download-requested",
 			 G_CALLBACK(initdownload), c);
@@ -1220,9 +1220,10 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d)
 }
 
 void
-progresschange(WebKitWebView *view, GParamSpec *pspec, Client *c)
+progresschanged(WebKitWebView *v, GParamSpec *ps, Client *c)
 {
-	c->progress = webkit_web_view_get_progress(c->view) * 100;
+	c->progress = webkit_web_view_get_estimated_load_progress(c->view) *
+	    100;
 	updatetitle(c);
 }
 
