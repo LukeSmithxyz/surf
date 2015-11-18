@@ -1259,15 +1259,9 @@ setup(void)
 	    WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
 
 	/* ssl */
-	tlsdb = g_tls_file_database_new(cafile, &error);
-
-	if (error) {
-		g_warning("Error loading SSL database %s: %s", cafile,
-		          error->message);
-		g_error_free(error);
-	}
-	g_object_set(G_OBJECT(s), "tls-database", tlsdb, NULL);
-	g_object_set(G_OBJECT(s), "ssl-strict", strictssl, NULL);
+	webkit_web_context_set_tls_errors_policy(context, strictssl ?
+	    WEBKIT_TLS_ERRORS_POLICY_FAIL :
+	    WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 }
 
 void
