@@ -155,7 +155,8 @@ static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec,
                              Client *c);
 static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
-static Client *newclient(void);
+static Client *newclient(Client *c);
+static WebKitWebView *newview(Client *c, WebKitWebView *rv);
 static void showview(WebKitWebView *v, Client *c);
 static void newwindow(Client *c, const Arg *arg, gboolean noembed);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
@@ -775,12 +776,10 @@ navigate(Client *c, const Arg *arg)
 }
 
 Client *
-newclient(void)
+newclient(Client *rc)
 {
 	Client *c;
-	WebKitWebSettings *settings;
 	gdouble dpi;
-	char *ua;
 
 	if (!(c = calloc(1, sizeof(Client))))
 		die("Cannot malloc!\n");
@@ -788,94 +787,111 @@ newclient(void)
 	c->title = NULL;
 	c->progress = 100;
 
-	/* Webview */
-	c->view = WEBKIT_WEB_VIEW(webkit_web_view_new());
+	c->next = clients;
+	clients = c;
 
-	g_signal_connect(G_OBJECT(c->view),
+	c->view = newview(c, rc ? rc->view : NULL);
+
+	return c;
+}
+
+WebKitWebView *
+newview(Client *c, WebKitWebView *rv)
+{
+	WebKitWebView *v;
+	WebKitSettings *settings;
+	char *ua;
+
+	/* Webview */
+	if (rv) {
+		v = WEBKIT_WEB_VIEW(
+		    webkit_web_view_new_with_related_view(rv));
+	} else {
+		v = WEBKIT_WEB_VIEW(webkit_web_view_new());
+
+		settings = webkit_web_view_get_settings(v);
+		if (!(ua = getenv("SURF_USERAGENT")))
+			ua = useragent;
+		g_object_set(G_OBJECT(settings), "user-agent", ua, NULL);
+		g_object_set(G_OBJECT(settings),
+			     "auto-load-images", loadimages, NULL);
+		g_object_set(G_OBJECT(settings),
+			     "enable-plugins", enableplugins, NULL);
+		g_object_set(G_OBJECT(settings),
+			     "enable-scripts", enablescripts, NULL);
+		g_object_set(G_OBJECT(settings),
+			     "enable-spatial-navigation", enablespatialbrowsing, NULL);
+		g_object_set(G_OBJECT(settings),
+			     "enable-developer-extras", enableinspector, NULL);
+		g_object_set(G_OBJECT(settings),
+			     "enable-default-context-menu", kioskmode ^ 1, NULL);
+		g_object_set(G_OBJECT(settings),
+			     "default-font-size", defaultfontsize, NULL);
+		g_object_set(G_OBJECT(settings),
+			     "resizable-text-areas", 1, NULL);
+		if (enablestyle)
+			setstyle(c, getstyle("about:blank"));
+
+		if (enableinspector) {
+			c->inspector = webkit_web_view_get_inspector(v);
+			g_signal_connect(G_OBJECT(c->inspector), "inspect-web-view",
+					 G_CALLBACK(inspector_new), c);
+			g_signal_connect(G_OBJECT(c->inspector), "show-window",
+					 G_CALLBACK(inspector_show), c);
+			g_signal_connect(G_OBJECT(c->inspector), "close-window",
+					 G_CALLBACK(inspector_close), c);
+			g_signal_connect(G_OBJECT(c->inspector), "finished",
+					 G_CALLBACK(inspector_finished), c);
+			c->isinspecting = false;
+		}
+	}
+
+	g_signal_connect(G_OBJECT(v),
 	                 "notify::title",
 			 G_CALLBACK(titlechange), c);
-	g_signal_connect(G_OBJECT(c->view),
+	g_signal_connect(G_OBJECT(v),
 	                 "hovering-over-link",
 			 G_CALLBACK(linkhover), c);
-	g_signal_connect(G_OBJECT(c->view),
+	g_signal_connect(G_OBJECT(v),
 	                 "geolocation-policy-decision-requested",
 			 G_CALLBACK(geopolicyrequested), c);
-	g_signal_connect(G_OBJECT(c->view),
+	g_signal_connect(G_OBJECT(v),
 	                 "create-web-view",
 			 G_CALLBACK(createwindow), c);
 	g_signal_connect(G_OBJECT(v), "ready-to-show",
 			 G_CALLBACK(showview), c);
-	g_signal_connect(G_OBJECT(c->view),
+	g_signal_connect(G_OBJECT(v),
 	                 "new-window-policy-decision-requested",
 			 G_CALLBACK(decidewindow), c);
-	g_signal_connect(G_OBJECT(c->view),
+	g_signal_connect(G_OBJECT(v),
 	                 "mime-type-policy-decision-requested",
 			 G_CALLBACK(decidedownload), c);
-	g_signal_connect(G_OBJECT(c->view),
+	g_signal_connect(G_OBJECT(v),
 	                 "window-object-cleared",
 			 G_CALLBACK(windowobjectcleared), c);
-	g_signal_connect(G_OBJECT(c->view),
+	g_signal_connect(G_OBJECT(v),
 	                 "notify::load-status",
 			 G_CALLBACK(loadstatuschange), c);
-	g_signal_connect(G_OBJECT(c->view),
+	g_signal_connect(G_OBJECT(v),
 	                 "notify::progress",
 			 G_CALLBACK(progresschange), c);
-	g_signal_connect(G_OBJECT(c->view),
+	g_signal_connect(G_OBJECT(v),
 	                 "download-requested",
 			 G_CALLBACK(initdownload), c);
-	g_signal_connect(G_OBJECT(c->view),
+	g_signal_connect(G_OBJECT(v),
 	                 "button-release-event",
 			 G_CALLBACK(buttonrelease), c);
-	g_signal_connect(G_OBJECT(c->view),
+	g_signal_connect(G_OBJECT(v),
 	                 "context-menu",
 			 G_CALLBACK(contextmenu), c);
-	g_signal_connect(G_OBJECT(c->view),
+	g_signal_connect(G_OBJECT(v),
 	                 "resource-request-starting",
 			 G_CALLBACK(beforerequest), c);
-	g_signal_connect(G_OBJECT(c->view),
+	g_signal_connect(G_OBJECT(v),
 	                 "should-show-delete-interface-for-element",
 			 G_CALLBACK(deletion_interface), c);
 
-	settings = webkit_web_view_get_settings(c->view);
-	if (!(ua = getenv("SURF_USERAGENT")))
-		ua = useragent;
-	g_object_set(G_OBJECT(settings), "user-agent", ua, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "auto-load-images", loadimages, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "enable-plugins", enableplugins, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "enable-scripts", enablescripts, NULL);
-	g_object_set(G_OBJECT(settings),
-		     "enable-spatial-navigation", enablespatialbrowsing, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "enable-developer-extras", enableinspector, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "enable-default-context-menu", kioskmode ^ 1, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "default-font-size", defaultfontsize, NULL);
-	g_object_set(G_OBJECT(settings),
-	             "resizable-text-areas", 1, NULL);
-	if (enablestyle)
-		setstyle(c, getstyle("about:blank"));
-
-	if (enableinspector) {
-		c->inspector = webkit_web_view_get_inspector(c->view);
-		g_signal_connect(G_OBJECT(c->inspector), "inspect-web-view",
-		                 G_CALLBACK(inspector_new), c);
-		g_signal_connect(G_OBJECT(c->inspector), "show-window",
-		                 G_CALLBACK(inspector_show), c);
-		g_signal_connect(G_OBJECT(c->inspector), "close-window",
-		                 G_CALLBACK(inspector_close), c);
-		g_signal_connect(G_OBJECT(c->inspector), "finished",
-		                 G_CALLBACK(inspector_finished), c);
-		c->isinspecting = false;
-	}
-
-	c->next = clients;
-	clients = c;
-
-	return c;
+	return v;
 }
 
 void
@@ -1589,7 +1605,8 @@ main(int argc, char *argv[])
 		arg.v = argv[0];
 
 	setup();
-	c = newclient();
+	c = newclient(NULL);
+	showview(NULL, c);
 	if (arg.v)
 		loaduri(clients, &arg);
 	else
