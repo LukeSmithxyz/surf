@@ -907,20 +907,6 @@ newclient(void)
 	if (enablestyle)
 		setstyle(c, getstyle("about:blank"));
 
-	/*
-	 * While stupid, CSS specifies that a pixel represents 1/96 of an inch.
-	 * This ensures websites are not unusably small with a high DPI screen.
-	 * It is equivalent to firefox's "layout.css.devPixelsPerPx" setting.
-	 */
-	if (zoomto96dpi) {
-		screen = gdk_window_get_screen(gwin);
-		dpi = gdk_screen_get_resolution(screen);
-		if (dpi != -1) {
-			g_object_set(G_OBJECT(settings),
-			             "enforce-96-dpi", true, NULL);
-			webkit_web_view_set_zoom_level(c->view, dpi/96);
-		}
-	}
 	/* This might conflict with _zoomto96dpi_. */
 	if (zoomlevel != 1.0)
 		webkit_web_view_set_zoom_level(c->view, zoomlevel);
