@@ -1207,6 +1207,11 @@ setup(void)
 	    webkit_web_context_get_cookie_manager(context),
 	    cookiepolicy_get());
 
+	/* rendering process model, can be a shared unique one or one for each
+	 * view */
+	webkit_web_context_set_process_model(context,
+	    WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
+
 	/* disk cache */
 	webkit_web_context_set_cache_model(context, enablecache ?
 	    WEBKIT_CACHE_MODEL_WEB_BROWSER :
