@@ -53,7 +53,7 @@ union Arg {
 };
 
 typedef struct Client {
-	GtkWidget *win, *scroll, *vbox, *pane;
+	GtkWidget *win;
 	Window xid;
 	WebKitWebView *view;
 	WebKitWebInspector *inspector;
@@ -778,7 +778,6 @@ newclient(void)
 {
 	Client *c;
 	WebKitWebSettings *settings;
-	WebKitWebFrame *frame;
 	GdkGeometry hints = { 1, 1 };
 	GdkScreen *screen;
 	GdkWindow *gwin;
@@ -821,13 +820,6 @@ newclient(void)
 
 	if (!kioskmode)
 		addaccelgroup(c);
-
-	/* Pane */
-	c->pane = gtk_paned_new(GTK_ORIENTATION_VERTICAL);
-
-	/* VBox */
-	c->vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-	gtk_paned_pack1(GTK_PANED(c->pane), c->vbox, TRUE, TRUE);
 
 	/* Webview */
 	c->view = WEBKIT_WEB_VIEW(webkit_web_view_new());
@@ -875,35 +867,11 @@ newclient(void)
 	                 "should-show-delete-interface-for-element",
 			 G_CALLBACK(deletion_interface), c);
 
-	/* Scrolled Window */
-	c->scroll = gtk_scrolled_window_new(NULL, NULL);
-
-	frame = webkit_web_view_get_main_frame(WEBKIT_WEB_VIEW(c->view));
-	g_signal_connect(G_OBJECT(frame), "scrollbars-policy-changed",
-	                 G_CALLBACK(gtk_true), NULL);
-
-	if (!enablescrollbars) {
-		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(c->scroll),
-		                               GTK_POLICY_NEVER,
-					       GTK_POLICY_NEVER);
-	} else {
-		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(c->scroll),
-		                               GTK_POLICY_AUTOMATIC,
-					       GTK_POLICY_AUTOMATIC);
-	}
-
 	/* Arranging */
-	gtk_container_add(GTK_CONTAINER(c->scroll), GTK_WIDGET(c->view));
-	gtk_container_add(GTK_CONTAINER(c->win), c->pane);
-	gtk_container_add(GTK_CONTAINER(c->vbox), c->scroll);
+	gtk_container_add(GTK_CONTAINER(c->win), GTK_WIDGET(c->view));
 
 	/* Setup */
-	gtk_box_set_child_packing(GTK_BOX(c->vbox), c->scroll, TRUE, TRUE, 0,
-	                          GTK_PACK_START);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
-	gtk_widget_show(c->pane);
-	gtk_widget_show(c->vbox);
-	gtk_widget_show(c->scroll);
 	gtk_widget_show(GTK_WIDGET(c->view));
 	gtk_widget_show(c->win);
 	gwin = gtk_widget_get_window(GTK_WIDGET(c->win));
