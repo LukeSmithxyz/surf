@@ -130,8 +130,8 @@ static void die(const char *errstr, ...);
 static void eval(Client *c, const Arg *arg);
 static void find(Client *c, const Arg *arg);
 static void fullscreen(Client *c, const Arg *arg);
-static void geopolicyrequested(WebKitWebView *v, WebKitWebFrame *f,
-                               WebKitGeolocationPolicyDecision *d, Client *c);
+static gboolean permissionrequested(WebKitWebView *v,
+		WebKitPermissionRequest *r, Client *c);
 static const char *getatom(Client *c, int a);
 static void gettogglestat(Client *c);
 static void getpagestat(Client *c);
@@ -527,14 +527,18 @@ fullscreen(Client *c, const Arg *arg)
 	c->fullscreen = !c->fullscreen;
 }
 
-void
-geopolicyrequested(WebKitWebView *v, WebKitWebFrame *f,
-                   WebKitGeolocationPolicyDecision *d, Client *c)
+gboolean
+permissionrequested(WebKitWebView *v, WebKitPermissionRequest *r, Client *c)
 {
-	if (allowgeolocation)
-		webkit_geolocation_policy_allow(d);
-	else
-		webkit_geolocation_policy_deny(d);
+	if (WEBKIT_IS_GEOLOCATION_PERMISSION_REQUEST(r)) {
+		if (allowgeolocation)
+			webkit_permission_request_allow(r);
+		else
+			webkit_permission_request_deny(r);
+		return TRUE;
+	}
+
+	return FALSE;
 }
 
 const char *
@@ -883,8 +887,8 @@ newview(Client *c, WebKitWebView *rv)
 	                 "mouse-target-changed",
 			 G_CALLBACK(mousetargetchanged), c);
 	g_signal_connect(G_OBJECT(v),
-	                 "geolocation-policy-decision-requested",
-			 G_CALLBACK(geopolicyrequested), c);
+	                 "permission-request",
+			 G_CALLBACK(permissionrequested), c);
 	g_signal_connect(G_OBJECT(v),
 	                 "create-web-view",
 			 G_CALLBACK(createwindow), c);
