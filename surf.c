@@ -153,8 +153,7 @@ static gboolean keypress(GtkAccelGroup *group, GObject *obj, guint key,
                          GdkModifierType mods, Client *c);
 static void mousetargetchanged(WebKitWebView *v, WebKitHitTestResult *h,
 		guint modifiers, Client *c);
-static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec,
-                             Client *c);
+static void loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c);
 static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *arg);
 static Client *newclient(Client *c);
@@ -809,37 +808,34 @@ mousetargetchanged(WebKitWebView *v, WebKitHitTestResult *h, guint modifiers,
 }
 
 void
-loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c)
+loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 {
-	WebKitWebFrame *frame;
-	WebKitWebDataSource *src;
-	WebKitNetworkRequest *request;
-	SoupMessage *msg;
-	char *uri;
-
-	switch (webkit_web_view_get_load_status (c->view)) {
+	switch (e) {
+	case WEBKIT_LOAD_STARTED:
+		c->tlsflags = G_TLS_CERTIFICATE_VALIDATE_ALL + 1;
+		break;
+	case WEBKIT_LOAD_REDIRECTED:
+		setatom(c, AtomUri, geturi(c));
+		break;
 	case WEBKIT_LOAD_COMMITTED:
-		uri = geturi(c);
-		if (strstr(uri, "https://") == uri) {
-			frame = webkit_web_view_get_main_frame(c->view);
-			src = webkit_web_frame_get_data_source(frame);
-			request = webkit_web_data_source_get_request(src);
-			msg = webkit_network_request_get_message(request);
-			c->sslfailed = !(soup_message_get_flags(msg)
-			               & SOUP_MESSAGE_CERTIFICATE_TRUSTED);
-		}
-		setatom(c, AtomUri, uri);
+		if (!webkit_web_view_get_tls_info(c->view, NULL, &(c->tlsflags)))
+			c->tlsflags = G_TLS_CERTIFICATE_VALIDATE_ALL + 1;
+
+		setatom(c, AtomUri, geturi(c));
 
 		if (enablestyle)
-			setstyle(c, getstyle(uri));
+			setstyle(c, getstyle(geturi(c)));
 		break;
 	case WEBKIT_LOAD_FINISHED:
-		c->progress = 100;
-		updatetitle(c);
-		break;
-	default:
+		/* Disabled until we write some WebKitWebExtension for
+		 * manipulating the DOM directly.
+		evalscript(c, "document.documentElement.style.overflow = '%s'",
+		    enablescrollbars ? "auto" : "hidden");
+		*/
+		runscript(c);
 		break;
 	}
+	updatetitle(c);
 }
 
 void
@@ -992,8 +988,8 @@ newview(Client *c, WebKitWebView *rv)
 	                 "window-object-cleared",
 			 G_CALLBACK(windowobjectcleared), c);
 	g_signal_connect(G_OBJECT(v),
-	                 "notify::load-status",
-			 G_CALLBACK(loadstatuschange), c);
+	                 "load-changed",
+			 G_CALLBACK(loadchanged), c);
 	g_signal_connect(G_OBJECT(v),
 	                 "notify::progress",
 			 G_CALLBACK(progresschange), c);
