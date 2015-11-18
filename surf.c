@@ -116,12 +116,11 @@ static char cookiepolicy_set(const WebKitCookieAcceptPolicy p);
 static char *copystr(char **str, const char *src);
 static GtkWidget *createview(WebKitWebView *v, WebKitNavigationAction *a,
 		Client *c);
-static gboolean decidedownload(WebKitWebView *v, WebKitWebFrame *f,
-                               WebKitNetworkRequest *r, gchar *m,
-			       WebKitWebPolicyDecision *p, Client *c);
-static gboolean decidewindow(WebKitWebView *v, WebKitWebFrame *f,
-                             WebKitNetworkRequest *r, WebKitWebNavigationAction
-			     *n, WebKitWebPolicyDecision *p, Client *c);
+static gboolean decidepolicy(WebKitWebView *v, WebKitPolicyDecision *d,
+    WebKitPolicyDecisionType dt, Client *c);
+static void decidenavigation(WebKitPolicyDecision *d, Client *c);
+static void decidenewwindow(WebKitPolicyDecision *d, Client *c);
+static void decideresource(WebKitPolicyDecision *d, Client *c);
 static gboolean deletion_interface(WebKitWebView *view,
                                    WebKitDOMHTMLElement *arg1, Client *c);
 static void destroyclient(Client *c);
@@ -438,6 +437,7 @@ createview(WebKitWebView *v, WebKitNavigationAction *a, Client *c)
 		 * popup windows of type “other” are almost always triggered
 		 * by user gesture, so inverse the logic here
 		 */
+/* instead of this, compare destination uri to mouse-over uri for validating window */
 		if (webkit_navigation_action_is_user_gesture(a)) {
 			return NULL;
 			break;
@@ -458,31 +458,99 @@ createview(WebKitWebView *v, WebKitNavigationAction *a, Client *c)
 }
 
 gboolean
-decidedownload(WebKitWebView *v, WebKitWebFrame *f, WebKitNetworkRequest *r,
-               gchar *m,  WebKitWebPolicyDecision *p, Client *c)
+decidepolicy(WebKitWebView *v, WebKitPolicyDecision *d,
+    WebKitPolicyDecisionType dt, Client *c)
 {
-	if (!webkit_web_view_can_show_mime_type(v, m)) {
-		webkit_web_policy_decision_download(p);
-		return TRUE;
+	switch (dt) {
+	case WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION:
+		decidenavigation(d, c);
+		break;
+	case WEBKIT_POLICY_DECISION_TYPE_NEW_WINDOW_ACTION:
+		decidenewwindow(d, c);
+		break;
+	case WEBKIT_POLICY_DECISION_TYPE_RESPONSE:
+		decideresource(d, c);
+		break;
+	default:
+		webkit_policy_decision_ignore(d);
+		break;
 	}
-	return FALSE;
+	return TRUE;
 }
 
-gboolean
-decidewindow(WebKitWebView *view, WebKitWebFrame *f, WebKitNetworkRequest *r,
-             WebKitWebNavigationAction *n, WebKitWebPolicyDecision *p,
-	     Client *c)
+void
+decidenavigation(WebKitPolicyDecision *d, Client *c)
 {
+	WebKitNavigationAction *a;
+
+	a = webkit_navigation_policy_decision_get_navigation_action(
+	    WEBKIT_NAVIGATION_POLICY_DECISION(d));
+
+	switch (webkit_navigation_action_get_navigation_type(a)) {
+	case WEBKIT_NAVIGATION_TYPE_LINK_CLICKED: /* fallthrough */
+	case WEBKIT_NAVIGATION_TYPE_FORM_SUBMITTED: /* fallthrough */
+	case WEBKIT_NAVIGATION_TYPE_BACK_FORWARD: /* fallthrough */
+	case WEBKIT_NAVIGATION_TYPE_RELOAD: /* fallthrough */
+	case WEBKIT_NAVIGATION_TYPE_FORM_RESUBMITTED:
+	case WEBKIT_NAVIGATION_TYPE_OTHER: /* fallthrough */
+	default:
+		/* Do not navigate to links with a "_blank" target (popup) */
+		if (webkit_navigation_policy_decision_get_frame_name(
+		    WEBKIT_NAVIGATION_POLICY_DECISION(d))) {
+			webkit_policy_decision_ignore(d);
+		} else {
+			/* Filter out navigation to different domain ? */
+			/* get action→urirequest, copy and load in new window+view
+			 * on Ctrl+Click ? */
+			webkit_policy_decision_use(d);
+		}
+		break;
+	}
+}
+
+void
+decidenewwindow(WebKitPolicyDecision *d, Client *c)
+{
+	WebKitNavigationAction *a;
 	Arg arg;
 
-	if (webkit_web_navigation_action_get_reason(n)
-	    == WEBKIT_WEB_NAVIGATION_REASON_LINK_CLICKED) {
-		webkit_web_policy_decision_ignore(p);
-		arg.v = (void *)webkit_network_request_get_uri(r);
-		newwindow(NULL, &arg, 0);
-		return TRUE;
+	a = webkit_navigation_policy_decision_get_navigation_action(
+	    WEBKIT_NAVIGATION_POLICY_DECISION(d));
+
+	switch (webkit_navigation_action_get_navigation_type(a)) {
+	case WEBKIT_NAVIGATION_TYPE_LINK_CLICKED: /* fallthrough */
+	case WEBKIT_NAVIGATION_TYPE_FORM_SUBMITTED: /* fallthrough */
+	case WEBKIT_NAVIGATION_TYPE_BACK_FORWARD: /* fallthrough */
+	case WEBKIT_NAVIGATION_TYPE_RELOAD: /* fallthrough */
+	case WEBKIT_NAVIGATION_TYPE_FORM_RESUBMITTED:
+		/* Filter domains here */
+/* If the value of “mouse-button” is not 0, then the navigation was triggered by a mouse event.
+ * test for link clicked but no button ? */
+		arg.v = webkit_uri_request_get_uri(
+		    webkit_navigation_action_get_request(a));
+		newwindow(c, &arg, 0);
+		break;
+	case WEBKIT_NAVIGATION_TYPE_OTHER: /* fallthrough */
+	default:
+		break;
 	}
-	return FALSE;
+
+	webkit_policy_decision_ignore(d);
+}
+
+void
+decideresource(WebKitPolicyDecision *d, Client *c)
+{
+	WebKitResponsePolicyDecision *r = WEBKIT_RESPONSE_POLICY_DECISION(d);
+	WebKitURIResponse *res;
+
+	if (webkit_response_policy_decision_is_mime_type_supported(r)) {
+		webkit_policy_decision_use(d);
+	} else {
+res = webkit_response_policy_decision_get_response(r);
+		webkit_policy_decision_ignore(d);
+		download(c, res);
+	}
 }
 
 gboolean
@@ -918,11 +986,8 @@ newview(Client *c, WebKitWebView *rv)
 	g_signal_connect(G_OBJECT(v), "ready-to-show",
 			 G_CALLBACK(showview), c);
 	g_signal_connect(G_OBJECT(v),
-	                 "new-window-policy-decision-requested",
-			 G_CALLBACK(decidewindow), c);
-	g_signal_connect(G_OBJECT(v),
-	                 "mime-type-policy-decision-requested",
-			 G_CALLBACK(decidedownload), c);
+	                 "decide-policy",
+			 G_CALLBACK(decidepolicy), c);
 	g_signal_connect(G_OBJECT(v),
 	                 "window-object-cleared",
 			 G_CALLBACK(windowobjectcleared), c);
