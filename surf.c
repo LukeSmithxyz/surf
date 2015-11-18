@@ -197,7 +197,6 @@ static void scroll(GtkAdjustment *a, const Arg *arg);
 static void setatom(Client *c, int a, const char *v);
 static void setup(void);
 static void sigchld(int unused);
-static void source(Client *c, const Arg *arg);
 static void spawn(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechange(WebKitWebView *view, GParamSpec *pspec, Client *c);
@@ -1370,17 +1369,6 @@ sigchld(int unused)
 	if (signal(SIGCHLD, sigchld) == SIG_ERR)
 		die("Can't install SIGCHLD handler");
 	while (0 < waitpid(-1, NULL, WNOHANG));
-}
-
-void
-source(Client *c, const Arg *arg)
-{
-	Arg a = { .b = FALSE };
-	gboolean s;
-
-	s = webkit_web_view_get_view_source_mode(c->view);
-	webkit_web_view_set_view_source_mode(c->view, !s);
-	reload(c, &a);
 }
 
 void
