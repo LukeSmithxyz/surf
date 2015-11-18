@@ -33,8 +33,6 @@ char *argv0;
 
 #define LENGTH(x)               (sizeof(x) / sizeof(x[0]))
 #define CLEANMASK(mask)         (mask & (MODKEY|GDK_SHIFT_MASK))
-#define COOKIEJAR_TYPE          (cookiejar_get_type ())
-#define COOKIEJAR(obj)          (G_TYPE_CHECK_INSTANCE_CAST ((obj), COOKIEJAR_TYPE, CookieJar))
 
 enum { AtomFind, AtomGo, AtomUri, AtomLast };
 enum {
@@ -82,17 +80,6 @@ typedef struct {
 } Button;
 
 typedef struct {
-	SoupCookieJarText parent_instance;
-	int lock;
-} CookieJar;
-
-typedef struct {
-	SoupCookieJarTextClass parent_class;
-} CookieJarClass;
-
-G_DEFINE_TYPE(CookieJar, cookiejar, SOUP_TYPE_COOKIE_JAR_TEXT)
-
-typedef struct {
 	char *regex;
 	char *style;
 	regex_t re;
@@ -107,7 +94,7 @@ static char winid[64];
 static char togglestat[9];
 static char pagestat[3];
 static GTlsDatabase *tlsdb;
-static int policysel = 0;
+static int cookiepolicy;
 static char *stylefile = NULL;
 static SoupCache *diskcache = NULL;
 
@@ -121,16 +108,8 @@ static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e, Client *c);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
 
-/* Cookiejar implementation */
-static void cookiejar_changed(SoupCookieJar *self, SoupCookie *old_cookie,
-                              SoupCookie *new_cookie);
-static void cookiejar_finalize(GObject *self);
-static SoupCookieJarAcceptPolicy cookiepolicy_get(void);
-static SoupCookieJar *cookiejar_new(const char *filename, gboolean read_only,
-                                    SoupCookieJarAcceptPolicy policy);
-static void cookiejar_set_property(GObject *self, guint prop_id,
-    const GValue *value, GParamSpec *pspec);
-static char cookiepolicy_set(const SoupCookieJarAcceptPolicy p);
+static WebKitCookieAcceptPolicy cookiepolicy_get(void);
+static char cookiepolicy_set(const WebKitCookieAcceptPolicy p);
 
 static char *copystr(char **str, const char *src);
 static WebKitWebView *createwindow(WebKitWebView *v, WebKitWebFrame *f,
@@ -360,90 +339,31 @@ cleanup(void)
 	g_free(stylefile);
 }
 
-void
-cookiejar_changed(SoupCookieJar *self, SoupCookie *old_cookie,
-                  SoupCookie *new_cookie)
-{
-	flock(COOKIEJAR(self)->lock, LOCK_EX);
-	if (new_cookie && !new_cookie->expires && sessiontime) {
-		soup_cookie_set_expires(new_cookie,
-		                        soup_date_new_from_now(sessiontime));
-	}
-	SOUP_COOKIE_JAR_CLASS(cookiejar_parent_class)->changed(self,
-	                                                       old_cookie,
-							       new_cookie);
-	flock(COOKIEJAR(self)->lock, LOCK_UN);
-}
-
-void
-cookiejar_class_init(CookieJarClass *klass)
-{
-	SOUP_COOKIE_JAR_CLASS(klass)->changed = cookiejar_changed;
-	G_OBJECT_CLASS(klass)->get_property =
-	    G_OBJECT_CLASS(cookiejar_parent_class)->get_property;
-	G_OBJECT_CLASS(klass)->set_property = cookiejar_set_property;
-	G_OBJECT_CLASS(klass)->finalize = cookiejar_finalize;
-	g_object_class_override_property(G_OBJECT_CLASS(klass), 1, "filename");
-}
-
-void
-cookiejar_finalize(GObject *self)
-{
-	close(COOKIEJAR(self)->lock);
-	G_OBJECT_CLASS(cookiejar_parent_class)->finalize(self);
-}
-
-void
-cookiejar_init(CookieJar *self)
-{
-	self->lock = open(cookiefile, 0);
-}
-
-SoupCookieJar *
-cookiejar_new(const char *filename, gboolean read_only,
-              SoupCookieJarAcceptPolicy policy)
-{
-	return g_object_new(COOKIEJAR_TYPE,
-	                    SOUP_COOKIE_JAR_TEXT_FILENAME, filename,
-			    SOUP_COOKIE_JAR_READ_ONLY, read_only,
-			    SOUP_COOKIE_JAR_ACCEPT_POLICY, policy, NULL);
-}
-
-void
-cookiejar_set_property(GObject *self, guint prop_id, const GValue *value,
-                       GParamSpec *pspec)
-{
-	flock(COOKIEJAR(self)->lock, LOCK_SH);
-	G_OBJECT_CLASS(cookiejar_parent_class)->set_property(self, prop_id,
-	                                                     value, pspec);
-	flock(COOKIEJAR(self)->lock, LOCK_UN);
-}
-
-SoupCookieJarAcceptPolicy
+WebKitCookieAcceptPolicy
 cookiepolicy_get(void)
 {
-	switch (cookiepolicies[policysel]) {
+	switch (cookiepolicies[cookiepolicy]) {
 	case 'a':
-		return SOUP_COOKIE_JAR_ACCEPT_NEVER;
+		return WEBKIT_COOKIE_POLICY_ACCEPT_NEVER;
 	case '@':
-		return SOUP_COOKIE_JAR_ACCEPT_NO_THIRD_PARTY;
+		return WEBKIT_COOKIE_POLICY_ACCEPT_NO_THIRD_PARTY;
 	case 'A':
 	default:
 		break;
 	}
 
-	return SOUP_COOKIE_JAR_ACCEPT_ALWAYS;
+	return WEBKIT_COOKIE_POLICY_ACCEPT_ALWAYS;
 }
 
 char
-cookiepolicy_set(const SoupCookieJarAcceptPolicy ep)
+cookiepolicy_set(const WebKitCookieAcceptPolicy ep)
 {
 	switch (ep) {
-	case SOUP_COOKIE_JAR_ACCEPT_NEVER:
+	case WEBKIT_COOKIE_POLICY_ACCEPT_NEVER:
 		return 'a';
-	case SOUP_COOKIE_JAR_ACCEPT_NO_THIRD_PARTY:
+	case WEBKIT_COOKIE_POLICY_ACCEPT_NO_THIRD_PARTY:
 		return '@';
-	case SOUP_COOKIE_JAR_ACCEPT_ALWAYS:
+	case WEBKIT_COOKIE_POLICY_ACCEPT_ALWAYS:
 	default:
 		break;
 	}
@@ -1292,6 +1212,7 @@ setup(void)
 	int i;
 	char *styledirfile, *stylepath;
 	SoupSession *s;
+	WebKitWebContext *context;
 	GError *error = NULL;
 
 	/* clean up any zombies immediately */
@@ -1337,10 +1258,13 @@ setup(void)
 	/* request handler */
 	s = webkit_get_default_session();
 
-	/* cookie jar */
-	soup_session_add_feature(s,
-	                         SOUP_SESSION_FEATURE(cookiejar_new(cookiefile,
-	                         FALSE, cookiepolicy_get())));
+	/* cookie policy */
+	webkit_cookie_manager_set_persistent_storage(
+	    webkit_web_context_get_cookie_manager(context), cookiefile,
+	    WEBKIT_COOKIE_PERSISTENT_STORAGE_TEXT);
+	webkit_cookie_manager_set_accept_policy(
+	    webkit_web_context_get_cookie_manager(context),
+	    cookiepolicy_get());
 
 	/* disk cache */
 	if (enablediskcache) {
@@ -1434,19 +1358,13 @@ toggle(Client *c, const Arg *arg)
 void
 togglecookiepolicy(Client *c, const Arg *arg)
 {
-	SoupCookieJar *jar;
-	SoupCookieJarAcceptPolicy policy;
+	++cookiepolicy;
+	cookiepolicy %= strlen(cookiepolicies);
 
-	jar = SOUP_COOKIE_JAR(soup_session_get_feature(
-	                      webkit_get_default_session(),
-	                      SOUP_TYPE_COOKIE_JAR));
-	g_object_get(G_OBJECT(jar), "accept-policy", &policy, NULL);
-
-	policysel++;
-	if (policysel >= strlen(cookiepolicies))
-		policysel = 0;
-
-	g_object_set(G_OBJECT(jar), "accept-policy", cookiepolicy_get(), NULL);
+	webkit_cookie_manager_set_accept_policy(
+	    webkit_web_context_get_cookie_manager(
+	    webkit_web_view_get_context(c->view)),
+	    cookiepolicy_get());
 
 	updatetitle(c);
 	/* Do not reload. */
