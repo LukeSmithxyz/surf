@@ -17,7 +17,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <webkit/webkit.h>
+#include <webkit2/webkit2.h>
 #include <glib/gstdio.h>
 #include <JavaScriptCore/JavaScript.h>
 #include <sys/file.h>
