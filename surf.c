@@ -59,7 +59,8 @@ typedef struct Client {
 	Window xid;
 	WebKitWebView *view;
 	WebKitWebInspector *inspector;
-	const char *title, *linkhover;
+	WebKitHitTestResult *mousepos;
+	const char *title, *targeturi;
 	const char *needle;
 	gint progress;
 	struct Client *next;
@@ -151,8 +152,8 @@ static void inspector_finished(WebKitWebInspector *i, Client *c);
 
 static gboolean keypress(GtkAccelGroup *group, GObject *obj, guint key,
                          GdkModifierType mods, Client *c);
-static void linkhover(WebKitWebView *v, const char* t, const char* l,
-                      Client *c);
+static void mousetargetchanged(WebKitWebView *v, WebKitHitTestResult *h,
+		guint modifiers, Client *c);
 static void loadstatuschange(WebKitWebView *view, GParamSpec *pspec,
                              Client *c);
 static void loaduri(Client *c, const Arg *arg);
@@ -691,14 +692,24 @@ keypress(GtkAccelGroup *group, GObject *obj, guint key, GdkModifierType mods,
 }
 
 void
-linkhover(WebKitWebView *v, const char* t, const char* l, Client *c)
+mousetargetchanged(WebKitWebView *v, WebKitHitTestResult *h, guint modifiers,
+    Client *c)
 {
-	if (l) {
-		c->linkhover = copystr(&c->linkhover, l);
-	} else if (c->linkhover) {
-		free(c->linkhover);
-		c->linkhover = NULL;
-	}
+	WebKitHitTestResultContext hc;
+
+	/* Keep the hit test to know where is the pointer on the next click */
+	c->mousepos = h;
+
+	hc = webkit_hit_test_result_get_context(h);
+
+	if (hc & OnLink)
+		c->targeturi = webkit_hit_test_result_get_link_uri(h);
+	else if (hc & OnImg)
+		c->targeturi = webkit_hit_test_result_get_image_uri(h);
+	else if (hc & OnMedia)
+		c->targeturi = webkit_hit_test_result_get_media_uri(h);
+	else
+		c->targeturi = NULL;
 	updatetitle(c);
 }
 
@@ -869,8 +880,8 @@ newview(Client *c, WebKitWebView *rv)
 	                 "notify::title",
 			 G_CALLBACK(titlechanged), c);
 	g_signal_connect(G_OBJECT(v),
-	                 "hovering-over-link",
-			 G_CALLBACK(linkhover), c);
+	                 "mouse-target-changed",
+			 G_CALLBACK(mousetargetchanged), c);
 	g_signal_connect(G_OBJECT(v),
 	                 "geolocation-policy-decision-requested",
 			 G_CALLBACK(geopolicyrequested), c);
