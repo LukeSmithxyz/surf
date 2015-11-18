@@ -96,7 +96,6 @@ static char pagestat[3];
 static GTlsDatabase *tlsdb;
 static int cookiepolicy;
 static char *stylefile = NULL;
-static SoupCache *diskcache = NULL;
 
 static void addaccelgroup(Client *c);
 static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
@@ -328,10 +327,6 @@ buttonrelease(WebKitWebView *web, GdkEventButton *e, Client *c)
 void
 cleanup(void)
 {
-	if (diskcache) {
-		soup_cache_flush(diskcache);
-		soup_cache_dump(diskcache);
-	}
 	while (clients)
 		destroyclient(clients);
 	g_free(cookiefile);
@@ -730,10 +725,6 @@ loadstatuschange(WebKitWebView *view, GParamSpec *pspec, Client *c)
 	case WEBKIT_LOAD_FINISHED:
 		c->progress = 100;
 		updatetitle(c);
-		if (diskcache) {
-			soup_cache_flush(diskcache);
-			soup_cache_dump(diskcache);
-		}
 		break;
 	default:
 		break;
@@ -1211,7 +1202,6 @@ setup(void)
 {
 	int i;
 	char *styledirfile, *stylepath;
-	SoupSession *s;
 	WebKitWebContext *context;
 	GError *error = NULL;
 
@@ -1255,9 +1245,6 @@ setup(void)
 		g_free(stylepath);
 	}
 
-	/* request handler */
-	s = webkit_get_default_session();
-
 	/* cookie policy */
 	webkit_cookie_manager_set_persistent_storage(
 	    webkit_web_context_get_cookie_manager(context), cookiefile,
@@ -1267,13 +1254,9 @@ setup(void)
 	    cookiepolicy_get());
 
 	/* disk cache */
-	if (enablediskcache) {
-		diskcache = soup_cache_new(cachefolder,
-		                           SOUP_CACHE_SINGLE_USER);
-		soup_cache_set_max_size(diskcache, diskcachebytes);
-		soup_cache_load(diskcache);
-		soup_session_add_feature(s, SOUP_SESSION_FEATURE(diskcache));
-	}
+	webkit_web_context_set_cache_model(context, enablecache ?
+	    WEBKIT_CACHE_MODEL_WEB_BROWSER :
+	    WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
 
 	/* ssl */
 	tlsdb = g_tls_file_database_new(cafile, &error);
