@@ -114,8 +114,8 @@ static WebKitCookieAcceptPolicy cookiepolicy_get(void);
 static char cookiepolicy_set(const WebKitCookieAcceptPolicy p);
 
 static char *copystr(char **str, const char *src);
-static WebKitWebView *createwindow(WebKitWebView *v, WebKitWebFrame *f,
-                                   Client *c);
+static GtkWidget *createview(WebKitWebView *v, WebKitNavigationAction *a,
+		Client *c);
 static gboolean decidedownload(WebKitWebView *v, WebKitWebFrame *f,
                                WebKitNetworkRequest *r, gchar *m,
 			       WebKitWebPolicyDecision *p, Client *c);
@@ -427,11 +427,34 @@ copystr(char **str, const char *src)
 	return tmp;
 }
 
-WebKitWebView *
-createwindow(WebKitWebView  *v, WebKitWebFrame *f, Client *c)
+GtkWidget *
+createview(WebKitWebView *v, WebKitNavigationAction *a, Client *c)
 {
-	Client *n = newclient();
-	return n->view;
+	Client *n;
+
+	switch (webkit_navigation_action_get_navigation_type(a)) {
+	case WEBKIT_NAVIGATION_TYPE_OTHER: /* fallthrough */
+		/*
+		 * popup windows of type “other” are almost always triggered
+		 * by user gesture, so inverse the logic here
+		 */
+		if (webkit_navigation_action_is_user_gesture(a)) {
+			return NULL;
+			break;
+		}
+	case WEBKIT_NAVIGATION_TYPE_LINK_CLICKED: /* fallthrough */
+	case WEBKIT_NAVIGATION_TYPE_FORM_SUBMITTED: /* fallthrough */
+	case WEBKIT_NAVIGATION_TYPE_BACK_FORWARD: /* fallthrough */
+	case WEBKIT_NAVIGATION_TYPE_RELOAD: /* fallthrough */
+	case WEBKIT_NAVIGATION_TYPE_FORM_RESUBMITTED:
+		n = newclient(c);
+		break;
+	default:
+		return NULL;
+		break;
+	}
+
+	return GTK_WIDGET(n->view);
 }
 
 gboolean
@@ -890,8 +913,8 @@ newview(Client *c, WebKitWebView *rv)
 	                 "permission-request",
 			 G_CALLBACK(permissionrequested), c);
 	g_signal_connect(G_OBJECT(v),
-	                 "create-web-view",
-			 G_CALLBACK(createwindow), c);
+	                 "create",
+			 G_CALLBACK(createview), c);
 	g_signal_connect(G_OBJECT(v), "ready-to-show",
 			 G_CALLBACK(showview), c);
 	g_signal_connect(G_OBJECT(v),
