@@ -188,8 +188,6 @@ static void togglestyle(Client *c, const Arg *arg);
 static void updatetitle(Client *c);
 static void updatewinid(Client *c);
 static void usage(void);
-static void windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame,
-                                JSContextRef js, JSObjectRef win, Client *c);
 static void zoom(Client *c, const Arg *arg);
 
 /* configuration, allows nested code to access above variables */
@@ -994,9 +992,6 @@ newview(Client *c, WebKitWebView *rv)
 	                 "decide-policy",
 			 G_CALLBACK(decidepolicy), c);
 	g_signal_connect(G_OBJECT(v),
-	                 "window-object-cleared",
-			 G_CALLBACK(windowobjectcleared), c);
-	g_signal_connect(G_OBJECT(v),
 	                 "load-changed",
 			 G_CALLBACK(loadchanged), c);
 	g_signal_connect(G_OBJECT(v),
@@ -1036,8 +1031,6 @@ showview(WebKitWebView *v, Client *c)
 				      GDK_HINT_MIN_SIZE);
 	gdk_window_set_events(gwin, GDK_ALL_EVENTS_MASK);
 	gdk_window_add_filter(gwin, processx, c);
-
-	runscript(frame);
 
 	/* This might conflict with _zoomto96dpi_. */
 	if (zoomlevel != 1.0)
@@ -1526,13 +1519,6 @@ usage(void)
 	die("usage: %s [-bBdDfFgGiIkKmMnNpPsSvx] [-a cookiepolicies ] "
 	    "[-c cookiefile] [-e xid] [-r scriptfile] [-t stylefile] "
 	    "[-u useragent] [-z zoomlevel] [uri]\n", basename(argv0));
-}
-
-void
-windowobjectcleared(GtkWidget *w, WebKitWebFrame *frame, JSContextRef js,
-                    JSObjectRef win, Client *c)
-{
-	runscript(frame);
 }
 
 void
