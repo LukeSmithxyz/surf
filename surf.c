@@ -107,7 +107,7 @@ static char *buildfile(const char *path);
 static char *buildpath(const char *path);
 static gboolean buttonreleased(GtkWidget *w, GdkEventKey *e, Client *c);
 static void cleanup(void);
-static void clipboard(Client *c, const Arg *arg);
+static void clipboard(Client *c, const Arg *a);
 
 static WebKitCookieAcceptPolicy cookiepolicy_get(void);
 static char cookiepolicy_set(const WebKitCookieAcceptPolicy p);
@@ -362,18 +362,16 @@ runscript(Client *c)
 }
 
 void
-clipboard(Client *c, const Arg *arg)
+clipboard(Client *c, const Arg *a)
 {
-	gboolean paste = *(gboolean *)arg;
-
-	if (paste) {
+	if (a->b) { /* load clipboard uri */
 		gtk_clipboard_request_text(gtk_clipboard_get(
 		                           GDK_SELECTION_PRIMARY),
 		                           pasteuri, c);
-	} else {
+	} else { /* copy uri */
 		gtk_clipboard_set_text(gtk_clipboard_get(
-		                       GDK_SELECTION_PRIMARY), c->linkhover
-		                       ? c->linkhover : geturi(c), -1);
+		                       GDK_SELECTION_PRIMARY), c->targeturi
+		                       ? c->targeturi : geturi(c), -1);
 	}
 }
 
