@@ -107,7 +107,7 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_i,      scroll_h,   { .i = +1 } },
 	{ MODKEY,                GDK_KEY_u,      scroll_h,   { .i = -1 } },
 
-	{ 0,                     GDK_KEY_F11,    fullscreen, { 0 } },
+	{ 0,                     GDK_KEY_F11,    togglefullscreen, { 0 } },
 	{ 0,                     GDK_KEY_Escape, stop,       { 0 } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_o,      inspector,  { 0 } },
 

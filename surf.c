@@ -127,7 +127,7 @@ static void die(const char *errstr, ...);
 static void evalscript(Client *c, const char *jsstr, ...);
 static void runscript(Client *c);
 static void find(Client *c, const Arg *arg);
-static void fullscreen(Client *c, const Arg *arg);
+static void togglefullscreen(Client *c, const Arg *a);
 static gboolean permissionrequested(WebKitWebView *v,
 		WebKitPermissionRequest *r, Client *c);
 static const char *getatom(Client *c, int a);
@@ -600,13 +600,13 @@ find(Client *c, const Arg *arg)
 }
 
 void
-fullscreen(Client *c, const Arg *arg)
+togglefullscreen(Client *c, const Arg *a)
 {
+	/* toggling value is handled in winevent() */
 	if (c->fullscreen)
 		gtk_window_unfullscreen(GTK_WINDOW(c->win));
 	else
 		gtk_window_fullscreen(GTK_WINDOW(c->win));
-	c->fullscreen = !c->fullscreen;
 }
 
 gboolean
@@ -1037,7 +1037,7 @@ showview(WebKitWebView *v, Client *c)
 		webkit_web_view_set_zoom_level(c->view, zoomlevel);
 
 	if (runinfullscreen)
-		fullscreen(c, NULL);
+		togglefullscreen(c, NULL);
 
 	setatom(c, AtomFind, "");
 	setatom(c, AtomUri, "about:blank");
@@ -1126,6 +1126,8 @@ createwindow(Client *c)
 	g_signal_connect(G_OBJECT(w), "destroy",
 	    G_CALLBACK(destroywin), c);
 	g_signal_connect(G_OBJECT(w), "leave-notify-event",
+	    G_CALLBACK(winevent), c);
+	g_signal_connect(G_OBJECT(w), "window-state-event",
 	    G_CALLBACK(winevent), c);
 
 	return w;
@@ -1339,6 +1341,13 @@ winevent(GtkWidget *w, GdkEvent *e, Client *c)
 		c->targeturi = NULL;
 		updatetitle(c);
 		break;
+	case GDK_WINDOW_STATE: /* fallthrough */
+		if (e->window_state.changed_mask ==
+		    GDK_WINDOW_STATE_FULLSCREEN) {
+			c->fullscreen = e->window_state.new_window_state &
+			    GDK_WINDOW_STATE_FULLSCREEN;
+			break;
+		}
 	default:
 		return FALSE;
 	}
