@@ -76,11 +76,12 @@ typedef struct {
 } Key;
 
 typedef struct {
-	unsigned int click;
+	unsigned int target;
 	unsigned int mask;
 	guint button;
-	void (*func)(Client *c, const Arg *arg);
+	void (*func)(Client *c, const Arg *a, WebKitHitTestResult *h);
 	const Arg arg;
+	unsigned int stopevent;
 } Button;
 
 typedef struct {
@@ -107,7 +108,7 @@ static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
                           WebKitNetworkResponse *resp, Client *c);
 static char *buildfile(const char *path);
 static char *buildpath(const char *path);
-static gboolean buttonrelease(WebKitWebView *web, GdkEventButton *e, Client *c);
+static gboolean buttonreleased(GtkWidget *w, GdkEventKey *e, Client *c);
 static void cleanup(void);
 static void clipboard(Client *c, const Arg *arg);
 
@@ -308,27 +309,25 @@ buildpath(const char *path)
 }
 
 gboolean
-buttonrelease(WebKitWebView *web, GdkEventButton *e, Client *c)
+buttonreleased(GtkWidget *w, GdkEventKey *e, Client *c)
 {
-	WebKitHitTestResultContext context;
-	WebKitHitTestResult *result;
-	Arg arg;
-	unsigned int i;
+	WebKitHitTestResultContext element;
+	GdkEventButton *eb = (GdkEventButton*)e;
+	int i;
 
-	result = webkit_web_view_get_hit_test_result(web, e);
-	g_object_get(result, "context", &context, NULL);
-	g_object_get(result, "link-uri", &arg.v, NULL);
-	for (i = 0; i < LENGTH(buttons); i++) {
-		if (context & buttons[i].click
-		    && e->button == buttons[i].button
-		    && CLEANMASK(e->state) == CLEANMASK(buttons[i].mask)
-		    && buttons[i].func) {
-			buttons[i].func(c, buttons[i].click == ClkLink
-			    && buttons[i].arg.i == 0 ? &arg : &buttons[i].arg);
-			return true;
+	element = webkit_hit_test_result_get_context(c->mousepos);
+
+	for (i = 0; i < LENGTH(buttons); ++i) {
+		if (element & buttons[i].target &&
+		    eb->button == buttons[i].button &&
+		    CLEANMASK(eb->state) == CLEANMASK(buttons[i].mask) &&
+		    buttons[i].func) {
+			buttons[i].func(c, &buttons[i].arg, c->mousepos);
+			return buttons[i].stopevent;
 		}
 	}
-	return false;
+
+	return FALSE;
 }
 
 void
@@ -1015,7 +1014,7 @@ newview(Client *c, WebKitWebView *rv)
 			 G_CALLBACK(progresschanged), c);
 	g_signal_connect(G_OBJECT(v),
 	                 "button-release-event",
-			 G_CALLBACK(buttonrelease), c);
+			 G_CALLBACK(buttonreleased), c);
 	g_signal_connect(G_OBJECT(v),
 	                 "context-menu",
 			 G_CALLBACK(contextmenu), c);

@@ -129,9 +129,9 @@ static Key keys[] = {
 };
 
 /* button definitions */
-/* where can be OnDoc, OnLink, OnImg, OnMedia, OnEdit, OnBar, OnSel, OnAny */
+/* target can be OnDoc, OnLink, OnImg, OnMedia, OnEdit, OnBar, OnSel, OnAny */
 static Button buttons[] = {
-	/* where        event mask      button  function        argument        stop event */
+	/* target       event mask      button  function        argument        stop event */
 	{ OnLink,       0,              2,      linkopenembed,  { 0 },          1 },
 	{ OnLink,       MODKEY,         2,      linkopen,       { 0 },          1 },
 	{ OnLink,       MODKEY,         1,      linkopen,       { 0 },          1 },
