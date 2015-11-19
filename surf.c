@@ -124,7 +124,8 @@ static void closeview(WebKitWebView *v, Client *c);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 static void die(const char *errstr, ...);
-static void eval(Client *c, const Arg *arg);
+static void evalscript(Client *c, const char *jsstr, ...);
+static void runscript(Client *c);
 static void find(Client *c, const Arg *arg);
 static void fullscreen(Client *c, const Arg *arg);
 static gboolean permissionrequested(WebKitWebView *v,
@@ -336,29 +337,28 @@ cookiepolicy_set(const WebKitCookieAcceptPolicy ep)
 }
 
 void
-evalscript(JSContextRef js, char *script, char* scriptname)
+evalscript(Client *c, const char *jsstr, ...)
 {
-	JSStringRef jsscript, jsscriptname;
-	JSValueRef exception = NULL;
+	va_list ap;
+	gchar *script;
 
-	jsscript = JSStringCreateWithUTF8CString(script);
-	jsscriptname = JSStringCreateWithUTF8CString(scriptname);
-	JSEvaluateScript(js, jsscript, JSContextGetGlobalObject(js),
-	                 jsscriptname, 0, &exception);
-	JSStringRelease(jsscript);
-	JSStringRelease(jsscriptname);
+	va_start(ap, jsstr);
+	script = g_strdup_vprintf(jsstr, ap);
+	va_end(ap);
+
+	webkit_web_view_run_javascript(c->view, script, NULL, NULL, NULL);
+	g_free(script);
 }
 
 void
-runscript(WebKitWebFrame *frame)
+runscript(Client *c)
 {
-	char *script;
-	GError *error;
+	gchar *script;
+	gsize l;
 
-	if (g_file_get_contents(scriptfile, &script, NULL, &error)) {
-		evalscript(webkit_web_frame_get_global_context(frame), script,
-		           scriptfile);
-	}
+	if (g_file_get_contents(scriptfile, &script, &l, NULL) && l)
+		evalscript(c, script);
+	g_free(script);
 }
 
 void
@@ -1316,14 +1316,6 @@ spawn(Client *c, const Arg *arg)
 		perror(" failed");
 		exit(0);
 	}
-}
-
-void
-eval(Client *c, const Arg *arg)
-{
-	WebKitWebFrame *frame = webkit_web_view_get_main_frame(c->view);
-	evalscript(webkit_web_frame_get_global_context(frame),
-	           ((char **)arg->v)[0], "");
 }
 
 void
