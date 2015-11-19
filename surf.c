@@ -135,7 +135,7 @@ static void gettogglestat(Client *c);
 static void getpagestat(Client *c);
 static char *geturi(Client *c);
 static const gchar *getstyle(const char *uri);
-static void setstyle(Client *c, const char *style);
+static void setstyle(Client *c, const char *stylefile);
 
 static void handleplumb(Client *c, const gchar *uri);
 
@@ -670,11 +670,23 @@ getstyle(const char *uri)
 }
 
 void
-setstyle(Client *c, const char *style)
+setstyle(Client *c, const char *stylefile)
 {
-	WebKitWebSettings *settings = webkit_web_view_get_settings(c->view);
+	gchar *style;
 
-	g_object_set(G_OBJECT(settings), "user-stylesheet-uri", style, NULL);
+	if (!g_file_get_contents(stylefile, &style, NULL, NULL)) {
+		fprintf(stderr, "Could not read style file: %s\n", stylefile);
+		return;
+	}
+
+	webkit_user_content_manager_add_style_sheet(
+	    webkit_web_view_get_user_content_manager(c->view),
+	    webkit_user_style_sheet_new(style,
+	    WEBKIT_USER_CONTENT_INJECT_ALL_FRAMES,
+	    WEBKIT_USER_STYLE_LEVEL_USER,
+	    NULL, NULL));
+
+	g_free(style);
 }
 
 void
