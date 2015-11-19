@@ -1263,7 +1263,6 @@ void
 setup(void)
 {
 	int i;
-	char *styledirfile, *stylepath;
 	WebKitWebContext *context;
 	GError *error = NULL;
 
@@ -1282,6 +1281,7 @@ setup(void)
 	cookiefile = buildfile(cookiefile);
 	scriptfile = buildfile(scriptfile);
 	cachedir   = buildpath(cachedir);
+
 	if (stylefile == NULL) {
 		styledir = buildpath(styledir);
 		for (i = 0; i < LENGTH(styles); i++) {
@@ -1292,19 +1292,12 @@ setup(void)
 				        styles[i].regex);
 				styles[i].regex = NULL;
 			}
-			styledirfile    = g_strconcat(styledir, "/",
-			                              styles[i].style, NULL);
-			stylepath       = buildfile(styledirfile);
-			styles[i].style = g_strconcat("file://", stylepath,
-			                              NULL);
-			g_free(styledirfile);
-			g_free(stylepath);
+			styles[i].style = g_strconcat(styledir, "/",
+			    styles[i].style, NULL);
 		}
 		g_free(styledir);
 	} else {
-		stylepath = buildfile(stylefile);
-		stylefile = g_strconcat("file://", stylepath, NULL);
-		g_free(stylepath);
+		stylefile = buildfile(stylefile);
 	}
 }
 
