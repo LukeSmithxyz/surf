@@ -167,6 +167,7 @@ static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
 static void print(Client *c, const Arg *arg);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
                                 gpointer d);
+static gboolean winevent(GtkWidget *w, GdkEvent *e, Client *c);
 static void progresschanged(WebKitWebView *v, GParamSpec *ps, Client *c);
 static void linkopen(Client *c, const Arg *arg);
 static void linkopenembed(Client *c, const Arg *arg);
@@ -180,7 +181,6 @@ static void sigchld(int unused);
 static void spawn(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechanged(WebKitWebView *view, GParamSpec *ps, Client *c);
-static void titlechangeleave(void *a, void *b, Client *c);
 static void toggle(Client *c, const Arg *arg);
 static void togglecookiepolicy(Client *c, const Arg *arg);
 static void togglegeolocation(Client *c, const Arg *arg);
@@ -1125,8 +1125,8 @@ createwindow(Client *c)
 
 	g_signal_connect(G_OBJECT(w), "destroy",
 	    G_CALLBACK(destroywin), c);
-	g_signal_connect(G_OBJECT(w), "leave_notify_event",
-	    G_CALLBACK(titlechangeleave), c);
+	g_signal_connect(G_OBJECT(w), "leave-notify-event",
+	    G_CALLBACK(winevent), c);
 
 	return w;
 }
@@ -1331,11 +1331,19 @@ titlechanged(WebKitWebView *view, GParamSpec *ps, Client *c)
 	updatetitle(c);
 }
 
-void
-titlechangeleave(void *a, void *b, Client *c)
+gboolean
+winevent(GtkWidget *w, GdkEvent *e, Client *c)
 {
-	c->linkhover = NULL;
-	updatetitle(c);
+	switch (e->type) {
+	case GDK_LEAVE_NOTIFY:
+		c->targeturi = NULL;
+		updatetitle(c);
+		break;
+	default:
+		return FALSE;
+	}
+
+	return TRUE;
 }
 
 void
