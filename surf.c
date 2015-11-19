@@ -166,10 +166,6 @@ static WebKitWebView *newview(Client *c, WebKitWebView *rv);
 static void showview(WebKitWebView *v, Client *c);
 static void newwindow(Client *c, const Arg *arg, gboolean noembed);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
-static gboolean contextmenu(WebKitWebView *view, GtkWidget *menu,
-                            WebKitHitTestResult *target, gboolean keyboard,
-			    Client *c);
-static void menuactivate(GtkMenuItem *item, Client *c);
 static void print(Client *c, const Arg *arg);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
                                 gpointer d);
@@ -1016,9 +1012,6 @@ newview(Client *c, WebKitWebView *rv)
 	                 "button-release-event",
 			 G_CALLBACK(buttonreleased), c);
 	g_signal_connect(G_OBJECT(v),
-	                 "context-menu",
-			 G_CALLBACK(contextmenu), c);
-	g_signal_connect(G_OBJECT(v),
 	                 "resource-request-starting",
 			 G_CALLBACK(beforerequest), c);
 	g_signal_connect(G_OBJECT(v),
@@ -1144,53 +1137,6 @@ newwindow(Client *c, const Arg *arg, gboolean noembed)
 		cmd[i++] = uri;
 	cmd[i++] = NULL;
 	spawn(NULL, &a);
-}
-
-gboolean
-contextmenu(WebKitWebView *view, GtkWidget *menu, WebKitHitTestResult *target,
-            gboolean keyboard, Client *c)
-{
-	GList *items = gtk_container_get_children(GTK_CONTAINER(GTK_MENU(menu)));
-
-	for (GList *l = items; l; l = l->next)
-		g_signal_connect(l->data, "activate", G_CALLBACK(menuactivate), c);
-
-	g_list_free(items);
-	return FALSE;
-}
-
-void
-menuactivate(GtkMenuItem *item, Client *c)
-{
-	/*
-	 * context-menu-action-2000 open link
-	 * context-menu-action-1    open link in window
-	 * context-menu-action-2    download linked file
-	 * context-menu-action-3    copy link location
-	 * context-menu-action-7    copy image address
-	 * context-menu-action-13   reload
-	 * context-menu-action-10   back
-	 * context-menu-action-11   forward
-	 * context-menu-action-12   stop
-	 */
-
-	const gchar *name, *uri;
-	GtkClipboard *prisel, *clpbrd;
-
-	name = gtk_actionable_get_action_name(GTK_ACTIONABLE(item));
-	if (name == NULL)
-		return;
-
-	if (!g_strcmp0(name, "context-menu-action-3")) {
-		prisel = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
-		gtk_clipboard_set_text(prisel, c->linkhover, -1);
-	} else if (!g_strcmp0(name, "context-menu-action-7")) {
-		prisel = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
-		clpbrd = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
-		uri = gtk_clipboard_wait_for_text(clpbrd);
-		if (uri)
-			gtk_clipboard_set_text(prisel, uri, -1);
-	}
 }
 
 void
