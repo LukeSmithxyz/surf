@@ -65,7 +65,7 @@ typedef struct Client {
 	const char *needle;
 	gint progress;
 	struct Client *next;
-	gboolean zoomed, fullscreen, isinspecting;
+	gboolean zoomed, fullscreen;
 } Client;
 
 typedef struct {
@@ -144,12 +144,7 @@ static void downloadstarted(WebKitWebContext *wc, WebKitDownload *d,
 static void responsereceived(WebKitDownload *d, GParamSpec *ps, Client *c);
 static void download(Client *c, WebKitURIResponse *r);
 
-static void inspector(Client *c, const Arg *arg);
-static WebKitWebView *inspector_new(WebKitWebInspector *i, WebKitWebView *v,
-                                    Client *c);
-static gboolean inspector_show(WebKitWebInspector *i, Client *c);
-static gboolean inspector_close(WebKitWebInspector *i, Client *c);
-static void inspector_finished(WebKitWebInspector *i, Client *c);
+static void toggleinspector(Client *c, const Arg *a);
 
 static gboolean keypress(GtkAccelGroup *group, GObject *obj, guint key,
                          GdkModifierType mods, Client *c);
@@ -722,58 +717,14 @@ download(Client *c, WebKitURIResponse *r)
 }
 
 void
-inspector(Client *c, const Arg *arg)
+toggleinspector(Client *c, const Arg *a)
 {
 	if (enableinspector) {
-		if (c->isinspecting)
+		if (webkit_web_inspector_is_attached(c->inspector))
 			webkit_web_inspector_close(c->inspector);
 		else
 			webkit_web_inspector_show(c->inspector);
 	}
-}
-
-WebKitWebView *
-inspector_new(WebKitWebInspector *i, WebKitWebView *v, Client *c)
-{
-	return WEBKIT_WEB_VIEW(webkit_web_view_new());
-}
-
-gboolean
-inspector_show(WebKitWebInspector *i, Client *c)
-{
-	WebKitWebView *w;
-
-	if (c->isinspecting)
-		return false;
-
-	w = webkit_web_inspector_get_web_view(i);
-	gtk_paned_pack2(GTK_PANED(c->pane), GTK_WIDGET(w), TRUE, TRUE);
-	gtk_widget_show(GTK_WIDGET(w));
-	c->isinspecting = true;
-
-	return true;
-}
-
-gboolean
-inspector_close(WebKitWebInspector *i, Client *c)
-{
-	GtkWidget *w;
-
-	if (!c->isinspecting)
-		return false;
-
-	w = GTK_WIDGET(webkit_web_inspector_get_web_view(i));
-	gtk_widget_hide(w);
-	gtk_widget_destroy(w);
-	c->isinspecting = false;
-
-	return true;
-}
-
-void
-inspector_finished(WebKitWebInspector *i, Client *c)
-{
-	g_free(c->inspector);
 }
 
 gboolean
@@ -1024,6 +975,9 @@ showview(WebKitWebView *v, Client *c)
 	GdkWindow *gwin;
 
 	c->win = createwindow(c);
+
+	if (enableinspector)
+		c->inspector = webkit_web_view_get_inspector(c->view);
 
 	if (!kioskmode)
 		addaccelgroup(c);

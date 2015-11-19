@@ -109,7 +109,7 @@ static Key keys[] = {
 
 	{ 0,                     GDK_KEY_F11,    togglefullscreen, { 0 } },
 	{ 0,                     GDK_KEY_Escape, stop,       { 0 } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_o,      inspector,  { 0 } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_o,      toggleinspector, { 0 } },
 
 	{ MODKEY,                GDK_KEY_g,      spawn,      SETPROP("_SURF_URI", "_SURF_GO") },
 	{ MODKEY,                GDK_KEY_f,      spawn,      SETPROP("_SURF_FIND", "_SURF_FIND") },
