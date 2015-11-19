@@ -103,9 +103,6 @@ static int cookiepolicy;
 static char *stylefile = NULL;
 
 static void addaccelgroup(Client *c);
-static void beforerequest(WebKitWebView *w, WebKitWebFrame *f,
-                          WebKitWebResource *r, WebKitNetworkRequest *req,
-                          WebKitNetworkResponse *resp, Client *c);
 static char *buildfile(const char *path);
 static char *buildpath(const char *path);
 static gboolean buttonreleased(GtkWidget *w, GdkEventKey *e, Client *c);
@@ -140,7 +137,7 @@ static char *geturi(Client *c);
 static const gchar *getstyle(const char *uri);
 static void setstyle(Client *c, const char *style);
 
-static void handleplumb(Client *c, WebKitWebView *w, const gchar *uri);
+static void handleplumb(Client *c, const gchar *uri);
 
 static void downloadstarted(WebKitWebContext *wc, WebKitDownload *d,
 		Client *c);
@@ -211,35 +208,6 @@ addaccelgroup(Client *c)
 		                        closure);
 	}
 	gtk_window_add_accel_group(GTK_WINDOW(c->win), group);
-}
-
-void
-beforerequest(WebKitWebView *w, WebKitWebFrame *f, WebKitWebResource *r,
-              WebKitNetworkRequest *req, WebKitNetworkResponse *resp,
-	      Client *c)
-{
-	const gchar *uri = webkit_network_request_get_uri(req);
-	int i, isascii = 1;
-
-	if (g_str_has_suffix(uri, "/favicon.ico"))
-		webkit_network_request_set_uri(req, "about:blank");
-
-	if (!g_str_has_prefix(uri, "http://")
-	    && !g_str_has_prefix(uri, "https://")
-	    && !g_str_has_prefix(uri, "about:")
-	    && !g_str_has_prefix(uri, "file://")
-	    && !g_str_has_prefix(uri, "data:")
-	    && !g_str_has_prefix(uri, "blob:")
-	    && strlen(uri) > 0) {
-		for (i = 0; i < strlen(uri); i++) {
-			if (!g_ascii_isprint(uri[i])) {
-				isascii = 0;
-				break;
-			}
-		}
-		if (isascii)
-			handleplumb(c, w, uri);
-	}
 }
 
 char *
@@ -539,13 +507,41 @@ decidenewwindow(WebKitPolicyDecision *d, Client *c)
 void
 decideresource(WebKitPolicyDecision *d, Client *c)
 {
+	const gchar *uri;
+	int i, isascii = 1;
 	WebKitResponsePolicyDecision *r = WEBKIT_RESPONSE_POLICY_DECISION(d);
 	WebKitURIResponse *res;
+
+	res = webkit_response_policy_decision_get_response(r);
+	uri = webkit_uri_response_get_uri(res);
+
+	if (g_str_has_suffix(uri, "/favicon.ico"))
+		webkit_uri_request_set_uri(
+		    webkit_response_policy_decision_get_request(r),
+		    "about:blank");
+
+	if (!g_str_has_prefix(uri, "http://")
+	    && !g_str_has_prefix(uri, "https://")
+	    && !g_str_has_prefix(uri, "about:")
+	    && !g_str_has_prefix(uri, "file://")
+	    && !g_str_has_prefix(uri, "data:")
+	    && !g_str_has_prefix(uri, "blob:")
+	    && strlen(uri) > 0) {
+		for (i = 0; i < strlen(uri); i++) {
+			if (!g_ascii_isprint(uri[i])) {
+				isascii = 0;
+				break;
+			}
+		}
+		if (isascii) {
+			handleplumb(c, uri);
+			webkit_policy_decision_ignore(d);
+		}
+	}
 
 	if (webkit_response_policy_decision_is_mime_type_supported(r)) {
 		webkit_policy_decision_use(d);
 	} else {
-res = webkit_response_policy_decision_get_response(r);
 		webkit_policy_decision_ignore(d);
 		download(c, res);
 	}
@@ -687,12 +683,11 @@ setstyle(Client *c, const char *style)
 }
 
 void
-handleplumb(Client *c, WebKitWebView *w, const gchar *uri)
+handleplumb(Client *c, const gchar *uri)
 {
 	Arg arg;
 
-	webkit_web_view_stop_loading(w);
-	arg = (Arg)PLUMB((char *)uri);
+	arg = (Arg)PLUMB(uri);
 	spawn(c, &arg);
 }
 
@@ -1011,9 +1006,6 @@ newview(Client *c, WebKitWebView *rv)
 	g_signal_connect(G_OBJECT(v),
 	                 "button-release-event",
 			 G_CALLBACK(buttonreleased), c);
-	g_signal_connect(G_OBJECT(v),
-	                 "resource-request-starting",
-			 G_CALLBACK(beforerequest), c);
 	g_signal_connect(G_OBJECT(v),
 	                 "should-show-delete-interface-for-element",
 			 G_CALLBACK(deletion_interface), c);
