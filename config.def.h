@@ -100,12 +100,13 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_l,      navigate,   { .i = +1 } },
 	{ MODKEY,                GDK_KEY_h,      navigate,   { .i = -1 } },
 
-	{ MODKEY,                GDK_KEY_j,      scroll_v,   { .i = +1 } },
-	{ MODKEY,                GDK_KEY_k,      scroll_v,   { .i = -1 } },
-	{ MODKEY,                GDK_KEY_b,      scroll_v,   { .i = -10000 } },
-	{ MODKEY,                GDK_KEY_space,  scroll_v,   { .i = +10000 } },
-	{ MODKEY,                GDK_KEY_i,      scroll_h,   { .i = +1 } },
-	{ MODKEY,                GDK_KEY_u,      scroll_h,   { .i = -1 } },
+	                                                     /* in page % */
+	{ MODKEY,                GDK_KEY_j,      scroll_v,   { .i = +10 } },
+	{ MODKEY,                GDK_KEY_k,      scroll_v,   { .i = -10 } },
+	{ MODKEY,                GDK_KEY_b,      scroll_v,   { .i = -50 } },
+	{ MODKEY,                GDK_KEY_space,  scroll_v,   { .i = +50 } },
+	{ MODKEY,                GDK_KEY_i,      scroll_h,   { .i = +10 } },
+	{ MODKEY,                GDK_KEY_u,      scroll_h,   { .i = -10 } },
 
 	{ 0,                     GDK_KEY_F11,    togglefullscreen, { 0 } },
 	{ 0,                     GDK_KEY_Escape, stop,       { 0 } },
