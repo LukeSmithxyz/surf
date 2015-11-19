@@ -120,8 +120,6 @@ static gboolean decidepolicy(WebKitWebView *v, WebKitPolicyDecision *d,
 static void decidenavigation(WebKitPolicyDecision *d, Client *c);
 static void decidenewwindow(WebKitPolicyDecision *d, Client *c);
 static void decideresource(WebKitPolicyDecision *d, Client *c);
-static gboolean deletion_interface(WebKitWebView *view,
-                                   WebKitDOMHTMLElement *arg1, Client *c);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 static void die(const char *errstr, ...);
@@ -545,12 +543,6 @@ decideresource(WebKitPolicyDecision *d, Client *c)
 		webkit_policy_decision_ignore(d);
 		download(c, res);
 	}
-}
-
-gboolean
-deletion_interface(WebKitWebView *view, WebKitDOMHTMLElement *arg1, Client *c)
-{
-	return FALSE;
 }
 
 void
@@ -1006,9 +998,6 @@ newview(Client *c, WebKitWebView *rv)
 	g_signal_connect(G_OBJECT(v),
 	                 "button-release-event",
 			 G_CALLBACK(buttonreleased), c);
-	g_signal_connect(G_OBJECT(v),
-	                 "should-show-delete-interface-for-element",
-			 G_CALLBACK(deletion_interface), c);
 
 	return v;
 }
