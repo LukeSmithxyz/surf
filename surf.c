@@ -164,7 +164,7 @@ static void showview(WebKitWebView *v, Client *c);
 static void newwindow(Client *c, const Arg *arg, gboolean noembed);
 static GtkWidget *createwindow(Client *c);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
-static void print(Client *c, const Arg *arg);
+static void print(Client *c, const Arg *a);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
                                 gpointer d);
 static gboolean winevent(GtkWidget *w, GdkEvent *e, Client *c);
@@ -1152,9 +1152,10 @@ pasteuri(GtkClipboard *clipboard, const char *text, gpointer d)
 }
 
 void
-print(Client *c, const Arg *arg)
+print(Client *c, const Arg *a)
 {
-	webkit_web_frame_print(webkit_web_view_get_main_frame(c->view));
+	webkit_print_operation_run_dialog(webkit_print_operation_new(c->view),
+	    GTK_WINDOW(c->win));
 }
 
 GdkFilterReturn
