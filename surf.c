@@ -161,6 +161,7 @@ static Client *newclient(Client *c);
 static WebKitWebView *newview(Client *c, WebKitWebView *rv);
 static void showview(WebKitWebView *v, Client *c);
 static void newwindow(Client *c, const Arg *arg, gboolean noembed);
+static GtkWidget *createwindow(Client *c);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
 static void print(Client *c, const Arg *arg);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
@@ -1017,33 +1018,7 @@ showview(WebKitWebView *v, Client *c)
 	GdkRGBA bgcolor = { 0 };
 	GdkWindow *gwin;
 
-	/* Window */
-	if (embed) {
-		c->win = gtk_plug_new(embed);
-	} else {
-		c->win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-
-		/* TA:  20091214:  Despite what the GNOME docs say, the ICCCM
-		 * is always correct, so we should still call this function.
-		 * But when doing so, we *must* differentiate between a
-		 * WM_CLASS and a resource on the window.  By convention, the
-		 * window class (WM_CLASS) is capped, while the resource is in
-		 * lowercase.   Both these values come as a pair.
-		 */
-		gtk_window_set_wmclass(GTK_WINDOW(c->win), "surf", "Surf");
-
-		/* TA:  20091214:  And set the role here as well -- so that
-		 * sessions can pick this up.
-		 */
-		gtk_window_set_role(GTK_WINDOW(c->win), "Surf");
-	}
-	gtk_window_set_default_size(GTK_WINDOW(c->win), 800, 600);
-	g_signal_connect(G_OBJECT(c->win),
-	                 "destroy",
-			 G_CALLBACK(destroywin), c);
-	g_signal_connect(G_OBJECT(c->win),
-	                 "leave_notify_event",
-			 G_CALLBACK(titlechangeleave), c);
+	c->win = createwindow(c);
 
 	if (!kioskmode)
 		addaccelgroup(c);
@@ -1126,6 +1101,41 @@ newwindow(Client *c, const Arg *arg, gboolean noembed)
 		cmd[i++] = uri;
 	cmd[i++] = NULL;
 	spawn(NULL, &a);
+}
+
+GtkWidget *
+createwindow(Client *c)
+{
+	GtkWidget *w;
+
+	if (embed) {
+		w = gtk_plug_new(embed);
+	} else {
+		w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+
+		/* TA:  20091214:  Despite what the GNOME docs say, the ICCCM
+		 * is always correct, so we should still call this function.
+		 * But when doing so, we *must* differentiate between a
+		 * WM_CLASS and a resource on the window.  By convention, the
+		 * window class (WM_CLASS) is capped, while the resource is in
+		 * lowercase.   Both these values come as a pair.
+		 */
+		gtk_window_set_wmclass(GTK_WINDOW(w), "surf", "Surf");
+
+		/* TA:  20091214:  And set the role here as well -- so that
+		 * sessions can pick this up.
+		 */
+		gtk_window_set_role(GTK_WINDOW(w), "Surf");
+
+		gtk_window_set_default_size(GTK_WINDOW(w), 800, 600);
+	}
+
+	g_signal_connect(G_OBJECT(w), "destroy",
+	    G_CALLBACK(destroywin), c);
+	g_signal_connect(G_OBJECT(w), "leave_notify_event",
+	    G_CALLBACK(titlechangeleave), c);
+
+	return w;
 }
 
 void
