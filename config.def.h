@@ -125,7 +125,6 @@ static Key keys[] = {
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_v,      toggle,     { .v = "enable-plugins" } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_a,      togglecookiepolicy, { 0 } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_m,      togglestyle, { 0 } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_b,      togglescrollbars, { 0 } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_g,      togglegeolocation, { 0 } },
 };
 

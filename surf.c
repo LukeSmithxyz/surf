@@ -178,7 +178,6 @@ static void titlechanged(WebKitWebView *view, GParamSpec *ps, Client *c);
 static void toggle(Client *c, const Arg *arg);
 static void togglecookiepolicy(Client *c, const Arg *arg);
 static void togglegeolocation(Client *c, const Arg *arg);
-static void togglescrollbars(Client *c, const Arg *arg);
 static void togglestyle(Client *c, const Arg *arg);
 static void updatetitle(Client *c);
 static void updatewinid(Client *c);
@@ -1326,49 +1325,6 @@ togglegeolocation(Client *c, const Arg *arg)
 
 	allowgeolocation ^= 1;
 	reload(c, &a);
-}
-
-void
-twitch(Client *c, const Arg *arg)
-{
-	GtkAdjustment *a;
-	gdouble v;
-
-	a = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(
-	                                        c->scroll));
-
-	v = gtk_adjustment_get_value(a);
-
-	v += arg->i;
-
-	v = MAX(v, 0.0);
-	v = MIN(v, gtk_adjustment_get_upper(a) -
-	        gtk_adjustment_get_page_size(a));
-	gtk_adjustment_set_value(a, v);
-}
-
-void
-togglescrollbars(Client *c, const Arg *arg)
-{
-	GtkPolicyType vspolicy;
-	Arg a;
-
-	gtk_scrolled_window_get_policy(GTK_SCROLLED_WINDOW(c->scroll), NULL,
-	                               &vspolicy);
-
-	if (vspolicy == GTK_POLICY_AUTOMATIC) {
-		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(c->scroll),
-		                               GTK_POLICY_NEVER,
-					       GTK_POLICY_NEVER);
-	} else {
-		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(c->scroll),
-		                               GTK_POLICY_AUTOMATIC,
-					       GTK_POLICY_AUTOMATIC);
-		a.i = +1;
-		twitch(c, &a);
-		a.i = -1;
-		twitch(c, &a);
-	}
 }
 
 void
