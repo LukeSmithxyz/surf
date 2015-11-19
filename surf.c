@@ -120,6 +120,7 @@ static gboolean decidepolicy(WebKitWebView *v, WebKitPolicyDecision *d,
 static void decidenavigation(WebKitPolicyDecision *d, Client *c);
 static void decidenewwindow(WebKitPolicyDecision *d, Client *c);
 static void decideresource(WebKitPolicyDecision *d, Client *c);
+static void closeview(WebKitWebView *v, Client *c);
 static void destroyclient(Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 static void die(const char *errstr, ...);
@@ -551,10 +552,9 @@ destroyclient(Client *c)
 	Client *p;
 
 	webkit_web_view_stop_loading(c->view);
-	gtk_widget_destroy(GTK_WIDGET(c->view));
-	gtk_widget_destroy(c->scroll);
-	gtk_widget_destroy(c->vbox);
+	/* Not needed, has already been called
 	gtk_widget_destroy(c->win);
+	 */
 
 	for (p = clients; p && p->next != c; p = p->next)
 		;
@@ -563,14 +563,20 @@ destroyclient(Client *c)
 	else
 		clients = c->next;
 	free(c);
-	if (clients == NULL)
-		gtk_main_quit();
+}
+
+void
+closeview(WebKitWebView *v, Client *c)
+{
+	gtk_widget_destroy(c->win);
 }
 
 void
 destroywin(GtkWidget* w, Client *c)
 {
 	destroyclient(c);
+	if (clients == NULL)
+		gtk_main_quit();
 }
 
 void
@@ -998,6 +1004,8 @@ newview(Client *c, WebKitWebView *rv)
 	g_signal_connect(G_OBJECT(v),
 	                 "button-release-event",
 			 G_CALLBACK(buttonreleased), c);
+	g_signal_connect(G_OBJECT(v), "close",
+			G_CALLBACK(closeview), c);
 
 	return v;
 }
