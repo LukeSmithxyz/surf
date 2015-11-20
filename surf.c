@@ -65,7 +65,7 @@ typedef struct Client {
 	const char *needle;
 	gint progress;
 	struct Client *next;
-	gboolean zoomed, fullscreen;
+	gboolean fullscreen;
 } Client;
 
 typedef struct {
@@ -182,7 +182,7 @@ static void togglestyle(Client *c, const Arg *arg);
 static void updatetitle(Client *c);
 static void updatewinid(Client *c);
 static void usage(void);
-static void zoom(Client *c, const Arg *arg);
+static void zoom(Client *c, const Arg *a);
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -996,7 +996,6 @@ showview(WebKitWebView *v, Client *c)
 	gdk_window_set_events(gwin, GDK_ALL_EVENTS_MASK);
 	gdk_window_add_filter(gwin, processx, c);
 
-	/* This might conflict with _zoomto96dpi_. */
 	if (zoomlevel != 1.0)
 		webkit_web_view_set_zoom_level(c->view, zoomlevel);
 
@@ -1423,20 +1422,16 @@ usage(void)
 }
 
 void
-zoom(Client *c, const Arg *arg)
+zoom(Client *c, const Arg *a)
 {
-	c->zoomed = TRUE;
-	if (arg->i < 0) {
-		/* zoom out */
-		webkit_web_view_zoom_out(c->view);
-	} else if (arg->i > 0) {
-		/* zoom in */
-		webkit_web_view_zoom_in(c->view);
-	} else {
-		/* reset */
-		c->zoomed = FALSE;
+	if (a->i > 0)
+		webkit_web_view_set_zoom_level(c->view, zoomlevel + 0.1);
+	else if (a->i < 0)
+		webkit_web_view_set_zoom_level(c->view, zoomlevel - 0.1);
+	else
 		webkit_web_view_set_zoom_level(c->view, 1.0);
-	}
+
+	zoomlevel = webkit_web_view_get_zoom_level(c->view);
 }
 
 int
