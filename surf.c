@@ -112,6 +112,7 @@ static char pagestats[2];
 static GTlsDatabase *tlsdb;
 static int cookiepolicy;
 static char *stylefile = NULL;
+static const char *useragent;
 
 static void addaccelgroup(Client *c);
 static char *buildfile(const char *path);
@@ -899,7 +900,6 @@ newview(Client *c, WebKitWebView *rv)
 	WebKitSettings *settings;
 	WebKitUserContentManager *contentmanager;
 	WebKitWebContext *context;
-	char *ua;
 
 	/* Webview */
 	if (rv) {
@@ -918,11 +918,16 @@ newview(Client *c, WebKitWebView *rv)
 		    "enable-javascript", enablescripts,
 		    "enable-plugins", enableplugins,
 		    NULL);
-		if (!(ua = getenv("SURF_USERAGENT")))
-			ua = useragent;
-		webkit_settings_set_user_agent(settings, ua);
 		/* Have a look at http://webkitgtk.org/reference/webkit2gtk/stable/WebKitSettings.html
 		 * for more interesting settings */
+
+		if (strcmp(fulluseragent, "")) {
+			webkit_settings_set_user_agent(settings, fulluseragent);
+		} else if (surfuseragent) {
+			webkit_settings_set_user_agent_with_application_details(
+			    settings, "Surf", VERSION);
+		}
+		useragent = webkit_settings_get_user_agent(settings);
 
 		contentmanager = webkit_user_content_manager_new();
 
