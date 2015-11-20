@@ -35,6 +35,9 @@ static Bool loadimages            = TRUE;
 static Bool hidebackground        = FALSE;
 static Bool allowgeolocation      = TRUE;
 
+static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
+                                    WEBKIT_FIND_OPTIONS_WRAP_AROUND;
+
 #define SETPROP(p, q) { \
 	.v = (char *[]){ "/bin/sh", "-c", \
 	     "prop=\"`xprop -id $2 $0 " \
@@ -116,8 +119,8 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_f,      spawn,      SETPROP("_SURF_FIND", "_SURF_FIND") },
 	{ MODKEY,                GDK_KEY_slash,  spawn,      SETPROP("_SURF_FIND", "_SURF_FIND") },
 
-	{ MODKEY,                GDK_KEY_n,      find,       { .b = TRUE } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_n,      find,       { .b = FALSE } },
+	{ MODKEY,                GDK_KEY_n,      find,       { .i = +1 } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_n,      find,       { .i = -1 } },
 
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_c,      toggle,     { .v = "enable-caret-browsing" } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_i,      toggle,     { .v = "auto-load-images" } },

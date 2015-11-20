@@ -59,6 +59,7 @@ typedef struct Client {
 	Window xid;
 	WebKitWebView *view;
 	WebKitWebInspector *inspector;
+	WebKitFindController *finder;
 	WebKitHitTestResult *mousepos;
 	GTlsCertificateFlags tlsflags;
 	const char *title, *targeturi;
@@ -126,7 +127,7 @@ static void destroywin(GtkWidget* w, Client *c);
 static void die(const char *errstr, ...);
 static void evalscript(Client *c, const char *jsstr, ...);
 static void runscript(Client *c);
-static void find(Client *c, const Arg *arg);
+static void find(Client *c, const Arg *a);
 static void togglefullscreen(Client *c, const Arg *a);
 static gboolean permissionrequested(WebKitWebView *v,
 		WebKitPermissionRequest *r, Client *c);
@@ -581,13 +582,27 @@ die(const char *errstr, ...)
 }
 
 void
-find(Client *c, const Arg *arg)
+find(Client *c, const Arg *a)
 {
-	const char *s;
+	const char *s, *f;
 
-	s = getatom(c, AtomFind);
-	gboolean forward = *(gboolean *)arg;
-	webkit_web_view_search_text(c->view, s, FALSE, forward, TRUE);
+	if (a && a->i) {
+		if (a->i > 0)
+			webkit_find_controller_search_next(c->finder);
+		else
+			webkit_find_controller_search_previous(c->finder);
+	} else {
+		s = getatom(c, AtomFind);
+		f = webkit_find_controller_get_search_text(c->finder);
+
+		if (g_strcmp0(f, s) == 0) /* reset search */
+			webkit_find_controller_search(c->finder, "", findopts, G_MAXUINT);
+
+		webkit_find_controller_search(c->finder, s, findopts, G_MAXUINT);
+
+		if (strcmp(s, "") == 0)
+			webkit_find_controller_search_finish(c->finder);
+	}
 }
 
 void
@@ -979,6 +994,8 @@ showview(WebKitWebView *v, Client *c)
 	if (enableinspector)
 		c->inspector = webkit_web_view_get_inspector(c->view);
 
+	c->finder = webkit_web_view_get_find_controller(c->view);
+
 	if (!kioskmode)
 		addaccelgroup(c);
 
@@ -1122,8 +1139,7 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d)
 		ev = &((XEvent *)e)->xproperty;
 		if (ev->state == PropertyNewValue) {
 			if (ev->atom == atoms[AtomFind]) {
-				arg.b = TRUE;
-				find(c, &arg);
+				find(c, NULL);
 
 				return GDK_FILTER_REMOVE;
 			} else if (ev->atom == atoms[AtomGo]) {
