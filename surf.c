@@ -1414,29 +1414,27 @@ getpagestats(Client *c)
 void
 updatetitle(Client *c)
 {
-	char *t;
+	char *title;
 
 	if (showindicators) {
 		gettogglestats(c);
 		getpagestats(c);
 
-		if (c->linkhover) {
-			t = g_strdup_printf("%s:%s | %s", togglestats, pagestats,
-			                    c->linkhover);
-		} else if (c->progress != 100) {
-			t = g_strdup_printf("[%i%%] %s:%s | %s", c->progress,
-			                    togglestats, pagestats,
-			                    c->title == NULL ? "" : c->title);
+		if (c->progress != 100) {
+			title = g_strdup_printf("[%i%%] %s:%s | %s",
+			    c->progress, togglestats, pagestats,
+			    c->targeturi ? c->targeturi : c->title);
 		} else {
-			t = g_strdup_printf("%s:%s | %s", togglestats, pagestats,
-			                    c->title == NULL ? "" : c->title);
+			title = g_strdup_printf("%s:%s | %s",
+			    togglestats, pagestats,
+			    c->targeturi ? c->targeturi : c->title);
 		}
 
-		gtk_window_set_title(GTK_WINDOW(c->win), t);
-		g_free(t);
+		gtk_window_set_title(GTK_WINDOW(c->win), title);
+		g_free(title);
 	} else {
-		gtk_window_set_title(GTK_WINDOW(c->win), (c->title == NULL) ?
-		                     "" : c->title);
+		gtk_window_set_title(GTK_WINDOW(c->win), c->title ?
+		    c->title : "");
 	}
 }
 
