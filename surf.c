@@ -1052,45 +1052,56 @@ showview(WebKitWebView *v, Client *c)
 }
 
 void
-newwindow(Client *c, const Arg *arg, gboolean noembed)
+newwindow(Client *c, const Arg *a, int noembed)
 {
-	guint i = 0;
-	const char *cmd[18], *uri;
-	const Arg a = { .v = (void *)cmd };
+	int i = 0;
 	char tmp[64];
+	const char *cmd[26], *uri;
+	const Arg arg = { .v = cmd };
 
 	cmd[i++] = argv0;
 	cmd[i++] = "-a";
 	cmd[i++] = cookiepolicies;
-	if (!enablescrollbars)
-		cmd[i++] = "-b";
+	cmd[i++] = enablescrollbars ? "-B" : "-b";
+	if (cookiefile && g_strcmp0(cookiefile, "")) {
+		cmd[i++] = "-c";
+		cmd[i++] = cookiefile;
+	}
+	cmd[i++] = enablecache ? "-D" : "-d";
 	if (embed && !noembed) {
 		cmd[i++] = "-e";
-		snprintf(tmp, LENGTH(tmp), "%u", (int)embed);
+		snprintf(tmp, LENGTH(tmp), "%lu", embed);
 		cmd[i++] = tmp;
 	}
-	if (!allowgeolocation)
-		cmd[i++] = "-g";
-	if (!loadimages)
-		cmd[i++] = "-i";
-	if (kioskmode)
-		cmd[i++] = "-k";
-	if (!enableplugins)
-		cmd[i++] = "-p";
-	if (!enablescripts)
-		cmd[i++] = "-s";
+	cmd[i++] = runinfullscreen ? "-F" : "-f";
+	cmd[i++] = allowgeolocation ? "-G" : "-g";
+	cmd[i++] = loadimages ? "-I" : "-i";
+	cmd[i++] = kioskmode ? "-K" : "-k";
+	cmd[i++] = enablestyle ? "-M" : "-m";
+	cmd[i++] = enableinspector ? "-N" : "-n";
+	cmd[i++] = enableplugins ? "-P" : "-p";
+	if (scriptfile && g_strcmp0(scriptfile, "")) {
+		cmd[i++] = "-r";
+		cmd[i++] = scriptfile;
+	}
+	cmd[i++] = enablescripts ? "-S" : "-s";
+	if (stylefile && g_strcmp0(stylefile, "")) {
+		cmd[i++] = "-t";
+		cmd[i++] = stylefile;
+	}
+	if (fulluseragent && g_strcmp0(fulluseragent, "")) {
+		cmd[i++] = "-u";
+		cmd[i++] = fulluseragent;
+	}
 	if (showxid)
 		cmd[i++] = "-x";
-	if (enablecache)
-		cmd[i++] = "-D";
-	cmd[i++] = "-c";
-	cmd[i++] = cookiefile;
+	/* do not keep zoom level */
 	cmd[i++] = "--";
-	uri = arg->v ? (char *)arg->v : c->linkhover;
-	if (uri)
+	if ((uri = a->v))
 		cmd[i++] = uri;
-	cmd[i++] = NULL;
-	spawn(NULL, &a);
+	cmd[i] = NULL;
+
+	spawn(c, &arg);
 }
 
 GtkWidget *
