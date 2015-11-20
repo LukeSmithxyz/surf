@@ -47,6 +47,16 @@ enum {
 	OnAny   = OnDoc | OnLink | OnImg | OnMedia | OnEdit | OnBar | OnSel,
 };
 
+enum {
+	CaretBrowsing,
+	FrameFlattening,
+	Geolocation,
+	JavaScript,
+	LoadImages,
+	Plugins,
+	ScrollBars,
+};
+
 typedef union Arg Arg;
 union Arg {
 	gboolean b;
@@ -176,9 +186,8 @@ static void sigchld(int unused);
 static void spawn(Client *c, const Arg *arg);
 static void stop(Client *c, const Arg *arg);
 static void titlechanged(WebKitWebView *view, GParamSpec *ps, Client *c);
-static void toggle(Client *c, const Arg *arg);
+static void toggle(Client *c, const Arg *a);
 static void togglecookiepolicy(Client *c, const Arg *arg);
-static void togglegeolocation(Client *c, const Arg *arg);
 static void togglestyle(Client *c, const Arg *arg);
 static void updatetitle(Client *c);
 static void updatewinid(Client *c);
@@ -1064,7 +1073,7 @@ newwindow(Client *c, const Arg *arg, gboolean noembed)
 		cmd[i++] = "-s";
 	if (showxid)
 		cmd[i++] = "-x";
-	if (enablediskcache)
+	if (enablecache)
 		cmd[i++] = "-D";
 	cmd[i++] = "-c";
 	cmd[i++] = cookiefile;
@@ -1306,18 +1315,53 @@ winevent(GtkWidget *w, GdkEvent *e, Client *c)
 }
 
 void
-toggle(Client *c, const Arg *arg)
+toggle(Client *c, const Arg *a)
 {
-	WebKitWebSettings *settings;
-	char *name = (char *)arg->v;
-	gboolean value;
-	Arg a = { .b = FALSE };
+	WebKitSettings *s;
 
-	settings = webkit_web_view_get_settings(c->view);
-	g_object_get(G_OBJECT(settings), name, &value, NULL);
-	g_object_set(G_OBJECT(settings), name, !value, NULL);
+	s = webkit_web_view_get_settings(c->view);
 
-	reload(c, &a);
+	switch ((unsigned int)a->i) {
+	case CaretBrowsing:
+		enablecaretbrowsing = !enablecaretbrowsing;
+		webkit_settings_set_enable_caret_browsing(s,
+		    enablecaretbrowsing);
+		updatetitle(c);
+		return; /* do not reload */
+		break;
+	case FrameFlattening:
+		enableframeflattening = !enableframeflattening;
+		webkit_settings_set_enable_frame_flattening(s,
+		    enableframeflattening);
+		break;
+	case Geolocation:
+		allowgeolocation = !allowgeolocation;
+		break;
+	case JavaScript:
+		enablescripts = !enablescripts;
+		webkit_settings_set_enable_javascript(s, enablescripts);
+		break;
+	case LoadImages:
+		loadimages = !loadimages;
+		webkit_settings_set_auto_load_images(s, loadimages);
+		break;
+	case Plugins:
+		enableplugins = !enableplugins;
+		webkit_settings_set_enable_plugins(s, enableplugins);
+		break;
+	case ScrollBars:
+		/* Disabled until we write some WebKitWebExtension for
+		 * manipulating the DOM directly.
+		enablescrollbars = !enablescrollbars;
+		evalscript(c, "document.documentElement.style.overflow = '%s'",
+		    enablescrollbars ? "auto" : "hidden");
+		*/
+		return; /* do not reload */
+		break;
+	default:
+		break;
+	}
+	reload(c, a);
 }
 
 void
@@ -1333,15 +1377,6 @@ togglecookiepolicy(Client *c, const Arg *arg)
 
 	updatetitle(c);
 	/* Do not reload. */
-}
-
-void
-togglegeolocation(Client *c, const Arg *arg)
-{
-	Arg a = { .b = FALSE };
-
-	allowgeolocation ^= 1;
-	reload(c, &a);
 }
 
 void
@@ -1368,7 +1403,7 @@ gettogglestat(Client *c)
 
 	togglestat[p++] = allowgeolocation? 'G': 'g';
 
-	togglestat[p++] = enablediskcache? 'D': 'd';
+	togglestat[p++] = enablecache? 'D': 'd';
 
 	g_object_get(G_OBJECT(settings), "auto-load-images", &value, NULL);
 	togglestat[p++] = value? 'I': 'i';
@@ -1473,10 +1508,10 @@ main(int argc, char *argv[])
 		cookiefile = EARGF(usage());
 		break;
 	case 'd':
-		enablediskcache = 0;
+		enablecache = 0;
 		break;
 	case 'D':
-		enablediskcache = 1;
+		enablecache = 1;
 		break;
 	case 'e':
 		embed = strtol(EARGF(usage()), NULL, 0);

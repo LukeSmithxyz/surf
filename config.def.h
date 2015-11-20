@@ -8,7 +8,6 @@ static char *cachedir       = "~/.surf/cache/";
 
 static Bool kioskmode       = FALSE; /* Ignore shortcuts */
 static Bool showindicators  = TRUE;  /* Show indicators in window title */
-static Bool zoomto96dpi     = TRUE;  /* Zoom pages to always emulate 96dpi */
 static Bool runinfullscreen = FALSE; /* Run in fullscreen mode by default */
 
 static guint defaultfontsize = 12;   /* Default font size */
@@ -18,15 +17,12 @@ static gfloat zoomlevel = 1.0;       /* Default zoom level */
 static char *cookiefile     = "~/.surf/cookies.txt";
 static char *cookiepolicies = "Aa@"; /* A: accept all; a: accept nothing,
                                       * @: accept no third party */
-static char *cafile         = "/etc/ssl/certs/ca-certificates.crt";
 static Bool strictssl       = FALSE; /* Refuse untrusted SSL connections */
-static time_t sessiontime   = 3600;
 
 /* Webkit default features */
 static Bool enablescrollbars      = TRUE;
-static Bool enablespatialbrowsing = TRUE;
-static Bool enablediskcache       = TRUE;
-static int diskcachebytes         = 5 * 1024 * 1024;
+static Bool enablecaretbrowsing   = TRUE;
+static Bool enablecache           = TRUE;
 static Bool enableplugins         = TRUE;
 static Bool enablescripts         = TRUE;
 static Bool enableinspector       = TRUE;
@@ -34,6 +30,8 @@ static Bool enablestyle           = TRUE;
 static Bool loadimages            = TRUE;
 static Bool hidebackground        = FALSE;
 static Bool allowgeolocation      = TRUE;
+static Bool enablednsprefetching  = FALSE;
+static Bool enableframeflattening = FALSE;
 
 static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
                                     WEBKIT_FIND_OPTIONS_WRAP_AROUND;
@@ -122,13 +120,16 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_n,      find,       { .i = +1 } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_n,      find,       { .i = -1 } },
 
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_c,      toggle,     { .v = "enable-caret-browsing" } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_i,      toggle,     { .v = "auto-load-images" } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_s,      toggle,     { .v = "enable-scripts" } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_v,      toggle,     { .v = "enable-plugins" } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_c,      toggle,     { .i = CaretBrowsing } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_f,      toggle,     { .i = FrameFlattening } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_g,      toggle,     { .i = Geolocation } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_s,      toggle,     { .i = JavaScript } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_i,      toggle,     { .i = LoadImages } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_v,      toggle,     { .i = Plugins } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_b,      toggle,     { .i = ScrollBars } },
+
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_a,      togglecookiepolicy, { 0 } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_m,      togglestyle, { 0 } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_g,      togglegeolocation, { 0 } },
 };
 
 /* button definitions */
