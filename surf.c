@@ -108,7 +108,7 @@ static Window embed = 0;
 static gboolean showxid = FALSE;
 static char winid[64];
 static char togglestat[9];
-static char pagestat[3];
+static char pagestats[2];
 static GTlsDatabase *tlsdb;
 static int cookiepolicy;
 static char *stylefile = NULL;
@@ -143,7 +143,7 @@ static gboolean permissionrequested(WebKitWebView *v,
 		WebKitPermissionRequest *r, Client *c);
 static const char *getatom(Client *c, int a);
 static void gettogglestat(Client *c);
-static void getpagestat(Client *c);
+static void getpagestats(Client *c);
 static char *geturi(Client *c);
 static const gchar *getstyle(const char *uri);
 static void setstyle(Client *c, const char *stylefile);
@@ -1420,13 +1420,11 @@ gettogglestat(Client *c)
 }
 
 void
-getpagestat(Client *c)
+getpagestats(Client *c)
 {
-	const char *uri = geturi(c);
-
 	pagestats[0] = c->tlsflags > G_TLS_CERTIFICATE_VALIDATE_ALL ? '-' :
 	    c->tlsflags > 0 ? 'U' : 'T';
-	pagestat[1] = '\0';
+	pagestats[1] = '\0';
 }
 
 void
@@ -1436,17 +1434,17 @@ updatetitle(Client *c)
 
 	if (showindicators) {
 		gettogglestat(c);
-		getpagestat(c);
+		getpagestats(c);
 
 		if (c->linkhover) {
-			t = g_strdup_printf("%s:%s | %s", togglestat, pagestat,
+			t = g_strdup_printf("%s:%s | %s", togglestat, pagestats,
 			                    c->linkhover);
 		} else if (c->progress != 100) {
 			t = g_strdup_printf("[%i%%] %s:%s | %s", c->progress,
-			                    togglestat, pagestat,
+			                    togglestat, pagestats,
 			                    c->title == NULL ? "" : c->title);
 		} else {
-			t = g_strdup_printf("%s:%s | %s", togglestat, pagestat,
+			t = g_strdup_printf("%s:%s | %s", togglestat, pagestats,
 			                    c->title == NULL ? "" : c->title);
 		}
 
