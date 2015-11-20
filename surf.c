@@ -107,7 +107,7 @@ static Client *clients = NULL;
 static Window embed = 0;
 static gboolean showxid = FALSE;
 static char winid[64];
-static char togglestat[9];
+static char togglestats[10];
 static char pagestats[2];
 static GTlsDatabase *tlsdb;
 static int cookiepolicy;
@@ -142,7 +142,7 @@ static void togglefullscreen(Client *c, const Arg *a);
 static gboolean permissionrequested(WebKitWebView *v,
 		WebKitPermissionRequest *r, Client *c);
 static const char *getatom(Client *c, int a);
-static void gettogglestat(Client *c);
+static void gettogglestats(Client *c);
 static void getpagestats(Client *c);
 static char *geturi(Client *c);
 static const gchar *getstyle(const char *uri);
@@ -1389,34 +1389,18 @@ togglestyle(Client *c, const Arg *arg)
 }
 
 void
-gettogglestat(Client *c)
+gettogglestats(Client *c)
 {
-	gboolean value;
-	int p = 0;
-	WebKitWebSettings *settings = webkit_web_view_get_settings(c->view);
-
-	togglestat[p++] = cookiepolicy_set(cookiepolicy_get());
-
-	g_object_get(G_OBJECT(settings), "enable-caret-browsing", &value,
-	             NULL);
-	togglestat[p++] = value? 'C': 'c';
-
-	togglestat[p++] = allowgeolocation? 'G': 'g';
-
-	togglestat[p++] = enablecache? 'D': 'd';
-
-	g_object_get(G_OBJECT(settings), "auto-load-images", &value, NULL);
-	togglestat[p++] = value? 'I': 'i';
-
-	g_object_get(G_OBJECT(settings), "enable-scripts", &value, NULL);
-	togglestat[p++] = value? 'S': 's';
-
-	g_object_get(G_OBJECT(settings), "enable-plugins", &value, NULL);
-	togglestat[p++] = value? 'V': 'v';
-
-	togglestat[p++] = enablestyle ? 'M': 'm';
-
-	togglestat[p] = '\0';
+	togglestats[0] = cookiepolicy_set(cookiepolicy_get());
+	togglestats[1] = enablecaretbrowsing ? 'C' : 'c';
+	togglestats[2] = allowgeolocation ? 'G' : 'g';
+	togglestats[3] = enablecache ? 'D' : 'd';
+	togglestats[4] = loadimages ? 'I' : 'i';
+	togglestats[5] = enablescripts ? 'S': 's';
+	togglestats[6] = enableplugins ? 'V' : 'v';
+	togglestats[7] = enablestyle ? 'M' : 'm';
+	togglestats[8] = enableframeflattening ? 'F' : 'f';
+	togglestats[9] = '\0';
 }
 
 void
@@ -1433,18 +1417,18 @@ updatetitle(Client *c)
 	char *t;
 
 	if (showindicators) {
-		gettogglestat(c);
+		gettogglestats(c);
 		getpagestats(c);
 
 		if (c->linkhover) {
-			t = g_strdup_printf("%s:%s | %s", togglestat, pagestats,
+			t = g_strdup_printf("%s:%s | %s", togglestats, pagestats,
 			                    c->linkhover);
 		} else if (c->progress != 100) {
 			t = g_strdup_printf("[%i%%] %s:%s | %s", c->progress,
-			                    togglestat, pagestats,
+			                    togglestats, pagestats,
 			                    c->title == NULL ? "" : c->title);
 		} else {
-			t = g_strdup_printf("%s:%s | %s", togglestat, pagestats,
+			t = g_strdup_printf("%s:%s | %s", togglestats, pagestats,
 			                    c->title == NULL ? "" : c->title);
 		}
 
