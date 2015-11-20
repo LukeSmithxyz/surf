@@ -164,6 +164,7 @@ static void mousetargetchanged(WebKitWebView *v, WebKitHitTestResult *h,
 static void loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c);
 static void loaduri(Client *c, const Arg *arg);
 static void navigate(Client *c, const Arg *a);
+static void clicknavigate(Client *c, const Arg *a, WebKitHitTestResult *h);
 static Client *newclient(Client *c);
 static WebKitWebView *newview(Client *c, WebKitWebView *rv);
 static void showview(WebKitWebView *v, Client *c);
@@ -175,8 +176,7 @@ static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
                                 gpointer d);
 static gboolean winevent(GtkWidget *w, GdkEvent *e, Client *c);
 static void progresschanged(WebKitWebView *v, GParamSpec *ps, Client *c);
-static void linkopen(Client *c, const Arg *arg);
-static void linkopenembed(Client *c, const Arg *arg);
+static void clicknewwindow(Client *c, const Arg *a, WebKitHitTestResult *h);
 static void reload(Client *c, const Arg *arg);
 static void scroll_h(Client *c, const Arg *a);
 static void scroll_v(Client *c, const Arg *a);
@@ -868,6 +868,12 @@ navigate(Client *c, const Arg *a)
 		webkit_web_view_go_forward(c->view);
 }
 
+void
+clicknavigate(Client *c, const Arg *a, WebKitHitTestResult *h)
+{
+	navigate(c, a);
+}
+
 Client *
 newclient(Client *rc)
 {
@@ -1171,15 +1177,12 @@ progresschanged(WebKitWebView *v, GParamSpec *ps, Client *c)
 }
 
 void
-linkopen(Client *c, const Arg *arg)
+clicknewwindow(Client *c, const Arg *a, WebKitHitTestResult *h)
 {
-	newwindow(NULL, arg, 1);
-}
+	Arg arg;
 
-void
-linkopenembed(Client *c, const Arg *arg)
-{
-	newwindow(NULL, arg, 0);
+	arg.v = webkit_hit_test_result_get_link_uri(h);
+	newwindow(c, &arg, a->b);
 }
 
 void
