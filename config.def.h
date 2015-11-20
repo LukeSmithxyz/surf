@@ -37,7 +37,7 @@ static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
                                     WEBKIT_FIND_OPTIONS_WRAP_AROUND;
 
 #define SETPROP(p, q) { \
-	.v = (char *[]){ "/bin/sh", "-c", \
+	.v = (const char *[]){ "/bin/sh", "-c", \
 	     "prop=\"`xprop -id $2 $0 " \
 	     "| sed \"s/^$0(STRING) = \\(\\\\\"\\?\\)\\(.*\\)\\1$/\\2/\" " \
 	     "| xargs -0 printf %b | dmenu`\" &&" \
@@ -48,7 +48,7 @@ static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
 
 /* DOWNLOAD(URI, referer) */
 #define DOWNLOAD(d, r) { \
-	.v = (char *[]){ "/bin/sh", "-c", \
+	.v = (const char *[]){ "/bin/sh", "-c", \
 	     "st -e /bin/sh -c \"curl -L -J -O --user-agent '$1'" \
 	     " --referer '$2' -b $3 -c $3 '$0';" \
 	     " sleep 5;\"", \
@@ -61,7 +61,7 @@ static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
  * "http://" or "https://" should be opened.
  */
 #define PLUMB(u) {\
-	.v = (char *[]){ "/bin/sh", "-c", \
+	.v = (const char *[]){ "/bin/sh", "-c", \
 	     "xdg-open \"$0\"", u, NULL \
 	} \
 }
