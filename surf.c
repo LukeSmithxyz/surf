@@ -152,7 +152,7 @@ static void mousetargetchanged(WebKitWebView *v, WebKitHitTestResult *h,
 		guint modifiers, Client *c);
 static void loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c);
 static void loaduri(Client *c, const Arg *arg);
-static void navigate(Client *c, const Arg *arg);
+static void navigate(Client *c, const Arg *a);
 static Client *newclient(Client *c);
 static WebKitWebView *newview(Client *c, WebKitWebView *rv);
 static void showview(WebKitWebView *v, Client *c);
@@ -836,10 +836,12 @@ loaduri(Client *c, const Arg *arg)
 }
 
 void
-navigate(Client *c, const Arg *arg)
+navigate(Client *c, const Arg *a)
 {
-	int steps = *(int *)arg;
-	webkit_web_view_go_back_or_forward(c->view, steps);
+	if (a->i < 0)
+		webkit_web_view_go_back(c->view);
+	else if (a->i > 0)
+		webkit_web_view_go_forward(c->view);
 }
 
 Client *
