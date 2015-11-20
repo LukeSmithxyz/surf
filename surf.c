@@ -109,7 +109,6 @@ static gboolean showxid = FALSE;
 static char winid[64];
 static char togglestats[10];
 static char pagestats[2];
-static GTlsDatabase *tlsdb;
 static int cookiepolicy;
 static char *stylefile = NULL;
 static const char *useragent;
@@ -124,7 +123,6 @@ static void clipboard(Client *c, const Arg *a);
 static WebKitCookieAcceptPolicy cookiepolicy_get(void);
 static char cookiepolicy_set(const WebKitCookieAcceptPolicy p);
 
-static char *copystr(char **str, const char *src);
 static GtkWidget *createview(WebKitWebView *v, WebKitNavigationAction *a,
 		Client *c);
 static gboolean decidepolicy(WebKitWebView *v, WebKitPolicyDecision *d,
@@ -377,19 +375,6 @@ clipboard(Client *c, const Arg *a)
 		                       GDK_SELECTION_PRIMARY), c->targeturi
 		                       ? c->targeturi : geturi(c), -1);
 	}
-}
-
-char *
-copystr(char **str, const char *src)
-{
-	char *tmp;
-	tmp = g_strdup(src);
-
-	if (str && *str) {
-		g_free(*str);
-		*str = tmp;
-	}
-	return tmp;
 }
 
 GtkWidget *
@@ -876,7 +861,6 @@ Client *
 newclient(Client *rc)
 {
 	Client *c;
-	gdouble dpi;
 
 	if (!(c = calloc(1, sizeof(Client))))
 		die("Cannot malloc!\n");
@@ -1235,8 +1219,6 @@ void
 setup(void)
 {
 	int i;
-	WebKitWebContext *context;
-	GError *error = NULL;
 
 	/* clean up any zombies immediately */
 	sigchld(0);
