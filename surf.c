@@ -162,7 +162,7 @@ static gboolean keypress(GtkAccelGroup *group, GObject *obj, guint key,
 static void mousetargetchanged(WebKitWebView *v, WebKitHitTestResult *h,
 		guint modifiers, Client *c);
 static void loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c);
-static void loaduri(Client *c, const Arg *arg);
+static void loaduri(Client *c, const Arg *a);
 static void navigate(Client *c, const Arg *a);
 static void clicknavigate(Client *c, const Arg *a, WebKitHitTestResult *h);
 static Client *newclient(Client *c);
@@ -825,38 +825,35 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 }
 
 void
-loaduri(Client *c, const Arg *arg)
+loaduri(Client *c, const Arg *a)
 {
-	char *u = NULL, *rp;
-	const char *uri = (char *)arg->v;
-	Arg a = { .b = FALSE };
 	struct stat st;
+	char *url, *path;
+	const char *uri = (char *)a->v;
 
-	if (strcmp(uri, "") == 0)
+	if (g_strcmp0(uri, "") == 0)
 		return;
 
-	/* In case it's a file path. */
-	if (stat(uri, &st) == 0) {
-		rp = realpath(uri, NULL);
-		u = g_strdup_printf("file://%s", rp);
-		free(rp);
+	if (g_strrstr(uri, "://") || g_str_has_prefix(uri, "about:")) {
+		url = g_strdup(uri);
+	} else if (!stat(uri, &st) && (path = realpath(uri, NULL))) {
+		url = g_strdup_printf("file://%s", path);
+		free(path);
 	} else {
-		u = g_strrstr(uri, "://") ? g_strdup(uri)
-		    : g_strdup_printf("http://%s", uri);
+		url = g_strdup_printf("http://%s", uri);
 	}
 
-	setatom(c, AtomUri, uri);
+	setatom(c, AtomUri, url);
 
-	/* prevents endless loop */
-	if (strcmp(u, geturi(c)) == 0) {
-		reload(c, &a);
+	if (strcmp(url, geturi(c)) == 0) {
+		reload(c, a);
 	} else {
-		webkit_web_view_load_uri(c->view, u);
-		c->progress = 0;
-		c->title = copystr(&c->title, u);
+		webkit_web_view_load_uri(c->view, url);
+		c->title = geturi(c);
 		updatetitle(c);
 	}
-	g_free(u);
+
+	g_free(url);
 }
 
 void
