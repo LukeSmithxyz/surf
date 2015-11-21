@@ -65,6 +65,13 @@ static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
 	} \
 }
 
+/* VIDEOPLAY(URI) */
+#define VIDEOPLAY(u) {\
+	.v = (const char *[]){ "/bin/sh", "-c", \
+	    "mpv --really-quiet \"$0\"", u, NULL \
+	} \
+}
+
 /* styles */
 /*
  * The iteration will stop at the first match, beginning at the beginning of
@@ -142,4 +149,5 @@ static Button buttons[] = {
 	{ OnLink,       MODKEY,         1,      clicknewwindow, { .b = 1 },     1 },
 	{ OnAny,        0,              8,      clicknavigate,  { .i = -1 },    1 },
 	{ OnAny,        0,              9,      clicknavigate,  { .i = +1 },    1 },
+	{ OnMedia,      MODKEY,         1,      clickexternplayer, { 0 },       1 },
 };

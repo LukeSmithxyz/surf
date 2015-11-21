@@ -178,6 +178,7 @@ static void find(Client *c, const Arg *a);
 /* Buttons */
 static void clicknavigate(Client *c, const Arg *a, WebKitHitTestResult *h);
 static void clicknewwindow(Client *c, const Arg *a, WebKitHitTestResult *h);
+static void clickexternplayer(Client *c, const Arg *a, WebKitHitTestResult *h);
 
 static char winid[64];
 static char togglestats[10];
@@ -1460,6 +1461,17 @@ clicknewwindow(Client *c, const Arg *a, WebKitHitTestResult *h)
 
 	arg.v = webkit_hit_test_result_get_link_uri(h);
 	newwindow(c, &arg, a->b);
+}
+
+void
+clickexternplayer(Client *c, const Arg *a, WebKitHitTestResult *h)
+{
+	Arg arg;
+
+	if (webkit_hit_test_result_get_context(h) & OnMedia) {
+		arg = (Arg)VIDEOPLAY(webkit_hit_test_result_get_media_uri(h));
+		spawn(c, &arg);
+	}
 }
 
 int
