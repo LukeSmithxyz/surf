@@ -259,7 +259,8 @@ sigchld(int unused)
 {
 	if (signal(SIGCHLD, sigchld) == SIG_ERR)
 		die("Can't install SIGCHLD handler");
-	while (0 < waitpid(-1, NULL, WNOHANG));
+	while (waitpid(-1, NULL, WNOHANG) > 0)
+		;
 }
 
 char *
