@@ -394,9 +394,9 @@ loaduri(Client *c, const Arg *a)
 const char *
 geturi(Client *c)
 {
-	char *uri;
+	const char *uri;
 
-	if (!(uri = (char *)webkit_web_view_get_uri(c->view)))
+	if (!(uri = webkit_web_view_get_uri(c->view)))
 		uri = "about:blank";
 	return uri;
 }
