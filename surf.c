@@ -70,7 +70,7 @@ typedef struct Client {
 	GTlsCertificateFlags tlsflags;
 	Window xid;
 	int progress, fullscreen;
-	const char *title, *targeturi;
+	const char *title, *overtitle, *targeturi;
 	const char *needle;
 	struct Client *next;
 } Client;
@@ -433,7 +433,7 @@ void
 updatetitle(Client *c)
 {
 	char *title;
-	const char *name = c->targeturi ? c->targeturi :
+	const char *name = c->overtitle ? c->overtitle :
 	                   c->title ? c->title : "";
 
 	if (showindicators) {
@@ -879,22 +879,25 @@ gboolean
 winevent(GtkWidget *w, GdkEvent *e, Client *c)
 {
 	switch (e->type) {
-	case GDK_LEAVE_NOTIFY:
-		c->targeturi = NULL;
+	case GDK_ENTER_NOTIFY:
+		c->overtitle = c->targeturi;
 		updatetitle(c);
 		break;
-	case GDK_WINDOW_STATE: /* fallthrough */
+	case GDK_LEAVE_NOTIFY:
+		c->overtitle = NULL;
+		updatetitle(c);
+		break;
+	case GDK_WINDOW_STATE:
 		if (e->window_state.changed_mask ==
-		    GDK_WINDOW_STATE_FULLSCREEN) {
+		    GDK_WINDOW_STATE_FULLSCREEN)
 			c->fullscreen = e->window_state.new_window_state &
 			                GDK_WINDOW_STATE_FULLSCREEN;
-			break;
-		}
+		break;
 	default:
-		return FALSE;
+		break;
 	}
 
-	return TRUE;
+	return FALSE;
 }
 
 void
@@ -965,6 +968,8 @@ createwindow(Client *c)
 
 	g_signal_connect(G_OBJECT(w), "destroy",
 	                 G_CALLBACK(destroywin), c);
+	g_signal_connect(G_OBJECT(w), "enter-notify-event",
+	                 G_CALLBACK(winevent), c);
 	g_signal_connect(G_OBJECT(w), "leave-notify-event",
 	                 G_CALLBACK(winevent), c);
 	g_signal_connect(G_OBJECT(w), "window-state-event",
@@ -1037,6 +1042,8 @@ mousetargetchanged(WebKitWebView *v, WebKitHitTestResult *h, guint modifiers,
 		c->targeturi = webkit_hit_test_result_get_media_uri(h);
 	else
 		c->targeturi = NULL;
+
+	c->overtitle = c->targeturi;
 	updatetitle(c);
 }
 
