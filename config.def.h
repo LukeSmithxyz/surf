@@ -18,6 +18,11 @@ static char *cookiepolicies = "Aa@"; /* A: accept all; a: accept nothing,
                                       * @: accept no third party */
 static int strictssl       = 0; /* Refuse untrusted SSL connections */
 
+/* Languages */
+static int enablespellchecking         = 0;
+static const char *spellinglanguages[] = { "en_US", NULL };
+static const char *preferedlanguages[] = { NULL };
+
 /* Webkit default features */
 static int enablescrollbars      = 1;
 static int enablecaretbrowsing   = 1;

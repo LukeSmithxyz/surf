@@ -726,6 +726,13 @@ newview(Client *c, WebKitWebView *rv)
 		webkit_cookie_manager_set_accept_policy(
 		    webkit_web_context_get_cookie_manager(context),
 		    cookiepolicy_get());
+		/* languages */
+		webkit_web_context_set_preferred_languages(context,
+		                                           preferedlanguages);
+		webkit_web_context_set_spell_checking_languages(context,
+		    spellinglanguages);
+		webkit_web_context_set_spell_checking_enabled(context,
+		    enablespellchecking);
 
 		g_signal_connect(G_OBJECT(context), "download-started",
 		                 G_CALLBACK(downloadstarted), c);
