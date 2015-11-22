@@ -105,7 +105,6 @@ static void sigchld(int unused);
 static char *buildfile(const char *path);
 static char *buildpath(const char *path);
 static Client *newclient(Client *c);
-static void addaccelgroup(Client *c);
 static void loaduri(Client *c, const Arg *a);
 static const char *geturi(Client *c);
 static void setatom(Client *c, int a, const char *v);
@@ -131,8 +130,6 @@ static WebKitWebView *newview(Client *c, WebKitWebView *rv);
 static GtkWidget *createview(WebKitWebView *v, WebKitNavigationAction *a,
                              Client *c);
 static gboolean buttonreleased(GtkWidget *w, GdkEvent *e, Client *c);
-static gboolean keypress(GtkAccelGroup *group, GObject *obj, guint key,
-                         GdkModifierType mods, Client *c);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
                                 gpointer d);
 static gboolean winevent(GtkWidget *w, GdkEvent *e, Client *c);
@@ -341,21 +338,6 @@ newclient(Client *rc)
 	c->view = newview(c, rc ? rc->view : NULL);
 
 	return c;
-}
-
-void
-addaccelgroup(Client *c)
-{
-	int i;
-	GtkAccelGroup *group = gtk_accel_group_new();
-	GClosure *closure;
-
-	for (i = 0; i < LENGTH(keys); i++) {
-		closure = g_cclosure_new(G_CALLBACK(keypress), c, NULL);
-		gtk_accel_group_connect(group, keys[i].keyval, keys[i].mod, 0,
-		                        closure);
-	}
-	gtk_window_add_accel_group(GTK_WINDOW(c->win), group);
 }
 
 void
@@ -828,28 +810,6 @@ buttonreleased(GtkWidget *w, GdkEvent *e, Client *c)
 	return FALSE;
 }
 
-gboolean
-keypress(GtkAccelGroup *group, GObject *obj, guint key, GdkModifierType mods,
-         Client *c)
-{
-	guint i;
-	gboolean processed = FALSE;
-
-	mods = CLEANMASK(mods);
-	key = gdk_keyval_to_lower(key);
-	updatewinid(c);
-	for (i = 0; i < LENGTH(keys); i++) {
-		if (key == keys[i].keyval
-		    && mods == keys[i].mod
-		    && keys[i].func) {
-			keys[i].func(c, &(keys[i].arg));
-			processed = TRUE;
-		}
-	}
-
-	return processed;
-}
-
 GdkFilterReturn
 processx(GdkXEvent *e, GdkEvent *event, gpointer d)
 {
@@ -878,11 +838,26 @@ processx(GdkXEvent *e, GdkEvent *event, gpointer d)
 gboolean
 winevent(GtkWidget *w, GdkEvent *e, Client *c)
 {
+	int i;
+
 	switch (e->type) {
 	case GDK_ENTER_NOTIFY:
 		c->overtitle = c->targeturi;
 		updatetitle(c);
 		break;
+	case GDK_KEY_PRESS:
+		if (!kioskmode) {
+			for (i = 0; i < LENGTH(keys); ++i) {
+				if (gdk_keyval_to_lower(e->key.keyval) ==
+				    keys[i].keyval &&
+				    CLEANMASK(e->key.state) == keys[i].mod &&
+				    keys[i].func) {
+					updatewinid(c);
+					keys[i].func(c, &(keys[i].arg));
+					return TRUE;
+				}
+			}
+		}
 	case GDK_LEAVE_NOTIFY:
 		c->overtitle = NULL;
 		updatetitle(c);
@@ -928,7 +903,6 @@ showview(WebKitWebView *v, Client *c)
 		webkit_web_view_set_background_color(c->view, &bgcolor);
 
 	if (!kioskmode) {
-		addaccelgroup(c);
 		gdk_window_set_events(gwin, GDK_ALL_EVENTS_MASK);
 		gdk_window_add_filter(gwin, processx, c);
 	}
@@ -969,6 +943,8 @@ createwindow(Client *c)
 	g_signal_connect(G_OBJECT(w), "destroy",
 	                 G_CALLBACK(destroywin), c);
 	g_signal_connect(G_OBJECT(w), "enter-notify-event",
+	                 G_CALLBACK(winevent), c);
+	g_signal_connect(G_OBJECT(w), "key-press-event",
 	                 G_CALLBACK(winevent), c);
 	g_signal_connect(G_OBJECT(w), "leave-notify-event",
 	                 G_CALLBACK(winevent), c);
