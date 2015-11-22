@@ -5,9 +5,9 @@ static char *scriptfile     = "~/.surf/script.js";
 static char *styledir       = "~/.surf/styles/";
 static char *cachedir       = "~/.surf/cache/";
 
-static Bool kioskmode       = FALSE; /* Ignore shortcuts */
-static Bool showindicators  = TRUE;  /* Show indicators in window title */
-static Bool runinfullscreen = FALSE; /* Run in fullscreen mode by default */
+static int kioskmode       = 0;     /* Ignore shortcuts */
+static int showindicators  = 1;     /* Show indicators in window title */
+static int runinfullscreen = 0;     /* Run in fullscreen mode by default */
 
 static guint defaultfontsize = 12;   /* Default font size */
 static gfloat zoomlevel     = 1.0;   /* Default zoom level */
@@ -16,21 +16,21 @@ static gfloat zoomlevel     = 1.0;   /* Default zoom level */
 static char *cookiefile     = "~/.surf/cookies.txt";
 static char *cookiepolicies = "Aa@"; /* A: accept all; a: accept nothing,
                                       * @: accept no third party */
-static Bool strictssl       = FALSE; /* Refuse untrusted SSL connections */
+static int strictssl       = 0; /* Refuse untrusted SSL connections */
 
 /* Webkit default features */
-static Bool enablescrollbars      = TRUE;
-static Bool enablecaretbrowsing   = TRUE;
-static Bool enablecache           = TRUE;
-static Bool enableplugins         = TRUE;
-static Bool enablescripts         = TRUE;
-static Bool enableinspector       = TRUE;
-static Bool enablestyle           = TRUE;
-static Bool loadimages            = TRUE;
-static Bool hidebackground        = FALSE;
-static Bool allowgeolocation      = TRUE;
-static Bool enablednsprefetching  = FALSE;
-static Bool enableframeflattening = FALSE;
+static int enablescrollbars      = 1;
+static int enablecaretbrowsing   = 1;
+static int enablecache           = 1;
+static int enableplugins         = 1;
+static int enablescripts         = 1;
+static int enableinspector       = 1;
+static int enablestyle           = 1;
+static int loadimages            = 1;
+static int hidebackground        = 0;
+static int allowgeolocation      = 1;
+static int enablednsprefetching  = 0;
+static int enableframeflattening = 0;
 
 static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
                                     WEBKIT_FIND_OPTIONS_WRAP_AROUND;
@@ -98,8 +98,8 @@ static Key keys[] = {
 	{ 0,                     GDK_KEY_Escape, stop,       { 0 } },
 	{ MODKEY,                GDK_KEY_c,      stop,       { 0 } },
 
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_r,      reload,     { .b = TRUE } },
-	{ MODKEY,                GDK_KEY_r,      reload,     { .b = FALSE } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_r,      reload,     { .b = 1 } },
+	{ MODKEY,                GDK_KEY_r,      reload,     { .b = 0 } },
 
 	{ MODKEY,                GDK_KEY_l,      navigate,   { .i = +1 } },
 	{ MODKEY,                GDK_KEY_h,      navigate,   { .i = -1 } },
@@ -118,8 +118,8 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_minus,  zoom,       { .i = -1 } },
 	{ MODKEY,                GDK_KEY_plus,   zoom,       { .i = +1 } },
 
-	{ MODKEY,                GDK_KEY_p,      clipboard,  { .b = TRUE } },
-	{ MODKEY,                GDK_KEY_y,      clipboard,  { .b = FALSE } },
+	{ MODKEY,                GDK_KEY_p,      clipboard,  { .b = 1 } },
+	{ MODKEY,                GDK_KEY_y,      clipboard,  { .b = 0 } },
 
 	{ MODKEY,                GDK_KEY_n,      find,       { .i = +1 } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_n,      find,       { .i = -1 } },

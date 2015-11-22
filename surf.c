@@ -56,8 +56,8 @@ enum {
 };
 
 typedef union {
-	gboolean b;
-	gint i;
+	int b;
+	int i;
 	const void *v;
 } Arg;
 
@@ -69,8 +69,7 @@ typedef struct Client {
 	WebKitHitTestResult *mousepos;
 	GTlsCertificateFlags tlsflags;
 	Window xid;
-	gint progress;
-	gboolean fullscreen;
+	int progress, fullscreen;
 	const char *title, *targeturi;
 	const char *needle;
 	struct Client *next;
@@ -122,7 +121,7 @@ static void runscript(Client *c);
 static void evalscript(Client *c, const char *jsstr, ...);
 static void updatewinid(Client *c);
 static void handleplumb(Client *c, const char *uri);
-static void newwindow(Client *c, const Arg *a, gboolean noembed);
+static void newwindow(Client *c, const Arg *a, int noembed);
 static void spawn(Client *c, const Arg *a);
 static void destroyclient(Client *c);
 static void cleanup(void);
@@ -185,7 +184,7 @@ static char togglestats[10];
 static char pagestats[2];
 static Atom atoms[AtomLast];
 static Window embed;
-static gboolean showxid = FALSE;
+static int showxid;
 static int cookiepolicy;
 static Display *dpy;
 static Client *clients;
@@ -1235,8 +1234,7 @@ pasteuri(GtkClipboard *clipboard, const char *text, gpointer d)
 void
 reload(Client *c, const Arg *a)
 {
-	gboolean nocache = *(gboolean *)a;
-	if (nocache)
+	if (a->b)
 		webkit_web_view_reload_bypass_cache(c->view);
 	else
 		webkit_web_view_reload(c->view);
@@ -1542,7 +1540,7 @@ main(int argc, char *argv[])
 		die("surf-"VERSION", ©2009-2015 surf engineers, "
 		    "see LICENSE for details\n");
 	case 'x':
-		showxid = TRUE;
+		showxid = 1;
 		break;
 	case 'z':
 		zoomlevel = strtof(EARGF(usage()), NULL);
