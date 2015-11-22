@@ -1143,10 +1143,10 @@ decideresource(WebKitPolicyDecision *d, Client *c)
 	    webkit_response_policy_decision_get_response(r);
 	const gchar *uri = webkit_uri_response_get_uri(res);
 
-	if (g_str_has_suffix(uri, "/favicon.ico"))
-		webkit_uri_request_set_uri(
-		    webkit_response_policy_decision_get_request(r),
-		    "about:blank");
+	if (g_str_has_suffix(uri, "/favicon.ico")) {
+		webkit_policy_decision_ignore(d);
+		return;
+	}
 
 	if (!g_str_has_prefix(uri, "http://")
 	    && !g_str_has_prefix(uri, "https://")
@@ -1164,6 +1164,7 @@ decideresource(WebKitPolicyDecision *d, Client *c)
 		if (isascii) {
 			handleplumb(c, uri);
 			webkit_policy_decision_ignore(d);
+			return;
 		}
 	}
 
