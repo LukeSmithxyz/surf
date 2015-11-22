@@ -485,12 +485,11 @@ cookiepolicy_get(void)
 		return WEBKIT_COOKIE_POLICY_ACCEPT_NEVER;
 	case '@':
 		return WEBKIT_COOKIE_POLICY_ACCEPT_NO_THIRD_PARTY;
+	default: /* fallthrough */
 	case 'A':
-	default:
-		break;
+		return WEBKIT_COOKIE_POLICY_ACCEPT_ALWAYS;
 	}
 
-	return WEBKIT_COOKIE_POLICY_ACCEPT_ALWAYS;
 }
 
 char
@@ -501,12 +500,11 @@ cookiepolicy_set(const WebKitCookieAcceptPolicy p)
 		return 'a';
 	case WEBKIT_COOKIE_POLICY_ACCEPT_NO_THIRD_PARTY:
 		return '@';
+	default: /* fallthrough */
 	case WEBKIT_COOKIE_POLICY_ACCEPT_ALWAYS:
-	default:
-		break;
+		return 'A';
 	}
 
-	return 'A';
 }
 
 const char *
