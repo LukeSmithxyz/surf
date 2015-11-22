@@ -406,8 +406,8 @@ setatom(Client *c, int a, const char *v)
 {
 	XSync(dpy, False);
 	XChangeProperty(dpy, c->xid,
-			atoms[a], XA_STRING, 8, PropModeReplace,
-			(unsigned char *)v, strlen(v) + 1);
+	                atoms[a], XA_STRING, 8, PropModeReplace,
+	                (unsigned char *)v, strlen(v) + 1);
 }
 
 const char *
