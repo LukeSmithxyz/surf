@@ -108,7 +108,7 @@ static char *buildpath(const char *path);
 static Client *newclient(Client *c);
 static void addaccelgroup(Client *c);
 static void loaduri(Client *c, const Arg *a);
-static char *geturi(Client *c);
+static const char *geturi(Client *c);
 static void setatom(Client *c, int a, const char *v);
 static const char *getatom(Client *c, int a);
 static void updatetitle(Client *c);
@@ -116,12 +116,12 @@ static void gettogglestats(Client *c);
 static void getpagestats(Client *c);
 static WebKitCookieAcceptPolicy cookiepolicy_get(void);
 static char cookiepolicy_set(const WebKitCookieAcceptPolicy p);
-static const gchar *getstyle(const char *uri);
+static const char *getstyle(const char *uri);
 static void setstyle(Client *c, const char *stylefile);
 static void runscript(Client *c);
 static void evalscript(Client *c, const char *jsstr, ...);
 static void updatewinid(Client *c);
-static void handleplumb(Client *c, const gchar *uri);
+static void handleplumb(Client *c, const char *uri);
 static void newwindow(Client *c, const Arg *a, gboolean noembed);
 static void spawn(Client *c, const Arg *a);
 static void destroyclient(Client *c);
@@ -392,7 +392,7 @@ loaduri(Client *c, const Arg *a)
 	g_free(url);
 }
 
-char *
+const char *
 geturi(Client *c)
 {
 	char *uri;
@@ -513,7 +513,7 @@ cookiepolicy_set(const WebKitCookieAcceptPolicy p)
 	return 'A';
 }
 
-const gchar *
+const char *
 getstyle(const char *uri)
 {
 	int i;
@@ -582,7 +582,7 @@ updatewinid(Client *c)
 }
 
 void
-handleplumb(Client *c, const gchar *uri)
+handleplumb(Client *c, const char *uri)
 {
 	Arg a = (Arg)PLUMB(uri);
 	spawn(c, &a);
