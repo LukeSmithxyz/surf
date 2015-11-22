@@ -948,6 +948,7 @@ showview(WebKitWebView *v, Client *c)
 GtkWidget *
 createwindow(Client *c)
 {
+	char *wmstr;
 	GtkWidget *w;
 
 	if (embed) {
@@ -955,19 +956,14 @@ createwindow(Client *c)
 	} else {
 		w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
-		/* TA:  20091214:  Despite what the GNOME docs say, the ICCCM
-		 * is always correct, so we should still call this function.
-		 * But when doing so, we *must* differentiate between a
-		 * WM_CLASS and a resource on the window.  By convention, the
-		 * window class (WM_CLASS) is capped, while the resource is in
-		 * lowercase.   Both these values come as a pair.
-		 */
-		gtk_window_set_wmclass(GTK_WINDOW(w), "surf", "Surf");
+		wmstr = g_path_get_basename(argv0);
+		gtk_window_set_wmclass(GTK_WINDOW(w), wmstr, "Surf");
+		g_free(wmstr);
 
-		/* TA:  20091214:  And set the role here as well -- so that
-		 * sessions can pick this up.
-		 */
-		gtk_window_set_role(GTK_WINDOW(w), "Surf");
+		wmstr = g_strdup_printf("%s[%lu]", "Surf",
+		        webkit_web_view_get_page_id(c->view));
+		gtk_window_set_role(GTK_WINDOW(w), wmstr);
+		g_free(wmstr);
 
 		gtk_window_set_default_size(GTK_WINDOW(w), 800, 600);
 	}
