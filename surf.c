@@ -211,7 +211,7 @@ die(const char *errstr, ...)
 	va_start(ap, errstr);
 	vfprintf(stderr, errstr, ap);
 	va_end(ap);
-	exit(EXIT_FAILURE);
+	exit(1);
 }
 
 void
@@ -1555,5 +1555,5 @@ main(int argc, char *argv[])
 	gtk_main();
 	cleanup();
 
-	return EXIT_SUCCESS;
+	return 0;
 }
