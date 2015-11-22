@@ -1368,7 +1368,12 @@ void
 togglestyle(Client *c, const Arg *a)
 {
 	enablestyle = !enablestyle;
-	setstyle(c, enablestyle ? getstyle(geturi(c)) : "");
+
+	if (enablestyle)
+		setstyle(c, getstyle(geturi(c)));
+	else
+		webkit_user_content_manager_remove_all_style_sheets(
+		    webkit_web_view_get_user_content_manager(c->view));
 
 	updatetitle(c);
 }
