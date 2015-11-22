@@ -130,7 +130,7 @@ static void cleanup(void);
 static WebKitWebView *newview(Client *c, WebKitWebView *rv);
 static GtkWidget *createview(WebKitWebView *v, WebKitNavigationAction *a,
                              Client *c);
-static gboolean buttonreleased(GtkWidget *w, GdkEventKey *e, Client *c);
+static gboolean buttonreleased(GtkWidget *w, GdkEvent *e, Client *c);
 static gboolean keypress(GtkAccelGroup *group, GObject *obj, guint key,
                          GdkModifierType mods, Client *c);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
@@ -813,18 +813,17 @@ createview(WebKitWebView *v, WebKitNavigationAction *a, Client *c)
 }
 
 gboolean
-buttonreleased(GtkWidget *w, GdkEventKey *e, Client *c)
+buttonreleased(GtkWidget *w, GdkEvent *e, Client *c)
 {
 	WebKitHitTestResultContext element;
-	GdkEventButton *eb = (GdkEventButton*)e;
 	int i;
 
 	element = webkit_hit_test_result_get_context(c->mousepos);
 
 	for (i = 0; i < LENGTH(buttons); ++i) {
 		if (element & buttons[i].target &&
-		    eb->button == buttons[i].button &&
-		    CLEANMASK(eb->state) == CLEANMASK(buttons[i].mask) &&
+		    e->button.button == buttons[i].button &&
+		    CLEANMASK(e->button.state) == CLEANMASK(buttons[i].mask) &&
 		    buttons[i].func) {
 			buttons[i].func(c, &buttons[i].arg, c->mousepos);
 			return buttons[i].stopevent;
