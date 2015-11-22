@@ -643,9 +643,9 @@ spawn(Client *c, const Arg *a)
 			close(ConnectionNumber(dpy));
 		setsid();
 		execvp(((char **)a->v)[0], (char **)a->v);
-		fprintf(stderr, "surf: execvp %s", ((char **)a->v)[0]);
+		fprintf(stderr, "%s: execvp %s", argv0, ((char **)a->v)[0]);
 		perror(" failed");
-		exit(0);
+		exit(1);
 	}
 }
 
