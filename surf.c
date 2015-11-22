@@ -1220,7 +1220,7 @@ void
 pasteuri(GtkClipboard *clipboard, const char *text, gpointer d)
 {
 	Arg a = {.v = text };
-	if (!text)
+	if (text)
 		loaduri((Client *) d, &a);
 }
 
