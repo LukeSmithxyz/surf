@@ -905,7 +905,6 @@ winevent(GtkWidget *w, GdkEvent *e, Client *c)
 void
 showview(WebKitWebView *v, Client *c)
 {
-	GdkGeometry hints = { 1, 1 };
 	GdkRGBA bgcolor = { 0 };
 	GdkWindow *gwin;
 
@@ -916,8 +915,6 @@ showview(WebKitWebView *v, Client *c)
 	c->win = createwindow(c);
 
 	gtk_container_add(GTK_CONTAINER(c->win), GTK_WIDGET(c->view));
-	gtk_window_set_geometry_hints(GTK_WINDOW(c->win), NULL, &hints,
-	                              GDK_HINT_MIN_SIZE);
 	gtk_widget_show_all(c->win);
 	gtk_widget_grab_focus(GTK_WIDGET(c->view));
 
