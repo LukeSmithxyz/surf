@@ -10,7 +10,7 @@ static Bool showindicators  = TRUE;  /* Show indicators in window title */
 static Bool runinfullscreen = FALSE; /* Run in fullscreen mode by default */
 
 static guint defaultfontsize = 12;   /* Default font size */
-static gfloat zoomlevel = 1.0;       /* Default zoom level */
+static gfloat zoomlevel     = 1.0;   /* Default zoom level */
 
 /* Soup default features */
 static char *cookiefile     = "~/.surf/cookies.txt";
@@ -36,23 +36,23 @@ static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
                                     WEBKIT_FIND_OPTIONS_WRAP_AROUND;
 
 #define SETPROP(p, q) { \
-	.v = (const char *[]){ "/bin/sh", "-c", \
-	     "prop=\"`xprop -id $2 $0 " \
-	     "| sed \"s/^$0(STRING) = \\(\\\\\"\\?\\)\\(.*\\)\\1$/\\2/\" " \
-	     "| xargs -0 printf %b | dmenu`\" &&" \
-	     "xprop -id $2 -f $1 8s -set $1 \"$prop\"", \
-	     p, q, winid, NULL \
-	} \
+        .v = (const char *[]){ "/bin/sh", "-c", \
+             "prop=\"`xprop -id $2 $0 " \
+             "| sed \"s/^$0(STRING) = \\(\\\\\"\\?\\)\\(.*\\)\\1$/\\2/\" " \
+             "| xargs -0 printf %b | dmenu`\" &&" \
+             "xprop -id $2 -f $1 8s -set $1 \"$prop\"", \
+             p, q, winid, NULL \
+        } \
 }
 
 /* DOWNLOAD(URI, referer) */
 #define DOWNLOAD(d, r) { \
-	.v = (const char *[]){ "/bin/sh", "-c", \
-	     "st -e /bin/sh -c \"curl -L -J -O --user-agent '$1'" \
-	     " --referer '$2' -b $3 -c $3 '$0';" \
-	     " sleep 5;\"", \
-	     d, useragent, r, cookiefile, NULL \
-	} \
+        .v = (const char *[]){ "/bin/sh", "-c", \
+             "st -e /bin/sh -c \"curl -L -J -O --user-agent '$1'" \
+             " --referer '$2' -b $3 -c $3 '$0';" \
+             " sleep 5;\"", \
+             d, useragent, r, cookiefile, NULL \
+        } \
 }
 
 /* PLUMB(URI) */
@@ -60,16 +60,16 @@ static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
  * "http://" or "https://" should be opened.
  */
 #define PLUMB(u) {\
-	.v = (const char *[]){ "/bin/sh", "-c", \
-	     "xdg-open \"$0\"", u, NULL \
-	} \
+        .v = (const char *[]){ "/bin/sh", "-c", \
+             "xdg-open \"$0\"", u, NULL \
+        } \
 }
 
 /* VIDEOPLAY(URI) */
 #define VIDEOPLAY(u) {\
-	.v = (const char *[]){ "/bin/sh", "-c", \
-	    "mpv --really-quiet \"$0\"", u, NULL \
-	} \
+        .v = (const char *[]){ "/bin/sh", "-c", \
+             "mpv --really-quiet \"$0\"", u, NULL \
+        } \
 }
 
 /* styles */
@@ -90,7 +90,7 @@ static SiteStyle styles[] = {
  * edit the CLEANMASK() macro.
  */
 static Key keys[] = {
-	/* modifier	         keyval          function    arg */
+	/* modifier              keyval          function    arg */
 	{ MODKEY,                GDK_KEY_g,      spawn,      SETPROP("_SURF_URI", "_SURF_GO") },
 	{ MODKEY,                GDK_KEY_f,      spawn,      SETPROP("_SURF_FIND", "_SURF_FIND") },
 	{ MODKEY,                GDK_KEY_slash,  spawn,      SETPROP("_SURF_FIND", "_SURF_FIND") },
