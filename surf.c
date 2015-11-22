@@ -755,26 +755,26 @@ newview(Client *c, WebKitWebView *rv)
 		    NULL);
 	}
 
-	g_signal_connect(G_OBJECT(v), "notify::title",
-			 G_CALLBACK(titlechanged), c);
-	g_signal_connect(G_OBJECT(v), "mouse-target-changed",
-			 G_CALLBACK(mousetargetchanged), c);
-	g_signal_connect(G_OBJECT(v), "permission-request",
-			 G_CALLBACK(permissionrequested), c);
-	g_signal_connect(G_OBJECT(v), "create",
-			 G_CALLBACK(createview), c);
-	g_signal_connect(G_OBJECT(v), "ready-to-show",
-			 G_CALLBACK(showview), c);
-	g_signal_connect(G_OBJECT(v), "decide-policy",
-			 G_CALLBACK(decidepolicy), c);
-	g_signal_connect(G_OBJECT(v), "load-changed",
-			 G_CALLBACK(loadchanged), c);
 	g_signal_connect(G_OBJECT(v), "notify::estimated-load-progress",
 			 G_CALLBACK(progresschanged), c);
+	g_signal_connect(G_OBJECT(v), "notify::title",
+			 G_CALLBACK(titlechanged), c);
 	g_signal_connect(G_OBJECT(v), "button-release-event",
 			 G_CALLBACK(buttonreleased), c);
 	g_signal_connect(G_OBJECT(v), "close",
 			G_CALLBACK(closeview), c);
+	g_signal_connect(G_OBJECT(v), "create",
+			 G_CALLBACK(createview), c);
+	g_signal_connect(G_OBJECT(v), "decide-policy",
+			 G_CALLBACK(decidepolicy), c);
+	g_signal_connect(G_OBJECT(v), "load-changed",
+			 G_CALLBACK(loadchanged), c);
+	g_signal_connect(G_OBJECT(v), "mouse-target-changed",
+			 G_CALLBACK(mousetargetchanged), c);
+	g_signal_connect(G_OBJECT(v), "permission-request",
+			 G_CALLBACK(permissionrequested), c);
+	g_signal_connect(G_OBJECT(v), "ready-to-show",
+			 G_CALLBACK(showview), c);
 
 	return v;
 }
