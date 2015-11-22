@@ -333,14 +333,12 @@ newclient(Client *rc)
 	if (!(c = calloc(1, sizeof(Client))))
 		die("Cannot malloc!\n");
 
-	c->title = NULL;
-	c->progress = 100;
-
 	c->next = clients;
 	clients = c;
 
-	c->view = newview(c, rc ? rc->view : NULL);
+	c->progress = 100;
 	c->tlsflags = G_TLS_CERTIFICATE_VALIDATE_ALL + 1;
+	c->view = newview(c, rc ? rc->view : NULL);
 
 	return c;
 }
@@ -435,26 +433,24 @@ void
 updatetitle(Client *c)
 {
 	char *title;
+	const char *name = c->targeturi ? c->targeturi :
+	                   c->title ? c->title : "";
 
 	if (showindicators) {
 		gettogglestats(c);
 		getpagestats(c);
 
-		if (c->progress != 100) {
+		if (c->progress != 100)
 			title = g_strdup_printf("[%i%%] %s:%s | %s",
-			        c->progress, togglestats, pagestats,
-			        c->targeturi ? c->targeturi : c->title);
-		} else {
+			        c->progress, togglestats, pagestats, name);
+		else
 			title = g_strdup_printf("%s:%s | %s",
-			        togglestats, pagestats,
-			        c->targeturi ? c->targeturi : c->title);
-		}
+			        togglestats, pagestats, name);
 
 		gtk_window_set_title(GTK_WINDOW(c->win), title);
 		g_free(title);
 	} else {
-		gtk_window_set_title(GTK_WINDOW(c->win), c->title ?
-		                     c->title : "");
+		gtk_window_set_title(GTK_WINDOW(c->win), name);
 	}
 }
 
@@ -1543,15 +1539,15 @@ main(int argc, char *argv[])
 	} ARGEND;
 	if (argc > 0)
 		arg.v = argv[0];
+	else
+		arg.v = "about:blank";
 
 	setup();
 	c = newclient(NULL);
 	showview(NULL, c);
 
-	if (arg.v)
-		loaduri(clients, &arg);
-	else
-		updatetitle(c);
+	loaduri(c, &arg);
+	updatetitle(c);
 
 	gtk_main();
 	cleanup();
