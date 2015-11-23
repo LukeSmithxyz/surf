@@ -6,6 +6,7 @@ VERSION = 0.6
 # paths
 PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/share/man
+LIBPREFIX = ${PREFIX}/lib/surf
 
 X11INC = /usr/X11R6/include
 X11LIB = /usr/X11R6/lib
@@ -18,7 +19,7 @@ INCS = -I. -I/usr/include -I${X11INC} ${GTKINC}
 LIBS = -L/usr/lib -lc -L${X11LIB} -lX11 ${GTKLIB} -lgthread-2.0
 
 # flags
-CPPFLAGS = -DVERSION=\"${VERSION}\" -D_DEFAULT_SOURCE
+CPPFLAGS = -DVERSION=\"${VERSION}\" -DWEBEXTDIR=\"${LIBPREFIX}\" -D_DEFAULT_SOURCE
 CFLAGS = -std=c99 -pedantic -Wall -Os ${INCS} ${CPPFLAGS}
 LDFLAGS = -s ${LIBS}
 
