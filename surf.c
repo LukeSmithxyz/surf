@@ -1517,7 +1517,7 @@ main(int argc, char *argv[])
 		stylefile = EARGF(usage());
 		break;
 	case 'u':
-		useragent = EARGF(usage());
+		fulluseragent = EARGF(usage());
 		break;
 	case 'v':
 		die("surf-"VERSION", ©2009-2015 surf engineers, "
