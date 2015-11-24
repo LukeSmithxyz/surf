@@ -1425,10 +1425,8 @@ clickexternplayer(Client *c, const Arg *a, WebKitHitTestResult *h)
 {
 	Arg arg;
 
-	if (webkit_hit_test_result_get_context(h) & OnMedia) {
-		arg = (Arg)VIDEOPLAY(webkit_hit_test_result_get_media_uri(h));
-		spawn(c, &arg);
-	}
+	arg = (Arg)VIDEOPLAY(webkit_hit_test_result_get_media_uri(h));
+	spawn(c, &arg);
 }
 
 int
