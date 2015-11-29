@@ -4,38 +4,40 @@ static char *fulluseragent  = ""; /* Or override the whole user agent string */
 static char *scriptfile     = "~/.surf/script.js";
 static char *styledir       = "~/.surf/styles/";
 static char *cachedir       = "~/.surf/cache/";
-
-static int kioskmode       = 0;     /* Ignore shortcuts */
-static int showindicators  = 1;     /* Show indicators in window title */
-static int runinfullscreen = 0;     /* Run in fullscreen mode by default */
-
-static guint defaultfontsize = 12;   /* Default font size */
-static gfloat zoomlevel     = 1.0;   /* Default zoom level */
-
-/* Soup default features */
 static char *cookiefile     = "~/.surf/cookies.txt";
-static char *cookiepolicies = "Aa@"; /* A: accept all; a: accept nothing,
-                                      * @: accept no third party */
-static int strictssl       = 0; /* Refuse untrusted SSL connections */
-
-/* Languages */
-static int enablespellchecking         = 0;
-static const char *spellinglanguages[] = { "en_US", NULL };
-static const char *preferedlanguages[] = { NULL };
 
 /* Webkit default features */
-static int enablescrollbars      = 1;
-static int enablecaretbrowsing   = 1;
-static int enablecache           = 1;
-static int enableplugins         = 1;
-static int enablescripts         = 1;
-static int enableinspector       = 1;
-static int enablestyle           = 1;
-static int loadimages            = 1;
-static int hidebackground        = 0;
-static int allowgeolocation      = 1;
-static int enablednsprefetching  = 0;
-static int enableframeflattening = 0;
+static Parameter defconfig[ParameterLast] = {
+	SETB(CaretBrowsing,      0),
+	SETV(CookiePolicies,     "@Aa"),
+	SETB(DiskCache,          1),
+	SETB(DNSPrefetch,        0),
+	SETI(FontSize,           12),
+	SETB(FrameFlattening,    0),
+	SETB(Geolocation,        0),
+	SETB(HideBackground,     0),
+	SETB(Inspector,          0),
+	SETB(JavaScript,         1),
+	SETB(KioskMode,          0),
+	SETB(LoadImages,         1),
+	SETB(Plugins,            1),
+	SETV(PreferredLanguages, ((char *[]){ NULL })),
+	SETB(RunInFullscreen,    0),
+	SETB(ScrollBars,         1),
+	SETB(ShowIndicators,     1),
+	SETB(SpellChecking,      0),
+	SETV(SpellLanguages,     ((char *[]){ "en_US", NULL })),
+	SETB(StrictSSL,          0),
+	SETB(Style,              1),
+	SETF(ZoomLevel,          1.0),
+};
+
+static UriParameters uriparams[] = {
+	{ "(://|\\.)suckless\\.org(/|$)", {
+	  FSETB(JavaScript, 0),
+	  FSETB(Plugins,    0),
+	}, },
+};
 
 static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
                                     WEBKIT_FIND_OPTIONS_WRAP_AROUND;
@@ -146,6 +148,7 @@ static Key keys[] = {
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_i,      toggle,     { .i = LoadImages } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_v,      toggle,     { .i = Plugins } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_b,      toggle,     { .i = ScrollBars } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_m,      toggle,     { .i = Style } },
 };
 
 /* button definitions */
