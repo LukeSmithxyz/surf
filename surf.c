@@ -31,18 +31,42 @@
 
 #define LENGTH(x)               (sizeof(x) / sizeof(x[0]))
 #define CLEANMASK(mask)         (mask & (MODKEY|GDK_SHIFT_MASK))
+#define SETB(p, s)              [p] = (Parameter){ { .b = s }, }
+#define SETI(p, s)              [p] = (Parameter){ { .i = s }, }
+#define SETV(p, s)              [p] = (Parameter){ { .v = s }, }
+#define SETF(p, s)              [p] = (Parameter){ { .f = s }, }
+#define FSETB(p, s)             [p] = (Parameter){ { .b = s }, 1 }
+#define FSETI(p, s)             [p] = (Parameter){ { .i = s }, 1 }
+#define FSETV(p, s)             [p] = (Parameter){ { .v = s }, 1 }
+#define FSETF(p, s)             [p] = (Parameter){ { .f = s }, 1 }
 
 enum { AtomFind, AtomGo, AtomUri, AtomLast };
 
-enum {
+typedef enum {
 	CaretBrowsing,
+	CookiePolicies,
+	DiskCache,
+	DNSPrefetch,
+	FontSize,
 	FrameFlattening,
 	Geolocation,
+	HideBackground,
+	Inspector,
 	JavaScript,
+	KioskMode,
 	LoadImages,
 	Plugins,
+	PreferredLanguages,
+	RunInFullscreen,
 	ScrollBars,
-};
+	ShowIndicators,
+	SpellChecking,
+	SpellLanguages,
+	StrictSSL,
+	Style,
+	ZoomLevel,
+	ParameterLast,
+} ParamName;
 
 enum {
 	OnDoc   = WEBKIT_HIT_TEST_RESULT_CONTEXT_DOCUMENT,
@@ -58,8 +82,14 @@ enum {
 typedef union {
 	int b;
 	int i;
+	float f;
 	const void *v;
 } Arg;
+
+typedef struct {
+	Arg val;
+	int force;
+} Parameter;
 
 typedef struct Client {
 	GtkWidget *win;
@@ -90,6 +120,12 @@ typedef struct {
 	const Arg arg;
 	unsigned int stopevent;
 } Button;
+
+typedef struct {
+	const char *uri;
+	Parameter config[ParameterLast];
+	regex_t re;
+} UriParameters;
 
 typedef struct {
 	char *regex;
