@@ -31,14 +31,18 @@
 
 #define LENGTH(x)               (sizeof(x) / sizeof(x[0]))
 #define CLEANMASK(mask)         (mask & (MODKEY|GDK_SHIFT_MASK))
-#define SETB(p, s)              [p] = (Parameter){ { .b = s }, }
-#define SETI(p, s)              [p] = (Parameter){ { .i = s }, }
-#define SETV(p, s)              [p] = (Parameter){ { .v = s }, }
-#define SETF(p, s)              [p] = (Parameter){ { .f = s }, }
-#define FSETB(p, s)             [p] = (Parameter){ { .b = s }, 1 }
-#define FSETI(p, s)             [p] = (Parameter){ { .i = s }, 1 }
-#define FSETV(p, s)             [p] = (Parameter){ { .v = s }, 1 }
-#define FSETF(p, s)             [p] = (Parameter){ { .f = s }, 1 }
+#define SETB(p, s)              [p] = { { .b = s }, }
+#define SETI(p, s)              [p] = { { .i = s }, }
+#define SETV(p, s)              [p] = { { .v = s }, }
+#define SETF(p, s)              [p] = { { .f = s }, }
+#define FSETB(p, s)             [p] = { { .b = s }, 1 }
+#define FSETI(p, s)             [p] = { { .i = s }, 1 }
+#define FSETV(p, s)             [p] = { { .v = s }, 1 }
+#define FSETF(p, s)             [p] = { { .f = s }, 1 }
+#define CSETB(p, s)             [p] = (Parameter){ { .b = s }, 1 }
+#define CSETI(p, s)             [p] = (Parameter){ { .i = s }, 1 }
+#define CSETV(p, s)             [p] = (Parameter){ { .v = s }, 1 }
+#define CSETF(p, s)             [p] = (Parameter){ { .f = s }, 1 }
 
 enum { AtomFind, AtomGo, AtomUri, AtomLast };
 
@@ -1599,76 +1603,76 @@ main(int argc, char *argv[])
 	/* command line args */
 	ARGBEGIN {
 	case 'a':
-		defconfig FSETV(CookiePolicies, EARGF(usage()));
+		defconfig CSETV(CookiePolicies, EARGF(usage()));
 		break;
 	case 'b':
-		defconfig FSETB(ScrollBars, 0);
+		defconfig CSETB(ScrollBars, 0);
 		break;
 	case 'B':
-		defconfig FSETB(ScrollBars, 1);
+		defconfig CSETB(ScrollBars, 1);
 		break;
 	case 'c':
 		cookiefile = EARGF(usage());
 		break;
 	case 'd':
-		defconfig FSETB(DiskCache, 0);
+		defconfig CSETB(DiskCache, 0);
 		break;
 	case 'D':
-		defconfig FSETB(DiskCache, 1);
+		defconfig CSETB(DiskCache, 1);
 		break;
 	case 'e':
 		embed = strtol(EARGF(usage()), NULL, 0);
 		break;
 	case 'f':
-		defconfig FSETB(RunInFullscreen, 0);
+		defconfig CSETB(RunInFullscreen, 0);
 		break;
 	case 'F':
-		defconfig FSETB(RunInFullscreen, 1);
+		defconfig CSETB(RunInFullscreen, 1);
 		break;
 	case 'g':
-		defconfig FSETB(Geolocation, 0);
+		defconfig CSETB(Geolocation, 0);
 		break;
 	case 'G':
-		defconfig FSETB(Geolocation, 1);
+		defconfig CSETB(Geolocation, 1);
 		break;
 	case 'i':
-		defconfig FSETB(LoadImages, 0);
+		defconfig CSETB(LoadImages, 0);
 		break;
 	case 'I':
-		defconfig FSETB(LoadImages, 1);
+		defconfig CSETB(LoadImages, 1);
 		break;
 	case 'k':
-		defconfig FSETB(KioskMode, 0);
+		defconfig CSETB(KioskMode, 0);
 		break;
 	case 'K':
-		defconfig FSETB(KioskMode, 1);
+		defconfig CSETB(KioskMode, 1);
 		break;
 	case 'm':
-		defconfig FSETB(Style, 0);
+		defconfig CSETB(Style, 0);
 		break;
 	case 'M':
-		defconfig FSETB(Style, 1);
+		defconfig CSETB(Style, 1);
 		break;
 	case 'n':
-		defconfig FSETB(Inspector, 0);
+		defconfig CSETB(Inspector, 0);
 		break;
 	case 'N':
-		defconfig FSETB(Inspector, 1);
+		defconfig CSETB(Inspector, 1);
 		break;
 	case 'p':
-		defconfig FSETB(Plugins, 0);
+		defconfig CSETB(Plugins, 0);
 		break;
 	case 'P':
-		defconfig FSETB(Plugins, 1);
+		defconfig CSETB(Plugins, 1);
 		break;
 	case 'r':
 		scriptfile = EARGF(usage());
 		break;
 	case 's':
-		defconfig FSETB(JavaScript, 0);
+		defconfig CSETB(JavaScript, 0);
 		break;
 	case 'S':
-		defconfig FSETB(JavaScript, 1);
+		defconfig CSETB(JavaScript, 1);
 		break;
 	case 't':
 		stylefile = EARGF(usage());
@@ -1683,7 +1687,7 @@ main(int argc, char *argv[])
 		showxid = 1;
 		break;
 	case 'z':
-		defconfig FSETF(ZoomLevel, strtof(EARGF(usage()), NULL));
+		defconfig CSETF(ZoomLevel, strtof(EARGF(usage()), NULL));
 		break;
 	default:
 		usage();
