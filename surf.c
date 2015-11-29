@@ -42,6 +42,17 @@
 
 enum { AtomFind, AtomGo, AtomUri, AtomLast };
 
+enum {
+	OnDoc   = WEBKIT_HIT_TEST_RESULT_CONTEXT_DOCUMENT,
+	OnLink  = WEBKIT_HIT_TEST_RESULT_CONTEXT_LINK,
+	OnImg   = WEBKIT_HIT_TEST_RESULT_CONTEXT_IMAGE,
+	OnMedia = WEBKIT_HIT_TEST_RESULT_CONTEXT_MEDIA,
+	OnEdit  = WEBKIT_HIT_TEST_RESULT_CONTEXT_EDITABLE,
+	OnBar   = WEBKIT_HIT_TEST_RESULT_CONTEXT_SCROLLBAR,
+	OnSel   = WEBKIT_HIT_TEST_RESULT_CONTEXT_SELECTION,
+	OnAny   = OnDoc | OnLink | OnImg | OnMedia | OnEdit | OnBar | OnSel,
+};
+
 typedef enum {
 	CaretBrowsing,
 	CookiePolicies,
@@ -67,17 +78,6 @@ typedef enum {
 	ZoomLevel,
 	ParameterLast,
 } ParamName;
-
-enum {
-	OnDoc   = WEBKIT_HIT_TEST_RESULT_CONTEXT_DOCUMENT,
-	OnLink  = WEBKIT_HIT_TEST_RESULT_CONTEXT_LINK,
-	OnImg   = WEBKIT_HIT_TEST_RESULT_CONTEXT_IMAGE,
-	OnMedia = WEBKIT_HIT_TEST_RESULT_CONTEXT_MEDIA,
-	OnEdit  = WEBKIT_HIT_TEST_RESULT_CONTEXT_EDITABLE,
-	OnBar   = WEBKIT_HIT_TEST_RESULT_CONTEXT_SCROLLBAR,
-	OnSel   = WEBKIT_HIT_TEST_RESULT_CONTEXT_SELECTION,
-	OnAny   = OnDoc | OnLink | OnImg | OnMedia | OnEdit | OnBar | OnSel,
-};
 
 typedef union {
 	int b;
@@ -150,6 +150,8 @@ static void gettogglestats(Client *c);
 static void getpagestats(Client *c);
 static WebKitCookieAcceptPolicy cookiepolicy_get(void);
 static char cookiepolicy_set(const WebKitCookieAcceptPolicy p);
+static void seturiparameters(Client *c, const char *uri);
+static void setparameter(Client *c, int refresh, ParamName p, const Arg *a);
 static const char *getstyle(const char *uri);
 static void setstyle(Client *c, const char *stylefile);
 static void runscript(Client *c);
@@ -203,7 +205,6 @@ static void stop(Client *c, const Arg *a);
 static void toggle(Client *c, const Arg *a);
 static void togglefullscreen(Client *c, const Arg *a);
 static void togglecookiepolicy(Client *c, const Arg *a);
-static void togglestyle(Client *c, const Arg *a);
 static void toggleinspector(Client *c, const Arg *a);
 static void find(Client *c, const Arg *a);
 
@@ -224,6 +225,7 @@ static Client *clients;
 static GdkDevice *gdkkb;
 static char *stylefile;
 static const char *useragent;
+static Parameter *curconfig;
 char *argv0;
 
 /* configuration, allows nested code to access above variables */
@@ -251,13 +253,15 @@ die(const char *errstr, ...)
 void
 setup(void)
 {
-	int i;
+	int i, j;
 
 	/* clean up any zombies immediately */
 	sigchld(0);
 	gtk_init(NULL, NULL);
 
 	dpy = GDK_DISPLAY_XDISPLAY(gdk_display_get_default());
+
+	curconfig = defconfig;
 
 	/* atoms */
 	atoms[AtomFind] = XInternAtom(dpy, "_SURF_FIND", False);
@@ -287,6 +291,24 @@ setup(void)
 		g_free(styledir);
 	} else {
 		stylefile = buildfile(stylefile);
+	}
+
+	for (i = 0; i < LENGTH(uriparams); ++i) {
+		if (!regcomp(&(uriparams[i].re), uriparams[i].uri,
+		    REG_EXTENDED)) {
+			/* copy default parameters if they are not already set
+			 * or if they are forced */
+			for (j = 0; j < ParameterLast; ++j) {
+				if (!uriparams[i].config[j].force ||
+				    defconfig[j].force)
+					uriparams[i].config[j] = defconfig[j];
+			}
+		} else {
+			fprintf(stderr,
+			        "Could not compile regex: %s\n",
+			        uriparams[i].uri);
+			uriparams[i].uri = NULL;
+		}
 	}
 }
 
@@ -456,7 +478,7 @@ updatetitle(Client *c)
 	const char *name = c->overtitle ? c->overtitle :
 	                   c->title ? c->title : "";
 
-	if (showindicators) {
+	if (curconfig[ShowIndicators].val.b) {
 		gettogglestats(c);
 		getpagestats(c);
 
@@ -478,14 +500,14 @@ void
 gettogglestats(Client *c)
 {
 	togglestats[0] = cookiepolicy_set(cookiepolicy_get());
-	togglestats[1] = enablecaretbrowsing ?   'C' : 'c';
-	togglestats[2] = allowgeolocation ?      'G' : 'g';
-	togglestats[3] = enablecache ?           'D' : 'd';
-	togglestats[4] = loadimages ?            'I' : 'i';
-	togglestats[5] = enablescripts ?         'S' : 's';
-	togglestats[6] = enableplugins ?         'V' : 'v';
-	togglestats[7] = enablestyle ?           'M' : 'm';
-	togglestats[8] = enableframeflattening ? 'F' : 'f';
+	togglestats[1] = curconfig[CaretBrowsing].val.b ?   'C' : 'c';
+	togglestats[2] = curconfig[Geolocation].val.b ?     'G' : 'g';
+	togglestats[3] = curconfig[DiskCache].val.b ?       'D' : 'd';
+	togglestats[4] = curconfig[LoadImages].val.b ?      'I' : 'i';
+	togglestats[5] = curconfig[JavaScript].val.b ?      'S' : 's';
+	togglestats[6] = curconfig[Plugins].val.b ?         'V' : 'v';
+	togglestats[7] = curconfig[Style].val.b ?           'M' : 'm';
+	togglestats[8] = curconfig[FrameFlattening].val.b ? 'F' : 'f';
 	togglestats[9] = '\0';
 }
 
@@ -500,7 +522,7 @@ getpagestats(Client *c)
 WebKitCookieAcceptPolicy
 cookiepolicy_get(void)
 {
-	switch (cookiepolicies[cookiepolicy]) {
+	switch (((char *)curconfig[CookiePolicies].val.v)[cookiepolicy]) {
 	case 'a':
 		return WEBKIT_COOKIE_POLICY_ACCEPT_NEVER;
 	case '@':
@@ -509,7 +531,6 @@ cookiepolicy_get(void)
 	case 'A':
 		return WEBKIT_COOKIE_POLICY_ACCEPT_ALWAYS;
 	}
-
 }
 
 char
@@ -524,7 +545,122 @@ cookiepolicy_set(const WebKitCookieAcceptPolicy p)
 	case WEBKIT_COOKIE_POLICY_ACCEPT_ALWAYS:
 		return 'A';
 	}
+}
 
+void
+seturiparameters(Client *c, const char *uri)
+{
+	int i;
+
+	for (i = 0; i < LENGTH(uriparams); ++i) {
+		if (uriparams[i].uri &&
+		    !regexec(&(uriparams[i].re), uri, 0, NULL, 0)) {
+			curconfig = uriparams[i].config;
+			break;
+		}
+	}
+
+	for (i = 0; i < ParameterLast; ++i)
+		setparameter(c, 0, i, &curconfig[i].val);
+}
+
+void
+setparameter(Client *c, int refresh, ParamName p, const Arg *a)
+{
+	WebKitSettings *s = webkit_web_view_get_settings(c->view);
+
+	switch (p) {
+	case CaretBrowsing:
+		webkit_settings_set_enable_caret_browsing(s, a->b);
+		refresh = 0;
+		break;
+	case CookiePolicies:
+		webkit_cookie_manager_set_accept_policy(
+		    webkit_web_context_get_cookie_manager(
+		    webkit_web_view_get_context(c->view)),
+		    cookiepolicy_get());
+		refresh = 0;
+		break;
+	case DiskCache:
+		webkit_web_context_set_cache_model(
+		    webkit_web_view_get_context(c->view),
+		    curconfig[DiskCache].val.b ?
+		    WEBKIT_CACHE_MODEL_WEB_BROWSER :
+		    WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
+		break;
+	case DNSPrefetch:
+		refresh = 0;
+		break;
+	case FontSize:
+		webkit_settings_set_default_font_size(
+		    webkit_web_view_get_settings(c->view),
+		    curconfig[FontSize].val.i);
+		break;
+	case FrameFlattening:
+		webkit_settings_set_enable_frame_flattening(s, a->b);
+		break;
+	case Geolocation:
+		break;
+	case HideBackground:
+		return; /* do nothing */
+	case Inspector:
+		return; /* do nothing */
+	case JavaScript:
+		webkit_settings_set_enable_javascript(s, a->b);
+		break;
+	case KioskMode:
+		return; /* do nothing */
+	case LoadImages:
+		webkit_settings_set_auto_load_images(s, a->b);
+		break;
+	case Plugins:
+		webkit_settings_set_enable_plugins(s, a->b);
+		break;
+	case PreferredLanguages:
+		return; /* do nothing */
+	case RunInFullscreen:
+		return; /* do nothing */
+	case ScrollBars:
+		/* Disabled until we write some WebKitWebExtension for
+		 * manipulating the DOM directly.
+		enablescrollbars = !enablescrollbars;
+		evalscript(c, "document.documentElement.style.overflow = '%s'",
+		    enablescrollbars ? "auto" : "hidden");
+		*/
+		refresh = 0;
+		break;
+	case ShowIndicators:
+		return; /* do nothing */
+	case SpellChecking:
+		webkit_web_context_set_spell_checking_enabled(
+		    webkit_web_view_get_context(c->view),
+		    curconfig[SpellChecking].val.b);
+		return; /* do nothing */
+	case SpellLanguages:
+		return; /* do nothing */
+	case StrictSSL:
+		webkit_web_context_set_tls_errors_policy(
+		    webkit_web_view_get_context(c->view),
+		    curconfig[StrictSSL].val.b ? WEBKIT_TLS_ERRORS_POLICY_FAIL :
+		    WEBKIT_TLS_ERRORS_POLICY_IGNORE);
+		return; /* do nothing */
+	case Style:
+		if (curconfig[Style].val.b)
+			setstyle(c, getstyle(geturi(c)));
+		else
+			webkit_user_content_manager_remove_all_style_sheets(
+			    webkit_web_view_get_user_content_manager(c->view));
+		refresh = 0;
+		break;
+	case ZoomLevel:
+		return; /* do nothing */
+	default:
+		return; /* do nothing */
+	}
+
+	updatetitle(c);
+	if (refresh)
+		reload(c, a);
 }
 
 const char *
@@ -612,30 +748,30 @@ newwindow(Client *c, const Arg *a, int noembed)
 
 	cmd[i++] = argv0;
 	cmd[i++] = "-a";
-	cmd[i++] = cookiepolicies;
-	cmd[i++] = enablescrollbars ? "-B" : "-b";
+	cmd[i++] = curconfig[CookiePolicies].val.v;
+	cmd[i++] = curconfig[ScrollBars].val.b ? "-B" : "-b";
 	if (cookiefile && g_strcmp0(cookiefile, "")) {
 		cmd[i++] = "-c";
 		cmd[i++] = cookiefile;
 	}
-	cmd[i++] = enablecache ? "-D" : "-d";
+	cmd[i++] = curconfig[DiskCache].val.b ? "-D" : "-d";
 	if (embed && !noembed) {
 		cmd[i++] = "-e";
 		snprintf(tmp, LENGTH(tmp), "%lu", embed);
 		cmd[i++] = tmp;
 	}
-	cmd[i++] = runinfullscreen ? "-F" : "-f";
-	cmd[i++] = allowgeolocation ? "-G" : "-g";
-	cmd[i++] = loadimages ? "-I" : "-i";
-	cmd[i++] = kioskmode ? "-K" : "-k";
-	cmd[i++] = enablestyle ? "-M" : "-m";
-	cmd[i++] = enableinspector ? "-N" : "-n";
-	cmd[i++] = enableplugins ? "-P" : "-p";
+	cmd[i++] = curconfig[RunInFullscreen].val.b ? "-F" : "-f" ;
+	cmd[i++] = curconfig[Geolocation].val.b ?     "-G" : "-g" ;
+	cmd[i++] = curconfig[LoadImages].val.b ?      "-I" : "-i" ;
+	cmd[i++] = curconfig[KioskMode].val.b ?       "-K" : "-k" ;
+	cmd[i++] = curconfig[Style].val.b ?           "-M" : "-m" ;
+	cmd[i++] = curconfig[Inspector].val.b ?       "-N" : "-n" ;
+	cmd[i++] = curconfig[Plugins].val.b ?         "-P" : "-p" ;
 	if (scriptfile && g_strcmp0(scriptfile, "")) {
 		cmd[i++] = "-r";
 		cmd[i++] = scriptfile;
 	}
-	cmd[i++] = enablescripts ? "-S" : "-s";
+	cmd[i++] = curconfig[JavaScript].val.b ? "-S" : "-s";
 	if (stylefile && g_strcmp0(stylefile, "")) {
 		cmd[i++] = "-t";
 		cmd[i++] = stylefile;
@@ -729,17 +865,17 @@ newview(Client *c, WebKitWebView *rv)
 		    webkit_web_view_new_with_related_view(rv));
 	} else {
 		settings = webkit_settings_new_with_settings(
-		           "auto-load-images", loadimages,
-		           "default-font-size", defaultfontsize,
-		           "enable-caret-browsing", enablecaretbrowsing,
-		           "enable-developer-extras", enableinspector,
-		           "enable-dns-prefetching", enablednsprefetching,
-		           "enable-frame-flattening", enableframeflattening,
-		           "enable-html5-database", enablecache,
-		           "enable-html5-local-storage", enablecache,
-		           "enable-javascript", enablescripts,
-		           "enable-plugins", enableplugins,
-		           NULL);
+		   "auto-load-images", curconfig[LoadImages].val.b,
+		   "default-font-size", curconfig[FontSize].val.f,
+		   "enable-caret-browsing", curconfig[CaretBrowsing].val.b,
+		   "enable-developer-extras", curconfig[Inspector].val.b,
+		   "enable-dns-prefetching", curconfig[DNSPrefetch].val.b,
+		   "enable-frame-flattening", curconfig[FrameFlattening].val.b,
+		   "enable-html5-database", curconfig[DiskCache].val.b,
+		   "enable-html5-local-storage", curconfig[DiskCache].val.b,
+		   "enable-javascript", curconfig[JavaScript].val.b,
+		   "enable-plugins", curconfig[Plugins].val.b,
+		   NULL);
 /* For mor interesting settings, have a look at
  * http://webkitgtk.org/reference/webkit2gtk/stable/WebKitSettings.html */
 
@@ -764,12 +900,12 @@ newview(Client *c, WebKitWebView *rv)
 		webkit_web_context_set_process_model(context,
 		    WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
 		/* ssl */
-		webkit_web_context_set_tls_errors_policy(context, strictssl ?
-		    WEBKIT_TLS_ERRORS_POLICY_FAIL :
+		webkit_web_context_set_tls_errors_policy(context,
+		    curconfig[StrictSSL].val.b ? WEBKIT_TLS_ERRORS_POLICY_FAIL :
 		    WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 		/* disk cache */
-		webkit_web_context_set_cache_model(context, enablecache ?
-		    WEBKIT_CACHE_MODEL_WEB_BROWSER :
+		webkit_web_context_set_cache_model(context,
+		    curconfig[DiskCache].val.b ? WEBKIT_CACHE_MODEL_WEB_BROWSER :
 		    WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
 
 		/* Currently only works with text file to be compatible with curl */
@@ -782,11 +918,11 @@ newview(Client *c, WebKitWebView *rv)
 		    cookiepolicy_get());
 		/* languages */
 		webkit_web_context_set_preferred_languages(context,
-		                                           preferedlanguages);
+		    curconfig[PreferredLanguages].val.v);
 		webkit_web_context_set_spell_checking_languages(context,
-		    spellinglanguages);
+		    curconfig[SpellLanguages].val.v);
 		webkit_web_context_set_spell_checking_enabled(context,
-		    enablespellchecking);
+		    curconfig[SpellChecking].val.b);
 
 		g_signal_connect(G_OBJECT(context), "download-started",
 		                 G_CALLBACK(downloadstarted), c);
@@ -907,7 +1043,7 @@ winevent(GtkWidget *w, GdkEvent *e, Client *c)
 		updatetitle(c);
 		break;
 	case GDK_KEY_PRESS:
-		if (!kioskmode) {
+		if (!curconfig[KioskMode].val.b) {
 			for (i = 0; i < LENGTH(keys); ++i) {
 				if (gdk_keyval_to_lower(e->key.keyval) ==
 				    keys[i].keyval &&
@@ -943,7 +1079,7 @@ showview(WebKitWebView *v, Client *c)
 	GdkWindow *gwin;
 
 	c->finder = webkit_web_view_get_find_controller(c->view);
-	if (enableinspector)
+	if (curconfig[Inspector].val.b)
 		c->inspector = webkit_web_view_get_inspector(c->view);
 
 	c->win = createwindow(c);
@@ -960,19 +1096,20 @@ showview(WebKitWebView *v, Client *c)
 		puts(winid);
 	}
 
-	if (hidebackground)
+	if (curconfig[HideBackground].val.b)
 		webkit_web_view_set_background_color(c->view, &bgcolor);
 
-	if (!kioskmode) {
+	if (!curconfig[KioskMode].val.b) {
 		gdk_window_set_events(gwin, GDK_ALL_EVENTS_MASK);
 		gdk_window_add_filter(gwin, processx, c);
 	}
 
-	if (runinfullscreen)
+	if (curconfig[RunInFullscreen].val.b)
 		togglefullscreen(c, NULL);
 
-	if (zoomlevel != 1.0)
-		webkit_web_view_set_zoom_level(c->view, zoomlevel);
+	if (curconfig[ZoomLevel].val.f != 1.0)
+		webkit_web_view_set_zoom_level(c->view,
+		                               curconfig[ZoomLevel].val.f);
 
 	setatom(c, AtomFind, "");
 	setatom(c, AtomUri, "about:blank");
@@ -1022,6 +1159,7 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 
 	switch (e) {
 	case WEBKIT_LOAD_STARTED:
+		curconfig = defconfig;
 		setatom(c, AtomUri, title);
 		c->title = title;
 		c->tlsflags = G_TLS_CERTIFICATE_VALIDATE_ALL + 1;
@@ -1037,8 +1175,8 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 		    &(c->tlsflags)))
 			c->tlsflags = G_TLS_CERTIFICATE_VALIDATE_ALL + 1;
 
-		if (enablestyle)
-			setstyle(c, getstyle(geturi(c)));
+		setatom(c, AtomUri, geturi(c));
+		seturiparameters(c, geturi(c));
 		break;
 	case WEBKIT_LOAD_FINISHED:
 		/* Disabled until we write some WebKitWebExtension for
@@ -1093,7 +1231,7 @@ gboolean
 permissionrequested(WebKitWebView *v, WebKitPermissionRequest *r, Client *c)
 {
 	if (WEBKIT_IS_GEOLOCATION_PERMISSION_REQUEST(r)) {
-		if (allowgeolocation)
+		if (curconfig[Geolocation].val.b)
 			webkit_permission_request_allow(r);
 		else
 			webkit_permission_request_deny(r);
@@ -1302,13 +1440,15 @@ void
 zoom(Client *c, const Arg *a)
 {
 	if (a->i > 0)
-		webkit_web_view_set_zoom_level(c->view, zoomlevel + 0.1);
+		webkit_web_view_set_zoom_level(c->view,
+		                               curconfig[ZoomLevel].val.f + 0.1);
 	else if (a->i < 0)
-		webkit_web_view_set_zoom_level(c->view, zoomlevel - 0.1);
+		webkit_web_view_set_zoom_level(c->view,
+		                               curconfig[ZoomLevel].val.f - 0.1);
 	else
 		webkit_web_view_set_zoom_level(c->view, 1.0);
 
-	zoomlevel = webkit_web_view_get_zoom_level(c->view);
+	curconfig[ZoomLevel].val.f = webkit_web_view_get_zoom_level(c->view);
 }
 
 void
@@ -1364,49 +1504,8 @@ stop(Client *c, const Arg *a)
 void
 toggle(Client *c, const Arg *a)
 {
-	WebKitSettings *s = webkit_web_view_get_settings(c->view);
-
-	switch ((unsigned int)a->i) {
-	case CaretBrowsing:
-		enablecaretbrowsing = !enablecaretbrowsing;
-		webkit_settings_set_enable_caret_browsing(s,
-		    enablecaretbrowsing);
-		updatetitle(c);
-		return; /* do not reload */
-		break;
-	case FrameFlattening:
-		enableframeflattening = !enableframeflattening;
-		webkit_settings_set_enable_frame_flattening(s,
-		    enableframeflattening);
-		break;
-	case Geolocation:
-		allowgeolocation = !allowgeolocation;
-		break;
-	case JavaScript:
-		enablescripts = !enablescripts;
-		webkit_settings_set_enable_javascript(s, enablescripts);
-		break;
-	case LoadImages:
-		loadimages = !loadimages;
-		webkit_settings_set_auto_load_images(s, loadimages);
-		break;
-	case Plugins:
-		enableplugins = !enableplugins;
-		webkit_settings_set_enable_plugins(s, enableplugins);
-		break;
-	case ScrollBars:
-		/* Disabled until we write some WebKitWebExtension for
-		 * manipulating the DOM directly.
-		enablescrollbars = !enablescrollbars;
-		evalscript(c, "document.documentElement.style.overflow = '%s'",
-		    enablescrollbars ? "auto" : "hidden");
-		*/
-		return; /* do not reload */
-		break;
-	default:
-		break;
-	}
-	reload(c, a);
+	curconfig[a->i].val.b ^= 1;
+	setparameter(c, 1, (ParamName)a->i, &curconfig[a->i].val);
 }
 
 void
@@ -1423,35 +1522,15 @@ void
 togglecookiepolicy(Client *c, const Arg *a)
 {
 	++cookiepolicy;
-	cookiepolicy %= strlen(cookiepolicies);
+	cookiepolicy %= strlen(curconfig[CookiePolicies].val.v);
 
-	webkit_cookie_manager_set_accept_policy(
-	    webkit_web_context_get_cookie_manager(
-	    webkit_web_view_get_context(c->view)),
-	    cookiepolicy_get());
-
-	updatetitle(c);
-	/* Do not reload. */
-}
-
-void
-togglestyle(Client *c, const Arg *a)
-{
-	enablestyle = !enablestyle;
-
-	if (enablestyle)
-		setstyle(c, getstyle(geturi(c)));
-	else
-		webkit_user_content_manager_remove_all_style_sheets(
-		    webkit_web_view_get_user_content_manager(c->view));
-
-	updatetitle(c);
+	setparameter(c, 0, CookiePolicies, NULL);
 }
 
 void
 toggleinspector(Client *c, const Arg *a)
 {
-	if (enableinspector) {
+	if (curconfig[Inspector].val.b) {
 		if (webkit_web_inspector_is_attached(c->inspector))
 			webkit_web_inspector_close(c->inspector);
 		else
@@ -1520,76 +1599,76 @@ main(int argc, char *argv[])
 	/* command line args */
 	ARGBEGIN {
 	case 'a':
-		cookiepolicies = EARGF(usage());
+		defconfig FSETV(CookiePolicies, EARGF(usage()));
 		break;
 	case 'b':
-		enablescrollbars = 0;
+		defconfig FSETB(ScrollBars, 0);
 		break;
 	case 'B':
-		enablescrollbars = 1;
+		defconfig FSETB(ScrollBars, 1);
 		break;
 	case 'c':
 		cookiefile = EARGF(usage());
 		break;
 	case 'd':
-		enablecache = 0;
+		defconfig FSETB(DiskCache, 0);
 		break;
 	case 'D':
-		enablecache = 1;
+		defconfig FSETB(DiskCache, 1);
 		break;
 	case 'e':
 		embed = strtol(EARGF(usage()), NULL, 0);
 		break;
 	case 'f':
-		runinfullscreen = 0;
+		defconfig FSETB(RunInFullscreen, 0);
 		break;
 	case 'F':
-		runinfullscreen = 1;
+		defconfig FSETB(RunInFullscreen, 1);
 		break;
 	case 'g':
-		allowgeolocation = 0;
+		defconfig FSETB(Geolocation, 0);
 		break;
 	case 'G':
-		allowgeolocation = 1;
+		defconfig FSETB(Geolocation, 1);
 		break;
 	case 'i':
-		loadimages = 0;
+		defconfig FSETB(LoadImages, 0);
 		break;
 	case 'I':
-		loadimages = 1;
+		defconfig FSETB(LoadImages, 1);
 		break;
 	case 'k':
-		kioskmode = 0;
+		defconfig FSETB(KioskMode, 0);
 		break;
 	case 'K':
-		kioskmode = 1;
+		defconfig FSETB(KioskMode, 1);
 		break;
 	case 'm':
-		enablestyle = 0;
+		defconfig FSETB(Style, 0);
 		break;
 	case 'M':
-		enablestyle = 1;
+		defconfig FSETB(Style, 1);
 		break;
 	case 'n':
-		enableinspector = 0;
+		defconfig FSETB(Inspector, 0);
 		break;
 	case 'N':
-		enableinspector = 1;
+		defconfig FSETB(Inspector, 1);
 		break;
 	case 'p':
-		enableplugins = 0;
+		defconfig FSETB(Plugins, 0);
 		break;
 	case 'P':
-		enableplugins = 1;
+		defconfig FSETB(Plugins, 1);
 		break;
 	case 'r':
 		scriptfile = EARGF(usage());
 		break;
 	case 's':
-		enablescripts = 0;
+		defconfig FSETB(JavaScript, 0);
 		break;
 	case 'S':
-		enablescripts = 1;
+		defconfig FSETB(JavaScript, 1);
 		break;
 	case 't':
 		stylefile = EARGF(usage());
@@ -1604,7 +1683,7 @@ main(int argc, char *argv[])
 		showxid = 1;
 		break;
 	case 'z':
-		zoomlevel = strtof(EARGF(usage()), NULL);
+		defconfig FSETF(ZoomLevel, strtof(EARGF(usage()), NULL));
 		break;
 	default:
 		usage();
