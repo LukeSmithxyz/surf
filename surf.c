@@ -365,7 +365,6 @@ loaduri(Client *c, const Arg *a)
 		reload(c, a);
 	} else {
 		webkit_web_view_load_uri(c->view, url);
-		c->title = geturi(c);
 		updatetitle(c);
 	}
 
@@ -964,19 +963,24 @@ createwindow(Client *c)
 void
 loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 {
+	const char *title = geturi(c);
+
 	switch (e) {
 	case WEBKIT_LOAD_STARTED:
+		setatom(c, AtomUri, title);
+		c->title = title;
 		c->tlsflags = G_TLS_CERTIFICATE_VALIDATE_ALL + 1;
 		break;
 	case WEBKIT_LOAD_REDIRECTED:
-		setatom(c, AtomUri, geturi(c));
+		setatom(c, AtomUri, title);
+		c->title = title;
 		break;
 	case WEBKIT_LOAD_COMMITTED:
+		setatom(c, AtomUri, title);
+		c->title = title;
 		if (!webkit_web_view_get_tls_info(c->view, NULL,
 		    &(c->tlsflags)))
 			c->tlsflags = G_TLS_CERTIFICATE_VALIDATE_ALL + 1;
-
-		setatom(c, AtomUri, geturi(c));
 
 		if (enablestyle)
 			setstyle(c, getstyle(geturi(c)));
