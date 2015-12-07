@@ -143,15 +143,13 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_l,      navigate,   { .i = +1 } },
 	{ MODKEY,                GDK_KEY_h,      navigate,   { .i = -1 } },
 
-	/* Currently we have to use scrolling steps that WebKit2GTK+ gives us
-	 * d: step down, u: step up, r: step right, l:step left
-	 * D: page down, U: page up */
-	{ MODKEY,                GDK_KEY_j,      scroll,     { .i = 'd' } },
-	{ MODKEY,                GDK_KEY_k,      scroll,     { .i = 'u' } },
-	{ MODKEY,                GDK_KEY_b,      scroll,     { .i = 'U' } },
-	{ MODKEY,                GDK_KEY_space,  scroll,     { .i = 'D' } },
-	{ MODKEY,                GDK_KEY_i,      scroll,     { .i = 'r' } },
-	{ MODKEY,                GDK_KEY_u,      scroll,     { .i = 'l' } },
+	/* vertical and horizontal scrolling, in viewport percentage */
+	{ MODKEY,                GDK_KEY_j,      scrollv,    { .i = +10 } },
+	{ MODKEY,                GDK_KEY_k,      scrollv,    { .i = -10 } },
+	{ MODKEY,                GDK_KEY_b,      scrollv,    { .i = +50 } },
+	{ MODKEY,                GDK_KEY_space,  scrollv,    { .i = -50 } },
+	{ MODKEY,                GDK_KEY_i,      scrollh,    { .i = +10 } },
+	{ MODKEY,                GDK_KEY_u,      scrollh,    { .i = -10 } },
 
 
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_j,      zoom,       { .i = -1 } },

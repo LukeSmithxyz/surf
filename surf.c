@@ -11,7 +11,6 @@
 #include <pwd.h>
 #include <regex.h>
 #include <signal.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,11 +27,13 @@
 #include <webkit2/webkit2.h>
 #include <X11/X.h>
 #include <X11/Xatom.h>
+#include <glib.h>
 
 #include "arg.h"
 
 #define LENGTH(x)               (sizeof(x) / sizeof(x[0]))
 #define CLEANMASK(mask)         (mask & (MODKEY|GDK_SHIFT_MASK))
+#define MSGBUFSZ 32
 
 enum { AtomFind, AtomGo, AtomUri, AtomLast };
 
@@ -104,6 +105,7 @@ typedef struct Client {
 	GTlsCertificate *cert, *failedcert;
 	GTlsCertificateFlags tlserr;
 	Window xid;
+	unsigned long pageid;
 	int progress, fullscreen, https, insecure, errorpage;
 	const char *title, *overtitle, *targeturi;
 	const char *needle;
@@ -171,6 +173,7 @@ static void updatewinid(Client *c);
 static void handleplumb(Client *c, const char *uri);
 static void newwindow(Client *c, const Arg *a, int noembed);
 static void spawn(Client *c, const Arg *a);
+static void msgext(Client *c, char type, const Arg *a);
 static void destroyclient(Client *c);
 static void cleanup(void);
 
@@ -183,6 +186,7 @@ static gboolean buttonreleased(GtkWidget *w, GdkEvent *e, Client *c);
 static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
                                 gpointer d);
 static gboolean winevent(GtkWidget *w, GdkEvent *e, Client *c);
+static gboolean readpipe(GIOChannel *s, GIOCondition ioc, gpointer unused);
 static void showview(WebKitWebView *v, Client *c);
 static GtkWidget *createwindow(Client *c);
 static gboolean loadfailedtls(WebKitWebView *v, gchar *uri,
@@ -219,7 +223,8 @@ static void print(Client *c, const Arg *a);
 static void showcert(Client *c, const Arg *a);
 static void clipboard(Client *c, const Arg *a);
 static void zoom(Client *c, const Arg *a);
-static void scroll(Client *c, const Arg *a);
+static void scrollv(Client *c, const Arg *a);
+static void scrollh(Client *c, const Arg *a);
 static void navigate(Client *c, const Arg *a);
 static void stop(Client *c, const Arg *a);
 static void toggle(Client *c, const Arg *a);
@@ -247,6 +252,7 @@ static char *stylefile;
 static const char *useragent;
 static Parameter *curconfig;
 static int modparams[ParameterLast];
+static int pipein[2], pipeout[2];
 char *argv0;
 
 static ParamName loadtransient[] = {
@@ -318,6 +324,7 @@ die(const char *errstr, ...)
 void
 setup(void)
 {
+	GIOChannel *gchanin;
 	GdkDisplay *gdpy;
 	int i, j;
 
@@ -347,6 +354,16 @@ setup(void)
 	certdir    = buildpath(certdir);
 
 	gdkkb = gdk_seat_get_keyboard(gdk_display_get_default_seat(gdpy));
+
+	if (pipe(pipeout) < 0 || pipe(pipein) < 0) {
+		fputs("Unable to create pipes\n", stderr);
+	} else {
+		gchanin = g_io_channel_unix_new(pipein[0]);
+		g_io_channel_set_encoding(gchanin, NULL, NULL);
+		g_io_channel_set_close_on_unref(gchanin, TRUE);
+		g_io_add_watch(gchanin, G_IO_IN, readpipe, NULL);
+	}
+
 
 	for (i = 0; i < LENGTH(certs); ++i) {
 		if (!regcomp(&(certs[i].re), certs[i].regex, REG_EXTENDED)) {
@@ -1033,6 +1050,8 @@ spawn(Client *c, const Arg *a)
 	if (fork() == 0) {
 		if (dpy)
 			close(ConnectionNumber(dpy));
+		close(pipein[0]);
+		close(pipeout[1]);
 		setsid();
 		execvp(((char **)a->v)[0], (char **)a->v);
 		fprintf(stderr, "%s: execvp %s", argv0, ((char **)a->v)[0]);
@@ -1065,6 +1084,9 @@ cleanup(void)
 {
 	while (clients)
 		destroyclient(clients);
+
+	close(pipein[0]);
+	close(pipeout[1]);
 	g_free(cookiefile);
 	g_free(scriptfile);
 	g_free(stylefile);
@@ -1077,14 +1099,13 @@ newview(Client *c, WebKitWebView *rv)
 {
 	WebKitWebView *v;
 	WebKitSettings *settings;
-	WebKitUserContentManager *contentmanager;
 	WebKitWebContext *context;
 	WebKitCookieManager *cookiemanager;
+	WebKitUserContentManager *contentmanager;
 
 	/* Webview */
 	if (rv) {
-		v = WEBKIT_WEB_VIEW(
-		    webkit_web_view_new_with_related_view(rv));
+		v = WEBKIT_WEB_VIEW(webkit_web_view_new_with_related_view(rv));
 	} else {
 		settings = webkit_settings_new_with_settings(
 		   "allow-file-access-from-file-urls", curconfig[FileURLsCrossAccess].val.i,
@@ -1197,9 +1218,43 @@ newview(Client *c, WebKitWebView *rv)
 	return v;
 }
 
+static gboolean
+readpipe(GIOChannel *s, GIOCondition ioc, gpointer unused)
+{
+	char msg[MSGBUFSZ];
+	gsize msgsz;
+	GError *gerr = NULL;
+
+	if (g_io_channel_read_chars(s, msg, sizeof(msg), &msgsz, &gerr) !=
+	    G_IO_STATUS_NORMAL) {
+		fprintf(stderr, "surf: error reading pipe: %s\n",
+		        gerr->message);
+		g_error_free(gerr);
+		return TRUE;
+	}
+	msg[msgsz] = '\0';
+
+	switch (msg[1]) {
+	case 'i':
+		close(pipein[1]);
+		close(pipeout[0]);
+		break;
+	}
+
+	return TRUE;
+}
+
 void
 initwebextensions(WebKitWebContext *wc, Client *c)
 {
+	GVariant *gv;
+
+	if (!pipeout[0] || !pipein[1])
+		return;
+
+	gv = g_variant_new("(ii)", pipeout[0], pipein[1]);
+
+	webkit_web_context_set_web_extensions_initialization_user_data(wc, gv);
 	webkit_web_context_set_web_extensions_directory(wc, WEBEXTDIR);
 }
 
@@ -1326,6 +1381,7 @@ showview(WebKitWebView *v, Client *c)
 	c->finder = webkit_web_view_get_find_controller(c->view);
 	c->inspector = webkit_web_view_get_inspector(c->view);
 
+	c->pageid = webkit_web_view_get_page_id(c->view);
 	c->win = createwindow(c);
 
 	gtk_container_add(GTK_CONTAINER(c->win), GTK_WIDGET(c->view));
@@ -1375,8 +1431,7 @@ createwindow(Client *c)
 		gtk_window_set_wmclass(GTK_WINDOW(w), wmstr, "Surf");
 		g_free(wmstr);
 
-		wmstr = g_strdup_printf("%s[%lu]", "Surf",
-		        webkit_web_view_get_page_id(c->view));
+		wmstr = g_strdup_printf("%s[%lu]", "Surf", c->pageid);
 		gtk_window_set_role(GTK_WINDOW(w), wmstr);
 		g_free(wmstr);
 
@@ -1797,38 +1852,27 @@ zoom(Client *c, const Arg *a)
 	curconfig[ZoomLevel].val.f = webkit_web_view_get_zoom_level(c->view);
 }
 
-void
-scroll(Client *c, const Arg *a)
+static void
+msgext(Client *c, char type, const Arg *a)
 {
-	GdkEvent *ev = gdk_event_new(GDK_KEY_PRESS);
+	char msg[MSGBUFSZ] = { c->pageid, type, a->i, '\0' };
 
-	gdk_event_set_device(ev, gdkkb);
-	ev->key.window = gtk_widget_get_window(GTK_WIDGET(c->win));
-	ev->key.state = GDK_CONTROL_MASK;
-	ev->key.time = GDK_CURRENT_TIME;
-
-	switch (a->i) {
-	case 'd':
-		ev->key.keyval = GDK_KEY_Down;
-		break;
-	case 'D':
-		ev->key.keyval = GDK_KEY_Page_Down;
-		break;
-	case 'l':
-		ev->key.keyval = GDK_KEY_Left;
-		break;
-	case 'r':
-		ev->key.keyval = GDK_KEY_Right;
-		break;
-	case 'U':
-		ev->key.keyval = GDK_KEY_Page_Up;
-		break;
-	case 'u':
-		ev->key.keyval = GDK_KEY_Up;
-		break;
+	if (pipeout[1]) {
+		if (write(pipeout[1], msg, sizeof(msg)) < 0)
+			fprintf(stderr, "surf: error sending: %s\n", msg);
 	}
+}
 
-	gdk_event_put(ev);
+void
+scrollv(Client *c, const Arg *a)
+{
+	msgext(c, 'v', a);
+}
+
+void
+scrollh(Client *c, const Arg *a)
+{
+	msgext(c, 'h', a);
 }
 
 void

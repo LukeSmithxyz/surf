@@ -29,7 +29,7 @@ options:
 	@$(LIBTOOL) --mode compile --tag CC $(CC) $(LIBCFLAGS) -c $<
 
 $(OBJ): config.h config.mk
-$(LIBOBJ): config.mk
+$(LIBOBJ): config.h config.mk
 
 config.h:
 	@echo creating $@ from config.def.h
