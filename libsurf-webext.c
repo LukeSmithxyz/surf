@@ -8,9 +8,9 @@
 #include <webkitdom/webkitdom.h>
 #include <webkitdom/WebKitDOMDOMWindowUnstable.h>
 
-#define LENGTH(x)   (sizeof(x) / sizeof(x[0]))
+#include "common.h"
 
-#define MSGBUFSZ 32
+#define LENGTH(x)   (sizeof(x) / sizeof(x[0]))
 
 typedef struct Page {
 	guint64 id;

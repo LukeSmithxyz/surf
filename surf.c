@@ -30,10 +30,10 @@
 #include <glib.h>
 
 #include "arg.h"
+#include "common.h"
 
 #define LENGTH(x)               (sizeof(x) / sizeof(x[0]))
 #define CLEANMASK(mask)         (mask & (MODKEY|GDK_SHIFT_MASK))
-#define MSGBUFSZ 32
 
 enum { AtomFind, AtomGo, AtomUri, AtomLast };
 
@@ -142,7 +142,6 @@ typedef struct {
 
 /* Surf */
 static void usage(void);
-static void die(const char *errstr, ...);
 static void setup(void);
 static void sigchld(int unused);
 static void sighup(int unused);
@@ -308,17 +307,6 @@ usage(void)
 	die("usage: surf [-bBdDfFgGiIkKmMnNpPsStTvwxX]\n"
 	    "[-a cookiepolicies ] [-c cookiefile] [-C stylefile] [-e xid]\n"
 	    "[-r scriptfile] [-u useragent] [-z zoomlevel] [uri]\n");
-}
-
-void
-die(const char *errstr, ...)
-{
-	va_list ap;
-
-	va_start(ap, errstr);
-	vfprintf(stderr, errstr, ap);
-	va_end(ap);
-	exit(1);
 }
 
 void

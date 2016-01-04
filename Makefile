@@ -4,9 +4,9 @@
 
 include config.mk
 
-SRC = surf.c
+SRC = surf.c common.c
 OBJ = $(SRC:.c=.o)
-LIBSRC = libsurf-webext.c
+LIBSRC = libsurf-webext.c common.c
 LIBOBJ = $(LIBSRC:.c=.lo)
 
 all: options libsurf-webext.la surf
@@ -38,7 +38,7 @@ config.h:
 libsurf-webext.la: $(LIBOBJ)
 	@echo libtool link $@
 	@$(LIBTOOL) --mode link --tag CC $(CC) $(LIBLDFLAGS) -o $@ \
-	    $(LIBOBJ) -rpath $(DESTDIR)$(LIBPREFIX)
+	    $(LIBOBJ) $(LIB) -rpath $(DESTDIR)$(LIBPREFIX)
 
 surf: $(OBJ)
 	@echo CC -o $@
