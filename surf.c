@@ -145,6 +145,7 @@ static void usage(void);
 static void die(const char *errstr, ...);
 static void setup(void);
 static void sigchld(int unused);
+static void sighup(int unused);
 static char *buildfile(const char *path);
 static char *buildpath(const char *path);
 static const char *getuserhomedir(const char *user);
@@ -266,6 +267,9 @@ setup(void)
 
 	/* clean up any zombies immediately */
 	sigchld(0);
+	if (signal(SIGHUP, sighup) == SIG_ERR)
+		die("Can't install SIGHUP handler");
+
 	gtk_init(NULL, NULL);
 
 	gdpy = gdk_display_get_default();
@@ -329,6 +333,16 @@ sigchld(int unused)
 		die("Can't install SIGCHLD handler");
 	while (waitpid(-1, NULL, WNOHANG) > 0)
 		;
+}
+
+void
+sighup(int unused)
+{
+	Arg a = { .b = 0 };
+	Client *c;
+
+	for (c = clients; c; c = c->next)
+		reload(c, &a);
 }
 
 char *
