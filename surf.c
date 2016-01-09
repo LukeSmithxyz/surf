@@ -571,6 +571,7 @@ seturiparameters(Client *c, const char *uri)
 void
 setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 {
+	GdkRGBA bgcolor = { 0 };
 	WebKitSettings *s = webkit_web_view_get_settings(c->view);
 
 	switch (p) {
@@ -587,28 +588,29 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 		break;
 	case DiskCache:
 		webkit_web_context_set_cache_model(
-		    webkit_web_view_get_context(c->view),
-		    curconfig[DiskCache].val.b ?
+		    webkit_web_view_get_context(c->view), a->b ?
 		    WEBKIT_CACHE_MODEL_WEB_BROWSER :
 		    WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
-		break;
+		return; /* do not update */
 	case DNSPrefetch:
-		refresh = 0;
-		break;
+		webkit_settings_set_enable_dns_prefetching(s, a->b);
+		return; /* do not update */
 	case FontSize:
-		webkit_settings_set_default_font_size(
-		    webkit_web_view_get_settings(c->view),
-		    curconfig[FontSize].val.i);
-		break;
+		webkit_settings_set_default_font_size(s, a->i);
+		return; /* do not update */
 	case FrameFlattening:
 		webkit_settings_set_enable_frame_flattening(s, a->b);
 		break;
 	case Geolocation:
+		refresh = 0;
 		break;
 	case HideBackground:
-		return; /* do nothing */
+		if (a->b)
+			webkit_web_view_set_background_color(c->view, &bgcolor);
+		return; /* do not update */
 	case Inspector:
-		return; /* do nothing */
+		webkit_settings_set_enable_developer_extras(s, a->b);
+		return; /* do not update */
 	case JavaScript:
 		webkit_settings_set_enable_javascript(s, a->b);
 		break;
@@ -631,25 +633,23 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 		evalscript(c, "document.documentElement.style.overflow = '%s'",
 		    enablescrollbars ? "auto" : "hidden");
 		*/
-		refresh = 0;
-		break;
+		return; /* do not update */
 	case ShowIndicators:
-		return; /* do nothing */
+		break;
 	case SpellChecking:
 		webkit_web_context_set_spell_checking_enabled(
-		    webkit_web_view_get_context(c->view),
-		    curconfig[SpellChecking].val.b);
-		return; /* do nothing */
+		    webkit_web_view_get_context(c->view), a->b);
+		return; /* do not update */
 	case SpellLanguages:
 		return; /* do nothing */
 	case StrictSSL:
 		webkit_web_context_set_tls_errors_policy(
-		    webkit_web_view_get_context(c->view),
-		    curconfig[StrictSSL].val.b ? WEBKIT_TLS_ERRORS_POLICY_FAIL :
+		    webkit_web_view_get_context(c->view), a->b ?
+		    WEBKIT_TLS_ERRORS_POLICY_FAIL :
 		    WEBKIT_TLS_ERRORS_POLICY_IGNORE);
-		return; /* do nothing */
+		return; /* do not update */
 	case Style:
-		if (curconfig[Style].val.b)
+		if (a->b)
 			setstyle(c, getstyle(geturi(c)));
 		else
 			webkit_user_content_manager_remove_all_style_sheets(
@@ -657,7 +657,8 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 		refresh = 0;
 		break;
 	case ZoomLevel:
-		return; /* do nothing */
+		webkit_web_view_set_zoom_level(c->view, a->f);
+		return; /* do not update */
 	default:
 		return; /* do nothing */
 	}
