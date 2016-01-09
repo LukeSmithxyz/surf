@@ -1084,8 +1084,7 @@ showview(WebKitWebView *v, Client *c)
 	GdkWindow *gwin;
 
 	c->finder = webkit_web_view_get_find_controller(c->view);
-	if (curconfig[Inspector].val.b)
-		c->inspector = webkit_web_view_get_inspector(c->view);
+	c->inspector = webkit_web_view_get_inspector(c->view);
 
 	c->win = createwindow(c);
 
@@ -1535,12 +1534,10 @@ togglecookiepolicy(Client *c, const Arg *a)
 void
 toggleinspector(Client *c, const Arg *a)
 {
-	if (curconfig[Inspector].val.b) {
-		if (webkit_web_inspector_is_attached(c->inspector))
-			webkit_web_inspector_close(c->inspector);
-		else
-			webkit_web_inspector_show(c->inspector);
-	}
+	if (webkit_web_inspector_is_attached(c->inspector))
+		webkit_web_inspector_close(c->inspector);
+	else if (curconfig[Inspector].val.b)
+		webkit_web_inspector_show(c->inspector);
 }
 
 void
