@@ -126,6 +126,7 @@ static void destroyclient(Client *c);
 static void cleanup(void);
 
 /* GTK/WebKit */
+static GdkDevice *getkbdevice(void);
 static WebKitWebView *newview(Client *c, WebKitWebView *rv);
 static GtkWidget *createview(WebKitWebView *v, WebKitNavigationAction *a,
                              Client *c);
@@ -160,8 +161,7 @@ static void reload(Client *c, const Arg *a);
 static void print(Client *c, const Arg *a);
 static void clipboard(Client *c, const Arg *a);
 static void zoom(Client *c, const Arg *a);
-static void scroll_v(Client *c, const Arg *a);
-static void scroll_h(Client *c, const Arg *a);
+static void scroll(Client *c, const Arg *a);
 static void navigate(Client *c, const Arg *a);
 static void stop(Client *c, const Arg *a);
 static void toggle(Client *c, const Arg *a);
@@ -185,6 +185,7 @@ static int showxid;
 static int cookiepolicy;
 static Display *dpy;
 static Client *clients;
+static GdkDevice *gdkkb;
 static char *stylefile;
 static const char *useragent;
 char *argv0;
@@ -231,6 +232,8 @@ setup(void)
 	cookiefile = buildfile(cookiefile);
 	scriptfile = buildfile(scriptfile);
 	cachedir   = buildpath(cachedir);
+
+	gdkkb = getkbdevice();
 
 	if (!stylefile) {
 		styledir = buildpath(styledir);
@@ -658,6 +661,22 @@ cleanup(void)
 	g_free(scriptfile);
 	g_free(stylefile);
 	g_free(cachedir);
+}
+
+static GdkDevice *
+getkbdevice(void)
+{
+	GList *l, *gdl = gdk_device_manager_list_devices(
+	           gdk_display_get_device_manager(gdk_display_get_default()),
+		   GDK_DEVICE_TYPE_MASTER);
+	GdkDevice *gd = NULL;
+
+	for (l = gdl; l != NULL; l = l->next)
+		if (gdk_device_get_source(l->data) == GDK_SOURCE_KEYBOARD)
+			gd = l->data;
+
+	g_list_free(gdl);
+	return gd;
 }
 
 WebKitWebView *
@@ -1257,17 +1276,38 @@ zoom(Client *c, const Arg *a)
 }
 
 void
-scroll_v(Client *c, const Arg *a)
+scroll(Client *c, const Arg *a)
 {
-	evalscript(c, "window.scrollBy(0, %d * (window.innerHeight / 100))",
-	           a->i);
-}
+	GdkEvent *ev = gdk_event_new(GDK_KEY_PRESS);
 
-void
-scroll_h(Client *c, const Arg *a)
-{
-	evalscript(c, "window.scrollBy(%d * (window.innerWidth / 100), 0)",
-	           a->i);
+	gdk_event_set_device(ev, gdkkb);
+//	gdk_event_set_screen(ev, gdk_screen_get_default());
+	ev->key.window = gtk_widget_get_window(GTK_WIDGET(c->win));
+	ev->key.state = GDK_CONTROL_MASK;
+	ev->key.time = GDK_CURRENT_TIME;
+
+	switch (a->i) {
+	case 'd':
+		ev->key.keyval = GDK_KEY_Down;
+		break;
+	case 'D':
+		ev->key.keyval = GDK_KEY_Page_Down;
+		break;
+	case 'l':
+		ev->key.keyval = GDK_KEY_Left;
+		break;
+	case 'r':
+		ev->key.keyval = GDK_KEY_Right;
+		break;
+	case 'U':
+		ev->key.keyval = GDK_KEY_Page_Up;
+		break;
+	case 'u':
+		ev->key.keyval = GDK_KEY_Up;
+		break;
+	}
+
+	gdk_event_put(ev);
 }
 
 void
