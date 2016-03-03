@@ -1167,20 +1167,18 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 		setatom(c, AtomUri, title);
 		c->title = title;
 		c->tlsflags = G_TLS_CERTIFICATE_VALIDATE_ALL + 1;
+		seturiparameters(c, geturi(c));
 		break;
 	case WEBKIT_LOAD_REDIRECTED:
 		setatom(c, AtomUri, title);
 		c->title = title;
+		seturiparameters(c, geturi(c));
 		break;
 	case WEBKIT_LOAD_COMMITTED:
-		setatom(c, AtomUri, title);
-		c->title = title;
 		if (!webkit_web_view_get_tls_info(c->view, NULL,
 		    &(c->tlsflags)))
 			c->tlsflags = G_TLS_CERTIFICATE_VALIDATE_ALL + 1;
 
-		setatom(c, AtomUri, geturi(c));
-		seturiparameters(c, geturi(c));
 		break;
 	case WEBKIT_LOAD_FINISHED:
 		/* Disabled until we write some WebKitWebExtension for
@@ -1461,7 +1459,6 @@ scroll(Client *c, const Arg *a)
 	GdkEvent *ev = gdk_event_new(GDK_KEY_PRESS);
 
 	gdk_event_set_device(ev, gdkkb);
-//	gdk_event_set_screen(ev, gdk_screen_get_default());
 	ev->key.window = gtk_widget_get_window(GTK_WIDGET(c->win));
 	ev->key.state = GDK_CONTROL_MASK;
 	ev->key.time = GDK_CURRENT_TIME;
