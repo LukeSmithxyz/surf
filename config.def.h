@@ -53,7 +53,7 @@ static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
 /* DOWNLOAD(URI, referer) */
 #define DOWNLOAD(d, r) { \
         .v = (const char *[]){ "/bin/sh", "-c", \
-             "st -e /bin/sh -c \"curl -L -J -O --user-agent '$1'" \
+             "st -e /bin/sh -c \"curl -g -L -J -O --user-agent '$1'" \
              " --referer '$2' -b $3 -c $3 '$0';" \
              " sleep 5;\"", \
              d, useragent, r, cookiefile, NULL \
