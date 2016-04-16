@@ -415,7 +415,10 @@ loaduri(Client *c, const Arg *a)
 	if (g_strcmp0(uri, "") == 0)
 		return;
 
-	if (g_strrstr(uri, "://") || g_str_has_prefix(uri, "about:")) {
+	if (g_str_has_prefix(uri, "http://")  ||
+	    g_str_has_prefix(uri, "https://") ||
+	    g_str_has_prefix(uri, "file://")  ||
+	    g_str_has_prefix(uri, "about:")) {
 		url = g_strdup(uri);
 	} else if (!stat(uri, &st) && (path = realpath(uri, NULL))) {
 		url = g_strdup_printf("file://%s", path);
