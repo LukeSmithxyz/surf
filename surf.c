@@ -350,29 +350,58 @@ buildfile(const char *path)
 	return fpath;
 }
 
+static const char*
+get_user_homedir(const char *user) {
+	struct passwd *pw = getpwnam(user);
+	if (!pw) {
+		die("Can't get user `%s' home directory.\n", user);
+	}
+	return pw->pw_dir;
+}
+
+static const char*
+get_current_user_homedir() {
+	const char *homedir;
+	const char *user;
+	struct passwd *pw;
+
+	homedir = getenv("HOME");
+	if (homedir) {
+		return homedir;
+	}
+
+	user = getenv("USER");
+	if (user) {
+		return get_user_homedir(user);
+	}
+
+	pw = getpwuid(getuid());
+	if (!pw) {
+		die("Can't get current user home directory\n");
+	}
+	return pw->pw_dir;
+}
+
 char *
 buildpath(const char *path)
 {
-	struct passwd *pw;
 	char *apath, *name, *p, *fpath;
 
 	if (path[0] == '~') {
+		const char *homedir;
 		if (path[1] == '/' || path[1] == '\0') {
 			p = (char *)&path[1];
-			pw = getpwuid(getuid());
+			homedir = get_current_user_homedir();
 		} else {
 			if ((p = strchr(path, '/')))
 				name = g_strndup(&path[1], --p - path);
 			else
 				name = g_strdup(&path[1]);
 
-			if (!(pw = getpwnam(name))) {
-				die("Can't get user %s home directory: %s.\n",
-				    name, path);
-			}
+			homedir = get_user_homedir(name);
 			g_free(name);
 		}
-		apath = g_build_filename(pw->pw_dir, p, NULL);
+		apath = g_build_filename(homedir, p, NULL);
 	} else {
 		apath = g_strdup(path);
 	}
