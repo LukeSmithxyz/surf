@@ -144,6 +144,8 @@ static void setup(void);
 static void sigchld(int unused);
 static char *buildfile(const char *path);
 static char *buildpath(const char *path);
+static const char *getuserhomedir(const char *user);
+static const char *getcurrentuserhomedir(void);
 static Client *newclient(Client *c);
 static void loaduri(Client *c, const Arg *a);
 static const char *geturi(Client *c);
@@ -351,34 +353,35 @@ buildfile(const char *path)
 }
 
 static const char*
-get_user_homedir(const char *user) {
+getuserhomedir(const char *user)
+{
 	struct passwd *pw = getpwnam(user);
-	if (!pw) {
-		die("Can't get user `%s' home directory.\n", user);
-	}
+
+	if (!pw)
+		die("Can't get user %s login information.\n", user);
+
 	return pw->pw_dir;
 }
 
 static const char*
-get_current_user_homedir() {
+getcurrentuserhomedir(void)
+{
 	const char *homedir;
 	const char *user;
 	struct passwd *pw;
 
 	homedir = getenv("HOME");
-	if (homedir) {
+	if (homedir)
 		return homedir;
-	}
 
 	user = getenv("USER");
-	if (user) {
-		return get_user_homedir(user);
-	}
+	if (user)
+		return getuserhomedir(user);
 
 	pw = getpwuid(getuid());
-	if (!pw) {
+	if (!pw)
 		die("Can't get current user home directory\n");
-	}
+
 	return pw->pw_dir;
 }
 
@@ -386,19 +389,19 @@ char *
 buildpath(const char *path)
 {
 	char *apath, *name, *p, *fpath;
+	const char *homedir;
 
 	if (path[0] == '~') {
-		const char *homedir;
 		if (path[1] == '/' || path[1] == '\0') {
 			p = (char *)&path[1];
-			homedir = get_current_user_homedir();
+			homedir = getcurrentuserhomedir();
 		} else {
 			if ((p = strchr(path, '/')))
 				name = g_strndup(&path[1], --p - path);
 			else
 				name = g_strdup(&path[1]);
 
-			homedir = get_user_homedir(name);
+			homedir = getuserhomedir(name);
 			g_free(name);
 		}
 		apath = g_build_filename(homedir, p, NULL);
