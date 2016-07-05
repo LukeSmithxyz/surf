@@ -258,13 +258,14 @@ die(const char *errstr, ...)
 void
 setup(void)
 {
-	GdkDisplay *gdpy = gdk_display_get_default();
+	GdkDisplay *gdpy;
 	int i, j;
 
 	/* clean up any zombies immediately */
 	sigchld(0);
 	gtk_init(NULL, NULL);
 
+	gdpy = gdk_display_get_default();
 	dpy = GDK_DISPLAY_XDISPLAY(gdpy);
 
 	curconfig = defconfig;
