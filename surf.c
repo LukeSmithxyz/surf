@@ -170,7 +170,6 @@ static void destroyclient(Client *c);
 static void cleanup(void);
 
 /* GTK/WebKit */
-static GdkDevice *getkbdevice(void);
 static WebKitWebView *newview(Client *c, WebKitWebView *rv);
 static GtkWidget *createview(WebKitWebView *v, WebKitNavigationAction *a,
                              Client *c);
@@ -259,13 +258,14 @@ die(const char *errstr, ...)
 void
 setup(void)
 {
+	GdkDisplay *gdpy = gdk_display_get_default();
 	int i, j;
 
 	/* clean up any zombies immediately */
 	sigchld(0);
 	gtk_init(NULL, NULL);
 
-	dpy = GDK_DISPLAY_XDISPLAY(gdk_display_get_default());
+	dpy = GDK_DISPLAY_XDISPLAY(gdpy);
 
 	curconfig = defconfig;
 
@@ -279,7 +279,7 @@ setup(void)
 	scriptfile = buildfile(scriptfile);
 	cachedir   = buildpath(cachedir);
 
-	gdkkb = getkbdevice();
+	gdkkb = gdk_seat_get_keyboard(gdk_display_get_default_seat(gdpy));
 
 	if (!stylefile) {
 		styledir = buildpath(styledir);
@@ -873,22 +873,6 @@ cleanup(void)
 	g_free(scriptfile);
 	g_free(stylefile);
 	g_free(cachedir);
-}
-
-static GdkDevice *
-getkbdevice(void)
-{
-	GList *l, *gdl = gdk_device_manager_list_devices(
-	           gdk_display_get_device_manager(gdk_display_get_default()),
-		   GDK_DEVICE_TYPE_MASTER);
-	GdkDevice *gd = NULL;
-
-	for (l = gdl; l != NULL; l = l->next)
-		if (gdk_device_get_source(l->data) == GDK_SOURCE_KEYBOARD)
-			gd = l->data;
-
-	g_list_free(gdl);
-	return gd;
 }
 
 WebKitWebView *
