@@ -58,6 +58,7 @@ enum {
 };
 
 typedef enum {
+	AcceleratedCanvas,
 	CaretBrowsing,
 	CookiePolicies,
 	DiskCache,
@@ -70,11 +71,13 @@ typedef enum {
 	JavaScript,
 	KioskMode,
 	LoadImages,
+	MediaManualPlay,
 	Plugins,
 	PreferredLanguages,
 	RunInFullscreen,
 	ScrollBars,
 	ShowIndicators,
+	SiteQuirks,
 	SpellChecking,
 	SpellLanguages,
 	StrictSSL,
@@ -611,6 +614,9 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 	WebKitSettings *s = webkit_web_view_get_settings(c->view);
 
 	switch (p) {
+	case AcceleratedCanvas:
+		webkit_settings_set_enable_accelerated_2d_canvas(s, a->b);
+		break;
 	case CaretBrowsing:
 		webkit_settings_set_enable_caret_browsing(s, a->b);
 		refresh = 0;
@@ -655,6 +661,9 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 	case LoadImages:
 		webkit_settings_set_auto_load_images(s, a->b);
 		break;
+	case MediaManualPlay:
+		webkit_settings_set_media_playback_requires_user_gesture(s, a->b);
+		break;
 	case Plugins:
 		webkit_settings_set_enable_plugins(s, a->b);
 		break;
@@ -671,6 +680,9 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 		*/
 		return; /* do not update */
 	case ShowIndicators:
+		break;
+	case SiteQuirks:
+		webkit_settings_set_enable_site_specific_quirks(s, a->b);
 		break;
 	case SpellChecking:
 		webkit_web_context_set_spell_checking_enabled(
@@ -900,6 +912,9 @@ newview(Client *c, WebKitWebView *rv)
 		   "enable-html5-local-storage", curconfig[DiskCache].val.b,
 		   "enable-javascript", curconfig[JavaScript].val.b,
 		   "enable-plugins", curconfig[Plugins].val.b,
+		   "enable-accelerated-2d-canvas", curconfig[AcceleratedCanvas].val.b,
+		   "enable-site-specific-quirks", curconfig[SiteQuirks].val.b,
+		   "media-playback-requires-user-gesture", curconfig[MediaManualPlay].val.b,
 		   NULL);
 /* For mor interesting settings, have a look at
  * http://webkitgtk.org/reference/webkit2gtk/stable/WebKitSettings.html */

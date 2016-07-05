@@ -8,6 +8,7 @@ static char *cookiefile     = "~/.surf/cookies.txt";
 
 /* Webkit default features */
 static Parameter defconfig[ParameterLast] = {
+	SETB(AcceleratedCanvas,  1),
 	SETB(CaretBrowsing,      0),
 	SETV(CookiePolicies,     "@Aa"),
 	SETB(DiskCache,          1),
@@ -20,11 +21,13 @@ static Parameter defconfig[ParameterLast] = {
 	SETB(JavaScript,         1),
 	SETB(KioskMode,          0),
 	SETB(LoadImages,         1),
+	SETB(MediaManualPlay,    0),
 	SETB(Plugins,            1),
 	SETV(PreferredLanguages, ((char *[]){ NULL })),
 	SETB(RunInFullscreen,    0),
 	SETB(ScrollBars,         1),
 	SETB(ShowIndicators,     1),
+	SETB(SiteQuirks,         1),
 	SETB(SpellChecking,      0),
 	SETV(SpellLanguages,     ((char *[]){ "en_US", NULL })),
 	SETB(StrictSSL,          0),
