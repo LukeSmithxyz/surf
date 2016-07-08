@@ -30,7 +30,7 @@ static Parameter defconfig[ParameterLast] = {
 	SETB(SiteQuirks,         1),
 	SETB(SpellChecking,      0),
 	SETV(SpellLanguages,     ((char *[]){ "en_US", NULL })),
-	SETB(StrictSSL,          0),
+	SETB(StrictSSL,          1),
 	SETB(Style,              1),
 	SETF(ZoomLevel,          1.0),
 };

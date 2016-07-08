@@ -104,9 +104,9 @@ typedef struct Client {
 	WebKitWebInspector *inspector;
 	WebKitFindController *finder;
 	WebKitHitTestResult *mousepos;
-	GTlsCertificateFlags tlsflags;
+	GTlsCertificateFlags tlserr;
 	Window xid;
-	int progress, fullscreen;
+	int progress, fullscreen, https, insecure;
 	const char *title, *overtitle, *targeturi;
 	const char *needle;
 	struct Client *next;
@@ -196,6 +196,8 @@ static gboolean decidepolicy(WebKitWebView *v, WebKitPolicyDecision *d,
 static void decidenavigation(WebKitPolicyDecision *d, Client *c);
 static void decidenewwindow(WebKitPolicyDecision *d, Client *c);
 static void decideresource(WebKitPolicyDecision *d, Client *c);
+static void insecurecontent(WebKitWebView *v, WebKitInsecureContentEvent e,
+                            Client *c);
 static void downloadstarted(WebKitWebContext *wc, WebKitDownload *d,
                             Client *c);
 static void responsereceived(WebKitDownload *d, GParamSpec *ps, Client *c);
@@ -452,7 +454,6 @@ newclient(Client *rc)
 	clients = c;
 
 	c->progress = 100;
-	c->tlsflags = G_TLS_CERTIFICATE_VALIDATE_ALL + 1;
 	c->view = newview(c, rc ? rc->view : NULL);
 
 	return c;
@@ -574,8 +575,10 @@ gettogglestats(Client *c)
 void
 getpagestats(Client *c)
 {
-	pagestats[0] = c->tlsflags > G_TLS_CERTIFICATE_VALIDATE_ALL ? '-' :
-	               c->tlsflags > 0 ? 'U' : 'T';
+	if (c->https)
+		pagestats[0] = (c->tlserr || c->insecure) ?  'U' : 'T';
+	else
+		pagestats[0] = '-';
 	pagestats[1] = '\0';
 }
 
@@ -1006,6 +1009,8 @@ newview(Client *c, WebKitWebView *rv)
 			 G_CALLBACK(createview), c);
 	g_signal_connect(G_OBJECT(v), "decide-policy",
 			 G_CALLBACK(decidepolicy), c);
+	g_signal_connect(G_OBJECT(v), "insecure-content-detected",
+			 G_CALLBACK(insecurecontent), c);
 	g_signal_connect(G_OBJECT(v), "load-changed",
 			 G_CALLBACK(loadchanged), c);
 	g_signal_connect(G_OBJECT(v), "mouse-target-changed",
@@ -1227,7 +1232,7 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 		curconfig = defconfig;
 		setatom(c, AtomUri, title);
 		c->title = title;
-		c->tlsflags = G_TLS_CERTIFICATE_VALIDATE_ALL + 1;
+		c->https = c->insecure = 0;
 		seturiparameters(c, geturi(c));
 		break;
 	case WEBKIT_LOAD_REDIRECTED:
@@ -1236,10 +1241,8 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 		seturiparameters(c, geturi(c));
 		break;
 	case WEBKIT_LOAD_COMMITTED:
-		if (!webkit_web_view_get_tls_info(c->view, NULL,
-		    &(c->tlsflags)))
-			c->tlsflags = G_TLS_CERTIFICATE_VALIDATE_ALL + 1;
-
+		c->https = webkit_web_view_get_tls_info(c->view, NULL,
+		                                        &c->tlserr);
 		break;
 	case WEBKIT_LOAD_FINISHED:
 		/* Disabled until we write some WebKitWebExtension for
@@ -1424,6 +1427,12 @@ decideresource(WebKitPolicyDecision *d, Client *c)
 		webkit_policy_decision_ignore(d);
 		download(c, res);
 	}
+}
+
+void
+insecurecontent(WebKitWebView *v, WebKitInsecureContentEvent e, Client *c)
+{
+	c->insecure = 1;
 }
 
 void
