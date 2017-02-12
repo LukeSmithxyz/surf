@@ -271,17 +271,19 @@ setup(void)
 	if (signal(SIGHUP, sighup) == SIG_ERR)
 		die("Can't install SIGHUP handler");
 
-	gtk_init(NULL, NULL);
-
-	gdpy = gdk_display_get_default();
-	dpy = GDK_DISPLAY_XDISPLAY(gdpy);
-
-	curconfig = defconfig;
+	if (!(dpy = XOpenDisplay(NULL)))
+		die("Can't open default display");
 
 	/* atoms */
 	atoms[AtomFind] = XInternAtom(dpy, "_SURF_FIND", False);
 	atoms[AtomGo] = XInternAtom(dpy, "_SURF_GO", False);
 	atoms[AtomUri] = XInternAtom(dpy, "_SURF_URI", False);
+
+	gtk_init(NULL, NULL);
+
+	gdpy = gdk_display_get_default();
+
+	curconfig = defconfig;
 
 	/* dirs and files */
 	cookiefile = buildfile(cookiefile);
@@ -901,6 +903,7 @@ cleanup(void)
 	g_free(scriptfile);
 	g_free(stylefile);
 	g_free(cachedir);
+	XCloseDisplay(dpy);
 }
 
 WebKitWebView *
