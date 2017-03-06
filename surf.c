@@ -918,7 +918,7 @@ newview(Client *c, WebKitWebView *rv)
 	} else {
 		settings = webkit_settings_new_with_settings(
 		   "auto-load-images", curconfig[LoadImages].val.b,
-		   "default-font-size", curconfig[FontSize].val.f,
+		   "default-font-size", curconfig[FontSize].val.i,
 		   "enable-caret-browsing", curconfig[CaretBrowsing].val.b,
 		   "enable-developer-extras", curconfig[Inspector].val.b,
 		   "enable-dns-prefetching", curconfig[DNSPrefetch].val.b,
