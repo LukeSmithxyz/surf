@@ -1747,7 +1747,7 @@ main(int argc, char *argv[])
 		fulluseragent = EARGF(usage());
 		break;
 	case 'v':
-		die("surf-"VERSION", ©2009-2015 surf engineers, "
+		die("surf-"VERSION", ©2009-2017 surf engineers, "
 		    "see LICENSE for details\n");
 	case 'x':
 		showxid = 1;
