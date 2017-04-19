@@ -6,9 +6,9 @@ surf \- simple webkit-based browser
 .RB [-bBdDfFgGiIkKmMnNpPsSvx]
 .RB [-a\ cookiepolicies]
 .RB [-c\ cookiefile]
+.RB [-C\ stylefile]
 .RB [-e\ xid]
 .RB [-r\ scriptfile]
-.RB [-t\ stylefile]
 .RB [-u\ useragent]
 .RB [-z\ zoomlevel]
 .RB "URI"
@@ -39,6 +39,11 @@ Enable Scrollbars
 Specify the
 .I cookiefile
 to use.
+.TP
+.B \-C stylefile
+Specify the user
+.I stylefile.
+This does disable the site-specific styles.
 .TP
 .B \-d
 Disable the disk cache.
@@ -101,11 +106,6 @@ Disable Javascript
 .TP
 .B \-S
 Enable Javascript
-.TP
-.B \-t stylefile
-Specify the user
-.I stylefile.
-This does disable the site-specific styles.
 .TP
 .B \-u useragent 
 Specify the

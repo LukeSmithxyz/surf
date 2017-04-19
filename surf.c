@@ -1679,6 +1679,9 @@ main(int argc, char *argv[])
 	case 'c':
 		cookiefile = EARGF(usage());
 		break;
+	case 'C':
+		stylefile = EARGF(usage());
+		break;
 	case 'd':
 		defconfig CSETB(DiskCache, 0);
 		break;
@@ -1738,9 +1741,6 @@ main(int argc, char *argv[])
 		break;
 	case 'S':
 		defconfig CSETB(JavaScript, 1);
-		break;
-	case 't':
-		stylefile = EARGF(usage());
 		break;
 	case 'u':
 		fulluseragent = EARGF(usage());
