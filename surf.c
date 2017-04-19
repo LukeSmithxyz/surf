@@ -1200,7 +1200,7 @@ createwindow(Client *c)
 		gtk_window_set_role(GTK_WINDOW(w), wmstr);
 		g_free(wmstr);
 
-		gtk_window_set_default_size(GTK_WINDOW(w), 800, 600);
+		gtk_window_set_default_size(GTK_WINDOW(w), winsize[0], winsize[1]);
 	}
 
 	g_signal_connect(G_OBJECT(w), "destroy",

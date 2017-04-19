@@ -42,6 +42,9 @@ static UriParameters uriparams[] = {
 	}, },
 };
 
+/* default window size: width, height */
+static int winsize[] = { 800, 600 };
+
 static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
                                     WEBKIT_FIND_OPTIONS_WRAP_AROUND;
 
