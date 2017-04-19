@@ -226,7 +226,7 @@ static void clicknewwindow(Client *c, const Arg *a, WebKitHitTestResult *h);
 static void clickexternplayer(Client *c, const Arg *a, WebKitHitTestResult *h);
 
 static char winid[64];
-static char togglestats[10];
+static char togglestats[11];
 static char pagestats[2];
 static Atom atoms[AtomLast];
 static Window embed;
@@ -569,7 +569,8 @@ gettogglestats(Client *c)
 	togglestats[6] = curconfig[Plugins].val.b ?         'V' : 'v';
 	togglestats[7] = curconfig[Style].val.b ?           'M' : 'm';
 	togglestats[8] = curconfig[FrameFlattening].val.b ? 'F' : 'f';
-	togglestats[9] = '\0';
+	togglestats[9] = curconfig[StrictTLS].val.b ?       'T' : 't';
+	togglestats[10] = '\0';
 }
 
 void
@@ -715,7 +716,7 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 		    webkit_web_view_get_context(c->view), a->b ?
 		    WEBKIT_TLS_ERRORS_POLICY_FAIL :
 		    WEBKIT_TLS_ERRORS_POLICY_IGNORE);
-		return; /* do not update */
+		break;
 	case Style:
 		if (a->b)
 			setstyle(c, getstyle(geturi(c)));
