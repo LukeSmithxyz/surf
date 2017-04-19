@@ -80,7 +80,7 @@ typedef enum {
 	SiteQuirks,
 	SpellChecking,
 	SpellLanguages,
-	StrictSSL,
+	StrictTLS,
 	Style,
 	ZoomLevel,
 	ParameterLast,
@@ -710,7 +710,7 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 		return; /* do not update */
 	case SpellLanguages:
 		return; /* do nothing */
-	case StrictSSL:
+	case StrictTLS:
 		webkit_web_context_set_tls_errors_policy(
 		    webkit_web_view_get_context(c->view), a->b ?
 		    WEBKIT_TLS_ERRORS_POLICY_FAIL :
@@ -960,9 +960,9 @@ newview(Client *c, WebKitWebView *rv)
 		 * or one for each view */
 		webkit_web_context_set_process_model(context,
 		    WEBKIT_PROCESS_MODEL_MULTIPLE_SECONDARY_PROCESSES);
-		/* ssl */
+		/* TLS */
 		webkit_web_context_set_tls_errors_policy(context,
-		    curconfig[StrictSSL].val.b ? WEBKIT_TLS_ERRORS_POLICY_FAIL :
+		    curconfig[StrictTLS].val.b ? WEBKIT_TLS_ERRORS_POLICY_FAIL :
 		    WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 		/* disk cache */
 		webkit_web_context_set_cache_model(context,
