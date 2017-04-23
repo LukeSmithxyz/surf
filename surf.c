@@ -817,7 +817,7 @@ newwindow(Client *c, const Arg *a, int noembed)
 {
 	int i = 0;
 	char tmp[64];
-	const char *cmd[26], *uri;
+	const char *cmd[27], *uri;
 	const Arg arg = { .v = cmd };
 
 	cmd[i++] = argv0;
