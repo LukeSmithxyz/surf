@@ -246,7 +246,7 @@ char *argv0;
 void
 usage(void)
 {
-	die("usage: %s [-bBdDfFgGiIkKmMnNpPsSvx] [-a cookiepolicies ] "
+	die("usage: %s [-bBdDfFgGiIkKmMnNpPsStTvx] [-a cookiepolicies ] "
 	    "[-c cookiefile] [-C stylefile] [-e xid] [-r scriptfile] "
 	    "[-u useragent] [-z zoomlevel] [uri]\n", basename(argv0));
 }
@@ -817,7 +817,7 @@ newwindow(Client *c, const Arg *a, int noembed)
 {
 	int i = 0;
 	char tmp[64];
-	const char *cmd[27], *uri;
+	const char *cmd[28], *uri;
 	const Arg arg = { .v = cmd };
 
 	cmd[i++] = argv0;
@@ -850,6 +850,7 @@ newwindow(Client *c, const Arg *a, int noembed)
 		cmd[i++] = scriptfile;
 	}
 	cmd[i++] = curconfig[JavaScript].val.b ? "-S" : "-s";
+	cmd[i++] = curconfig[StrictTLS].val.b ? "-T" : "-t";
 	if (fulluseragent && g_strcmp0(fulluseragent, "")) {
 		cmd[i++] = "-u";
 		cmd[i++] = fulluseragent;
@@ -1742,6 +1743,12 @@ main(int argc, char *argv[])
 		break;
 	case 'S':
 		defconfig CSETB(JavaScript, 1);
+		break;
+	case 't':
+		defconfig CSETB(StrictTLS, 0);
+		break;
+	case 'T':
+		defconfig CSETB(StrictTLS, 1);
 		break;
 	case 'u':
 		fulluseragent = EARGF(usage());
