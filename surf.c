@@ -247,7 +247,7 @@ void
 usage(void)
 {
 	die("usage: %s [-bBdDfFgGiIkKmMnNpPsSvx] [-a cookiepolicies ] "
-	    "[-c cookiefile] [-e xid] [-r scriptfile] [-t stylefile] "
+	    "[-c cookiefile] [-C stylefile] [-e xid] [-r scriptfile] "
 	    "[-u useragent] [-z zoomlevel] [uri]\n", basename(argv0));
 }
 
@@ -828,6 +828,10 @@ newwindow(Client *c, const Arg *a, int noembed)
 		cmd[i++] = "-c";
 		cmd[i++] = cookiefile;
 	}
+	if (stylefile && g_strcmp0(stylefile, "")) {
+		cmd[i++] = "-C";
+		cmd[i++] = stylefile;
+	}
 	cmd[i++] = curconfig[DiskCache].val.b ? "-D" : "-d";
 	if (embed && !noembed) {
 		cmd[i++] = "-e";
@@ -846,10 +850,6 @@ newwindow(Client *c, const Arg *a, int noembed)
 		cmd[i++] = scriptfile;
 	}
 	cmd[i++] = curconfig[JavaScript].val.b ? "-S" : "-s";
-	if (stylefile && g_strcmp0(stylefile, "")) {
-		cmd[i++] = "-t";
-		cmd[i++] = stylefile;
-	}
 	if (fulluseragent && g_strcmp0(fulluseragent, "")) {
 		cmd[i++] = "-u";
 		cmd[i++] = fulluseragent;
