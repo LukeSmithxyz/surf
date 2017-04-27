@@ -163,7 +163,7 @@ static char cookiepolicy_set(const WebKitCookieAcceptPolicy p);
 static void seturiparameters(Client *c, const char *uri);
 static void setparameter(Client *c, int refresh, ParamName p, const Arg *a);
 static const char *getstyle(const char *uri);
-static void setstyle(Client *c, const char *stylefile);
+static void setstyle(Client *c, const char *file);
 static void runscript(Client *c);
 static void evalscript(Client *c, const char *jsstr, ...);
 static void updatewinid(Client *c);
@@ -755,12 +755,12 @@ getstyle(const char *uri)
 }
 
 void
-setstyle(Client *c, const char *stylefile)
+setstyle(Client *c, const char *file)
 {
 	gchar *style;
 
-	if (!g_file_get_contents(stylefile, &style, NULL, NULL)) {
-		fprintf(stderr, "Could not read style file: %s\n", stylefile);
+	if (!g_file_get_contents(file, &style, NULL, NULL)) {
+		fprintf(stderr, "Could not read style file: %s\n", file);
 		return;
 	}
 
