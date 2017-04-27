@@ -136,9 +136,9 @@ typedef struct {
 
 typedef struct {
 	char *regex;
-	char *style;
+	char *file;
 	regex_t re;
-} SiteStyle;
+} SiteSpecific;
 
 /* Surf */
 static void usage(void);
@@ -304,8 +304,8 @@ setup(void)
 				        styles[i].regex);
 				styles[i].regex = NULL;
 			}
-			styles[i].style = g_strconcat(styledir, "/",
-			                              styles[i].style, NULL);
+			styles[i].file = g_strconcat(styledir, "/",
+			                             styles[i].file, NULL);
 		}
 		g_free(styledir);
 	} else {
@@ -748,7 +748,7 @@ getstyle(const char *uri)
 	for (i = 0; i < LENGTH(styles); ++i) {
 		if (styles[i].regex &&
 		    !regexec(&(styles[i].re), uri, 0, NULL, 0))
-			return styles[i].style;
+			return styles[i].file;
 	}
 
 	return "";

@@ -90,7 +90,7 @@ static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
  * The iteration will stop at the first match, beginning at the beginning of
  * the list.
  */
-static SiteStyle styles[] = {
+static SiteSpecific styles[] = {
 	/* regexp               file in $styledir */
 	{ ".*",                 "default.css" },
 };
