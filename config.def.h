@@ -3,12 +3,14 @@ static int surfuseragent    = 1;  /* Append Surf version to default WebKit user 
 static char *fulluseragent  = ""; /* Or override the whole user agent string */
 static char *scriptfile     = "~/.surf/script.js";
 static char *styledir       = "~/.surf/styles/";
+static char *certdir        = "~/.surf/certificates/";
 static char *cachedir       = "~/.surf/cache/";
 static char *cookiefile     = "~/.surf/cookies.txt";
 
 /* Webkit default features */
 static Parameter defconfig[ParameterLast] = {
 	SETB(AcceleratedCanvas,  1),
+	SETB(Certificate,        0),
 	SETB(CaretBrowsing,      0),
 	SETV(CookiePolicies,     "@Aa"),
 	SETB(DiskCache,          1),
@@ -93,6 +95,15 @@ static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
 static SiteSpecific styles[] = {
 	/* regexp               file in $styledir */
 	{ ".*",                 "default.css" },
+};
+
+/* certificates */
+/*
+ * Provide custom certificate for urls
+ */
+static SiteSpecific certs[] = {
+	/* regexp               file in $certdir */
+	{ "://suckless\\.org/", "suckless.org.crt" },
 };
 
 #define MODKEY GDK_CONTROL_MASK

@@ -60,6 +60,7 @@ enum {
 typedef enum {
 	AcceleratedCanvas,
 	CaretBrowsing,
+	Certificate,
 	CookiePolicies,
 	DiskCache,
 	DNSPrefetch,
@@ -162,6 +163,8 @@ static WebKitCookieAcceptPolicy cookiepolicy_get(void);
 static char cookiepolicy_set(const WebKitCookieAcceptPolicy p);
 static void seturiparameters(Client *c, const char *uri);
 static void setparameter(Client *c, int refresh, ParamName p, const Arg *a);
+static const char *getcert(const char *uri);
+static void setcert(Client *c, const char *file);
 static const char *getstyle(const char *uri);
 static void setstyle(Client *c, const char *file);
 static void runscript(Client *c);
@@ -291,8 +294,18 @@ setup(void)
 	cookiefile = buildfile(cookiefile);
 	scriptfile = buildfile(scriptfile);
 	cachedir   = buildpath(cachedir);
+	certdir    = buildpath(certdir);
 
 	gdkkb = gdk_seat_get_keyboard(gdk_display_get_default_seat(gdpy));
+
+	for (i = 0; i < LENGTH(certs); ++i) {
+		if (regcomp(&(certs[i].re), certs[i].regex, REG_EXTENDED)) {
+			fprintf(stderr, "Could not compile regex: %s\n",
+			        certs[i].regex);
+			certs[i].regex = NULL;
+		}
+		certs[i].file = g_strconcat(certdir, "/", certs[i].file, NULL);
+	}
 
 	if (!stylefile) {
 		styledir = buildpath(styledir);
@@ -642,6 +655,10 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 		webkit_settings_set_enable_caret_browsing(s, a->b);
 		refresh = 0;
 		break;
+	case Certificate:
+		if (a->b)
+			setcert(c, geturi(c));
+		return; /* do not update */
 	case CookiePolicies:
 		webkit_cookie_manager_set_accept_policy(
 		    webkit_web_context_get_cookie_manager(
@@ -735,6 +752,44 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 	updatetitle(c);
 	if (refresh)
 		reload(c, a);
+}
+
+const char *
+getcert(const char *uri)
+{
+	int i;
+
+	for (i = 0; i < LENGTH(certs); ++i) {
+		if (certs[i].regex &&
+		    !regexec(&(certs[i].re), uri, 0, NULL, 0))
+			return certs[i].file;
+	}
+
+	return NULL;
+}
+
+void
+setcert(Client *c, const char *uri)
+{
+	const char *file = getcert(uri);
+	char *host;
+	GTlsCertificate *cert;
+
+	if (!file)
+		return;
+
+	if (!(cert = g_tls_certificate_new_from_file(file, NULL))) {
+		fprintf(stderr, "Could not read certificate file: %s\n", file);
+		return;
+	}
+
+	uri = strstr(uri, "://") + sizeof("://") - 1;
+	host = strndup(uri, strstr(uri, "/") - uri);
+
+	webkit_web_context_allow_tls_certificate_for_host(
+	    webkit_web_view_get_context(c->view), cert, host);
+
+	free(host);
 }
 
 const char *
