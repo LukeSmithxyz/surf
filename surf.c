@@ -299,26 +299,28 @@ setup(void)
 	gdkkb = gdk_seat_get_keyboard(gdk_display_get_default_seat(gdpy));
 
 	for (i = 0; i < LENGTH(certs); ++i) {
-		if (regcomp(&(certs[i].re), certs[i].regex, REG_EXTENDED)) {
+		if (!regcomp(&(certs[i].re), certs[i].regex, REG_EXTENDED)) {
+			certs[i].file = g_strconcat(certdir, "/", certs[i].file,
+			                            NULL);
+		} else {
 			fprintf(stderr, "Could not compile regex: %s\n",
 			        certs[i].regex);
 			certs[i].regex = NULL;
 		}
-		certs[i].file = g_strconcat(certdir, "/", certs[i].file, NULL);
 	}
 
 	if (!stylefile) {
 		styledir = buildpath(styledir);
 		for (i = 0; i < LENGTH(styles); ++i) {
-			if (regcomp(&(styles[i].re), styles[i].regex,
+			if (!regcomp(&(styles[i].re), styles[i].regex,
 			    REG_EXTENDED)) {
-				fprintf(stderr,
-				        "Could not compile regex: %s\n",
+				styles[i].file = g_strconcat(styledir, "/",
+				                    styles[i].file, NULL);
+			} else {
+				fprintf(stderr, "Could not compile regex: %s\n",
 				        styles[i].regex);
 				styles[i].regex = NULL;
 			}
-			styles[i].file = g_strconcat(styledir, "/",
-			                             styles[i].file, NULL);
 		}
 		g_free(styledir);
 	} else {
@@ -336,8 +338,7 @@ setup(void)
 					uriparams[i].config[j] = defconfig[j];
 			}
 		} else {
-			fprintf(stderr,
-			        "Could not compile regex: %s\n",
+			fprintf(stderr, "Could not compile regex: %s\n",
 			        uriparams[i].uri);
 			uriparams[i].uri = NULL;
 		}
