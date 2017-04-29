@@ -789,6 +789,7 @@ setcert(Client *c, const char *uri)
 
 	webkit_web_context_allow_tls_certificate_for_host(
 	    webkit_web_view_get_context(c->view), cert, host);
+	g_object_unref(cert);
 
 	free(host);
 }
