@@ -236,7 +236,7 @@ static void clicknewwindow(Client *c, const Arg *a, WebKitHitTestResult *h);
 static void clickexternplayer(Client *c, const Arg *a, WebKitHitTestResult *h);
 
 static char winid[64];
-static char togglestats[11];
+static char togglestats[12];
 static char pagestats[2];
 static Atom atoms[AtomLast];
 static Window embed;
@@ -590,8 +590,9 @@ gettogglestats(Client *c)
 	togglestats[6] = curconfig[Plugins].val.b ?         'V' : 'v';
 	togglestats[7] = curconfig[Style].val.b ?           'M' : 'm';
 	togglestats[8] = curconfig[FrameFlattening].val.b ? 'F' : 'f';
-	togglestats[9] = curconfig[StrictTLS].val.b ?       'T' : 't';
-	togglestats[10] = '\0';
+	togglestats[9] = curconfig[Certificate].val.b ?     'X' : 'x';
+	togglestats[10] = curconfig[StrictTLS].val.b ?      'T' : 't';
+	togglestats[11] = '\0';
 }
 
 void
@@ -881,7 +882,7 @@ newwindow(Client *c, const Arg *a, int noembed)
 {
 	int i = 0;
 	char tmp[64];
-	const char *cmd[28], *uri;
+	const char *cmd[29], *uri;
 	const Arg arg = { .v = cmd };
 
 	cmd[i++] = argv0;
@@ -921,6 +922,7 @@ newwindow(Client *c, const Arg *a, int noembed)
 	}
 	if (showxid)
 		cmd[i++] = "-w";
+	cmd[i++] = curconfig[Certificate].val.b ? "-X" : "-x" ;
 	/* do not keep zoom level */
 	cmd[i++] = "--";
 	if ((uri = a->v))
@@ -1901,6 +1903,12 @@ main(int argc, char *argv[])
 		    "see LICENSE for details\n");
 	case 'w':
 		showxid = 1;
+		break;
+	case 'x':
+		defconfig CSETB(Certificate, 0);
+		break;
+	case 'X':
+		defconfig CSETB(Certificate, 1);
 		break;
 	case 'z':
 		defconfig CSETF(ZoomLevel, strtof(EARGF(usage()), NULL));
