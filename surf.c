@@ -5,6 +5,7 @@
 #include <sys/file.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <glib.h>
 #include <libgen.h>
 #include <limits.h>
 #include <pwd.h>
@@ -106,9 +107,10 @@ typedef struct Client {
 	WebKitWebInspector *inspector;
 	WebKitFindController *finder;
 	WebKitHitTestResult *mousepos;
+	GTlsCertificate *cert, *failedcert;
 	GTlsCertificateFlags tlserr;
 	Window xid;
-	int progress, fullscreen, https, insecure;
+	int progress, fullscreen, https, insecure, errorpage;
 	const char *title, *overtitle, *targeturi;
 	const char *needle;
 	struct Client *next;
@@ -216,6 +218,7 @@ static void destroywin(GtkWidget* w, Client *c);
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
 static void reload(Client *c, const Arg *a);
 static void print(Client *c, const Arg *a);
+static void showcert(Client *c, const Arg *a);
 static void clipboard(Client *c, const Arg *a);
 static void zoom(Client *c, const Arg *a);
 static void scroll(Client *c, const Arg *a);
@@ -1294,7 +1297,9 @@ loadfailedtls(WebKitWebView *v, gchar *uri, GTlsCertificate *cert,
 	GString *errmsg = g_string_new(NULL);
 	gchar *html, *pem;
 
+	c->failedcert = g_object_ref(cert);
 	c->tlserr = err;
+	c->errorpage = 1;
 
 	if (err & G_TLS_CERTIFICATE_UNKNOWN_CA)
 		g_string_append(errmsg,
@@ -1322,7 +1327,9 @@ loadfailedtls(WebKitWebView *v, gchar *uri, GTlsCertificate *cert,
 
 	g_object_get(cert, "certificate-pem", &pem, NULL);
 	html = g_strdup_printf("<p>Could not validate TLS for “%s”<br>%s</p>"
-	                       "<p><pre>%s</pre><p>", uri, errmsg->str, pem);
+	                       "<p>You can inspect the following certificate "
+	                       "with Ctrl+Shift+x (default keybinding).</p>"
+	                       "<p><pre>%s</pre></p>", uri, errmsg->str, pem);
 	g_free(pem);
 	g_string_free(errmsg, TRUE);
 
@@ -1344,6 +1351,10 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 		c->title = title;
 		c->https = c->insecure = 0;
 		seturiparameters(c, geturi(c));
+		if (c->errorpage)
+			c->errorpage = 0;
+		else
+			g_clear_object(&c->failedcert);
 		break;
 	case WEBKIT_LOAD_REDIRECTED:
 		setatom(c, AtomUri, title);
@@ -1351,7 +1362,7 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 		seturiparameters(c, geturi(c));
 		break;
 	case WEBKIT_LOAD_COMMITTED:
-		c->https = webkit_web_view_get_tls_info(c->view, NULL,
+		c->https = webkit_web_view_get_tls_info(c->view, &c->cert,
 		                                        &c->tlserr);
 		break;
 	case WEBKIT_LOAD_FINISHED:
@@ -1602,6 +1613,30 @@ print(Client *c, const Arg *a)
 {
 	webkit_print_operation_run_dialog(webkit_print_operation_new(c->view),
 	                                  GTK_WINDOW(c->win));
+}
+
+void
+showcert(Client *c, const Arg *a)
+{
+	GTlsCertificate *cert = c->failedcert ? c->failedcert : c->cert;
+	GcrCertificate *gcrt;
+	GByteArray *crt;
+	GtkWidget *win;
+	GcrCertificateWidget *wcert;
+
+	if (!cert)
+		return;
+
+	g_object_get(cert, "certificate", &crt, NULL);
+	gcrt = gcr_simple_certificate_new(crt->data, crt->len);
+	g_byte_array_unref(crt);
+
+	win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	wcert = gcr_certificate_widget_new(gcrt);
+	g_object_unref(gcrt);
+
+	gtk_container_add(GTK_CONTAINER(win), GTK_WIDGET(wcert));
+	gtk_widget_show_all(win);
 }
 
 void
