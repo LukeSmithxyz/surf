@@ -1005,7 +1005,7 @@ newview(Client *c, WebKitWebView *rv)
 		   "enable-site-specific-quirks", curconfig[SiteQuirks].val.b,
 		   "media-playback-requires-user-gesture", curconfig[MediaManualPlay].val.b,
 		   NULL);
-/* For mor interesting settings, have a look at
+/* For more interesting settings, have a look at
  * http://webkitgtk.org/reference/webkit2gtk/stable/WebKitSettings.html */
 
 		if (strcmp(fulluseragent, "")) {
