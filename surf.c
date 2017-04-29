@@ -22,6 +22,7 @@
 #include <glib/gstdio.h>
 #include <gtk/gtk.h>
 #include <gtk/gtkx.h>
+#include <gcr/gcr.h>
 #include <JavaScriptCore/JavaScript.h>
 #include <webkit2/webkit2.h>
 #include <X11/X.h>
@@ -187,6 +188,9 @@ static GdkFilterReturn processx(GdkXEvent *xevent, GdkEvent *event,
 static gboolean winevent(GtkWidget *w, GdkEvent *e, Client *c);
 static void showview(WebKitWebView *v, Client *c);
 static GtkWidget *createwindow(Client *c);
+static gboolean loadfailedtls(WebKitWebView *v, gchar *uri,
+                              GTlsCertificate *cert,
+                              GTlsCertificateFlags err, Client *c);
 static void loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c);
 static void progresschanged(WebKitWebView *v, GParamSpec *ps, Client *c);
 static void titlechanged(WebKitWebView *view, GParamSpec *ps, Client *c);
@@ -1070,6 +1074,8 @@ newview(Client *c, WebKitWebView *rv)
 			 G_CALLBACK(decidepolicy), c);
 	g_signal_connect(G_OBJECT(v), "insecure-content-detected",
 			 G_CALLBACK(insecurecontent), c);
+	g_signal_connect(G_OBJECT(v), "load-failed-with-tls-errors",
+			 G_CALLBACK(loadfailedtls), c);
 	g_signal_connect(G_OBJECT(v), "load-changed",
 			 G_CALLBACK(loadchanged), c);
 	g_signal_connect(G_OBJECT(v), "mouse-target-changed",
@@ -1279,6 +1285,51 @@ createwindow(Client *c)
 	                 G_CALLBACK(winevent), c);
 
 	return w;
+}
+
+gboolean
+loadfailedtls(WebKitWebView *v, gchar *uri, GTlsCertificate *cert,
+              GTlsCertificateFlags err, Client *c)
+{
+	GString *errmsg = g_string_new(NULL);
+	gchar *html, *pem;
+
+	c->tlserr = err;
+
+	if (err & G_TLS_CERTIFICATE_UNKNOWN_CA)
+		g_string_append(errmsg,
+		    "The signing certificate authority is not known.<br>");
+	if (err & G_TLS_CERTIFICATE_BAD_IDENTITY)
+		g_string_append(errmsg,
+		    "The certificate does not match the expected identity "
+		    "of the site that it was retrieved from.<br>");
+	if (err & G_TLS_CERTIFICATE_NOT_ACTIVATED)
+		g_string_append(errmsg,
+		    "The certificate's activation time "
+		    "is still in the future.<br>");
+	if (err & G_TLS_CERTIFICATE_EXPIRED)
+		g_string_append(errmsg, "The certificate has expired.<br>");
+	if (err & G_TLS_CERTIFICATE_REVOKED)
+		g_string_append(errmsg,
+		    "The certificate has been revoked according to "
+		    "the GTlsConnection's certificate revocation list.<br>");
+	if (err & G_TLS_CERTIFICATE_INSECURE)
+		g_string_append(errmsg,
+		    "The certificate's algorithm is considered insecure.<br>");
+	if (err & G_TLS_CERTIFICATE_GENERIC_ERROR)
+		g_string_append(errmsg,
+		    "Some error occurred validating the certificate.<br>");
+
+	g_object_get(cert, "certificate-pem", &pem, NULL);
+	html = g_strdup_printf("<p>Could not validate TLS for “%s”<br>%s</p>"
+	                       "<p><pre>%s</pre><p>", uri, errmsg->str, pem);
+	g_free(pem);
+	g_string_free(errmsg, TRUE);
+
+	webkit_web_view_load_alternate_html(c->view, html, uri, NULL);
+	g_free(html);
+
+	return TRUE;
 }
 
 void
