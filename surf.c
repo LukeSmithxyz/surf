@@ -920,7 +920,7 @@ newwindow(Client *c, const Arg *a, int noembed)
 		cmd[i++] = fulluseragent;
 	}
 	if (showxid)
-		cmd[i++] = "-x";
+		cmd[i++] = "-w";
 	/* do not keep zoom level */
 	cmd[i++] = "--";
 	if ((uri = a->v))
@@ -1899,7 +1899,7 @@ main(int argc, char *argv[])
 	case 'v':
 		die("surf-"VERSION", ©2009-2017 surf engineers, "
 		    "see LICENSE for details\n");
-	case 'x':
+	case 'w':
 		showxid = 1;
 		break;
 	case 'z':
