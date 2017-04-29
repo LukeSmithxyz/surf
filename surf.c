@@ -792,14 +792,16 @@ setcert(Client *c, const char *uri)
 		return;
 	}
 
-	uri = strstr(uri, "://") + sizeof("://") - 1;
-	host = strndup(uri, strstr(uri, "/") - uri);
+	if ((uri = strstr(uri, "https://"))) {
+		uri += sizeof("https://") - 1;
+		host = g_strndup(uri, strchr(uri, '/') - uri);
+		webkit_web_context_allow_tls_certificate_for_host(
+		    webkit_web_view_get_context(c->view), cert, host);
+		g_free(host);
+	}
 
-	webkit_web_context_allow_tls_certificate_for_host(
-	    webkit_web_view_get_context(c->view), cert, host);
 	g_object_unref(cert);
 
-	free(host);
 }
 
 const char *
