@@ -21,19 +21,19 @@ one can point surf to another URI by setting its XProperties.
 .TP
 .B \-a cookiepolicies
 Define the order of
-.I cookie policies.
+.I cookie policies\fR.
 The default is "@Aa" but could be
 redefined in the
-.I config.h,
+.IR config.h ,
 with "A" meaning to
 accept all cookies, "a" to deny all cookies and "@", which tells surf to
 accept no third party cookies.
 .TP
 .B \-b
-Disable Scrollbars
+Disable Scrollbars.
 .TP
 .B \-B
-Enable Scrollbars
+Enable Scrollbars.
 .TP
 .B \-c cookiefile
 Specify the
@@ -42,7 +42,7 @@ to use.
 .TP
 .B \-C stylefile
 Specify the user
-.I stylefile.
+.IR stylefile .
 This does disable the site-specific styles.
 .TP
 .B \-d
@@ -53,7 +53,7 @@ Enable the disk cache.
 .TP
 .B \-e xid
 Reparents to window specified by
-.I xid.
+.IR xid .
 .TP
 .B \-f
 Start surf in windowed mode (not fullscreen).
@@ -68,16 +68,16 @@ Disable giving the geolocation to websites.
 Enable giving the geolocation to websites.
 .TP
 .B \-i
-Disable Images
+Disable Images.
 .TP
 .B \-I
-Enable Images
+Enable Images.
 .TP
 .B \-k
-Disable kiosk mode (disable key strokes and right click)
+Disable kiosk mode (disable key strokes and right click).
 .TP
 .B \-K
-Enable kiosk mode (disable key strokes and right click)
+Enable kiosk mode (disable key strokes and right click).
 .TP
 .B \-m
 Disable application of user style sheets.
@@ -92,26 +92,26 @@ Disable the Web Inspector (Developer Tools).
 Enable the Web Inspector (Developer Tools).
 .TP
 .B \-p
-Disable Plugins
+Disable Plugins.
 .TP
 .B \-P
-Enable Plugins
+Enable Plugins.
 .TP
 .B \-r scriptfile
 Specify the user
-.I scriptfile.
+.IR scriptfile .
 .TP
 .B \-s
-Disable Javascript
+Disable Javascript.
 .TP
 .B \-S
-Enable Javascript
+Enable Javascript.
 .TP
 .B \-t
-Disable strict TLS check
+Disable strict TLS check.
 .TP
 .B \-T
-Enable strict TLS check
+Enable strict TLS check.
 .TP
 .B \-u useragent
 Specify the
@@ -124,7 +124,7 @@ Prints version information to standard output, then exits.
 .B \-w
 Prints xid to standard output. This can be used to script the browser in for
 example
-.BR xdotool(1).
+.BR xdotool(1) .
 .TP
 .B -x
 Disable custom certificates.
@@ -168,10 +168,10 @@ Scroll horizontally to the left.
 Zooms page in.
 .TP
 .B Ctrl\-Shift\-j or Ctrl\--
-Zooms page out
+Zooms page out.
 .TP
 .B Ctrl\-Shift\-q
-Resets Zoom
+Resets Zoom.
 .TP
 .B Ctrl\-f and Ctrl\-/
 Opens the search-bar.
@@ -205,7 +205,7 @@ Display the current TLS certificate in a popup window.
 .TP
 .B Ctrl\-Shift\-a
 Toggle through the the
-.I cookie policies.
+.I cookie policies\fR.
 This will not reload the page.
 .TP
 .B Ctrl\-Shift\-b
@@ -302,10 +302,10 @@ using proxy
 .B SURF_USERAGENT
 If this variable is set upon startup, surf will use it as the
 .I useragent
-string
+string.
 .TP
 .B http_proxy
-If this variable is set and not empty upon startup, surf will use it as the http proxy
+If this variable is set and not empty upon startup, surf will use it as the http proxy.
 .SH PLUGINS
 For using plugins in surf, first determine your running architecture. Then get
 the appropriate plugin for that architecture and copy it to
