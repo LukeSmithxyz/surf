@@ -3,7 +3,7 @@
 surf \- simple webkit-based browser
 .SH SYNOPSIS
 .B surf
-.RB [-bBdDfFgGiIkKmMnNpPsStTvx]
+.RB [-bBdDfFgGiIkKmMnNpPsStTvwxX]
 .RB [-a\ cookiepolicies]
 .RB [-c\ cookiefile]
 .RB [-C\ stylefile]
@@ -11,7 +11,7 @@ surf \- simple webkit-based browser
 .RB [-r\ scriptfile]
 .RB [-u\ useragent]
 .RB [-z\ zoomlevel]
-.RB "URI"
+.RB [URI]
 .SH DESCRIPTION
 surf is a simple Web browser based on WebKit/GTK+. It is able
 to display websites and follow links. It supports the XEmbed protocol
@@ -22,7 +22,7 @@ one can point surf to another URI by setting its XProperties.
 .B \-a cookiepolicies
 Define the order of
 .I cookie policies.
-The default is "Aa@" but could be
+The default is "@Aa" but could be
 redefined in the
 .I config.h,
 with "A" meaning to
@@ -136,7 +136,6 @@ Enable custom certificates.
 Specify the
 .I zoomlevel
 which surf should use.
-.BR xprop(1).
 .SH USAGE
 .B Escape
 Stops loading current page or stops download.
@@ -201,10 +200,7 @@ Reloads the website without using the cache.
 .B Ctrl\-y
 Copies current URI to primary selection.
 .TP
-.B Ctrl\-o
-Show the sourcecode of the current page.
-.TP
-.B Ctrl\-x
+.B Ctrl\-Shift\-x
 Display the current TLS certificate in a popup window.
 .TP
 .B Ctrl\-Shift\-a
