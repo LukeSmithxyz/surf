@@ -152,7 +152,7 @@ static Key keys[] = {
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_n,      find,       { .i = -1 } },
 
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_p,      print,      { 0 } },
-	{ MODKEY,                GDK_KEY_x,      showcert,   { 0 } },
+	{ MODKEY,                GDK_KEY_t,      showcert,   { 0 } },
 
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_a,      togglecookiepolicy, { 0 } },
 	{ 0,                     GDK_KEY_F11,    togglefullscreen, { 0 } },

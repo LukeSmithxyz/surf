@@ -1332,7 +1332,7 @@ loadfailedtls(WebKitWebView *v, gchar *uri, GTlsCertificate *cert,
 	g_object_get(cert, "certificate-pem", &pem, NULL);
 	html = g_strdup_printf("<p>Could not validate TLS for “%s”<br>%s</p>"
 	                       "<p>You can inspect the following certificate "
-	                       "with Ctrl+Shift+x (default keybinding).</p>"
+	                       "with Ctrl-t (default keybinding).</p>"
 	                       "<p><pre>%s</pre></p>", uri, errmsg->str, pem);
 	g_free(pem);
 	g_string_free(errmsg, TRUE);
