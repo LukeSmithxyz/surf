@@ -256,9 +256,9 @@ char *argv0;
 void
 usage(void)
 {
-	die("usage: %s [-bBdDfFgGiIkKmMnNpPsStTvwxX] [-a cookiepolicies ] "
-	    "[-c cookiefile] [-C stylefile] [-e xid] [-r scriptfile] "
-	    "[-u useragent] [-z zoomlevel] [uri]\n", basename(argv0));
+	die("usage: surf [-bBdDfFgGiIkKmMnNpPsStTvwxX]\n"
+	    "[-a cookiepolicies ] [-c cookiefile] [-C stylefile] [-e xid]\n"
+	    "[-r scriptfile] [-u useragent] [-z zoomlevel] [uri]\n");
 }
 
 void
