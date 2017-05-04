@@ -50,13 +50,13 @@ static int winsize[] = { 800, 600 };
 static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
                                     WEBKIT_FIND_OPTIONS_WRAP_AROUND;
 
-#define SETPROP(p, q) { \
+/* SETPROP(readprop, setprop)*/
+#define SETPROP(r, s) { \
         .v = (const char *[]){ "/bin/sh", "-c", \
-             "prop=\"`xprop -id $2 $0 " \
-             "| sed \"s/^$0(STRING) = \\(\\\\\"\\?\\)\\(.*\\)\\1$/\\2/\" " \
-             "| xargs -0 printf %b | dmenu`\" &&" \
-             "xprop -id $2 -f $1 8s -set $1 \"$prop\"", \
-             p, q, winid, NULL \
+             "prop=\"$(printf '%b' \"$(xprop -id $1 $2 " \
+             "| sed \"s/^$2(STRING) = //;s/^\\\"\\(.*\\)\\\"$/\\1/\")\" " \
+             "| dmenu)\" && xprop -id $1 -f $3 8s -set $3 \"$prop\"", \
+             "surf-setprop", winid, r, s, NULL \
         } \
 }
 
