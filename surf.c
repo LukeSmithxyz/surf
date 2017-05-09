@@ -636,18 +636,32 @@ cookiepolicy_set(const WebKitCookieAcceptPolicy p)
 void
 seturiparameters(Client *c, const char *uri)
 {
+	Parameter *newconfig = NULL;
 	int i;
 
 	for (i = 0; i < LENGTH(uriparams); ++i) {
 		if (uriparams[i].uri &&
 		    !regexec(&(uriparams[i].re), uri, 0, NULL, 0)) {
-			curconfig = uriparams[i].config;
+			newconfig = uriparams[i].config;
 			break;
 		}
 	}
 
-	for (i = 0; i < ParameterLast; ++i)
-		setparameter(c, 0, i, &curconfig[i].val);
+	if (!newconfig)
+		newconfig = defconfig;
+	if (newconfig == curconfig)
+		return;
+
+	for (i = 0; i < ParameterLast; ++i) {
+		if (defconfig[i].force)
+			continue;
+		if (newconfig[i].force)
+			setparameter(c, 0, i, &newconfig[i].val);
+		else if (curconfig[i].force)
+			setparameter(c, 0, i, &defconfig[i].val);
+	}
+
+	curconfig = newconfig;
 }
 
 void
@@ -1350,7 +1364,6 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 
 	switch (e) {
 	case WEBKIT_LOAD_STARTED:
-		curconfig = defconfig;
 		setatom(c, AtomUri, title);
 		c->title = title;
 		c->https = c->insecure = 0;
