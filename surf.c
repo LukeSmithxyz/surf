@@ -530,10 +530,10 @@ geturi(Client *c)
 void
 setatom(Client *c, int a, const char *v)
 {
-	XSync(dpy, False);
 	XChangeProperty(dpy, c->xid,
 	                atoms[a], XA_STRING, 8, PropModeReplace,
 	                (unsigned char *)v, strlen(v) + 1);
+	XSync(dpy, False);
 }
 
 const char *
@@ -545,6 +545,7 @@ getatom(Client *c, int a)
 	unsigned long ldummy;
 	unsigned char *p = NULL;
 
+	XSync(dpy, False);
 	XGetWindowProperty(dpy, c->xid, atoms[a], 0L, BUFSIZ, False, XA_STRING,
 	                   &adummy, &idummy, &ldummy, &ldummy, &p);
 	if (p)
