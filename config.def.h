@@ -13,6 +13,7 @@ static Parameter defconfig[ParameterLast] = {
 	SETB(Certificate,        0),
 	SETB(CaretBrowsing,      0),
 	SETV(CookiePolicies,     "@Aa"),
+	SETV(DefaultCharset,     "UTF-8"),
 	SETB(DiskCache,          1),
 	SETB(DNSPrefetch,        0),
 	SETI(FontSize,           12),

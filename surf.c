@@ -65,6 +65,7 @@ typedef enum {
 	Certificate,
 	CookiePolicies,
 	DiskCache,
+	DefaultCharset,
 	DNSPrefetch,
 	FontSize,
 	FrameFlattening,
@@ -695,6 +696,9 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 		    WEBKIT_CACHE_MODEL_WEB_BROWSER :
 		    WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
 		return; /* do not update */
+	case DefaultCharset:
+		webkit_settings_set_default_charset(s, a->v);
+		return; /* do not update */
 	case DNSPrefetch:
 		webkit_settings_set_enable_dns_prefetching(s, a->b);
 		return; /* do not update */
@@ -1008,6 +1012,7 @@ newview(Client *c, WebKitWebView *rv)
 	} else {
 		settings = webkit_settings_new_with_settings(
 		   "auto-load-images", curconfig[LoadImages].val.b,
+		   "default-charset", curconfig[DefaultCharset].val.v,
 		   "default-font-size", curconfig[FontSize].val.i,
 		   "enable-caret-browsing", curconfig[CaretBrowsing].val.b,
 		   "enable-developer-extras", curconfig[Inspector].val.b,
