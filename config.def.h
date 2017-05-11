@@ -32,6 +32,7 @@ static Parameter defconfig[ParameterLast] = {
 	SETB(ScrollBars,         1),
 	SETB(ShowIndicators,     1),
 	SETB(SiteQuirks,         1),
+	SETB(SmoothScrolling,    0),
 	SETB(SpellChecking,      0),
 	SETV(SpellLanguages,     ((char *[]){ "en_US", NULL })),
 	SETB(StrictTLS,          1),

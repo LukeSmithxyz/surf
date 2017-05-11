@@ -83,6 +83,7 @@ typedef enum {
 	ScrollBars,
 	ShowIndicators,
 	SiteQuirks,
+	SmoothScrolling,
 	SpellChecking,
 	SpellLanguages,
 	StrictTLS,
@@ -750,6 +751,9 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 		return; /* do not update */
 	case ShowIndicators:
 		break;
+	case SmoothScrolling:
+		webkit_settings_set_enable_smooth_scrolling(s, a->b);
+		return; /* do not update */
 	case SiteQuirks:
 		webkit_settings_set_enable_site_specific_quirks(s, a->b);
 		break;
@@ -1029,6 +1033,7 @@ newview(Client *c, WebKitWebView *rv)
 		   "enable-plugins", curconfig[Plugins].val.b,
 		   "enable-accelerated-2d-canvas", curconfig[AcceleratedCanvas].val.b,
 		   "enable-site-specific-quirks", curconfig[SiteQuirks].val.b,
+		   "enable-smooth-scrolling", curconfig[SmoothScrolling].val.b,
 		   "media-playback-requires-user-gesture", curconfig[MediaManualPlay].val.b,
 		   NULL);
 /* For more interesting settings, have a look at
