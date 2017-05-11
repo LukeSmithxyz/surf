@@ -21,6 +21,7 @@ static Parameter defconfig[ParameterLast] = {
 	SETB(Geolocation,        0),
 	SETB(HideBackground,     0),
 	SETB(Inspector,          0),
+	SETB(Java,               1),
 	SETB(JavaScript,         1),
 	SETB(KioskMode,          0),
 	SETB(LoadImages,         1),

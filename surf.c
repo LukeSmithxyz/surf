@@ -72,6 +72,7 @@ typedef enum {
 	Geolocation,
 	HideBackground,
 	Inspector,
+	Java,
 	JavaScript,
 	KioskMode,
 	LoadImages,
@@ -718,6 +719,9 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 	case Inspector:
 		webkit_settings_set_enable_developer_extras(s, a->b);
 		return; /* do not update */
+	case Java:
+		webkit_settings_set_enable_java(s, a->b);
+		return; /* do not update */
 	case JavaScript:
 		webkit_settings_set_enable_javascript(s, a->b);
 		break;
@@ -1020,6 +1024,7 @@ newview(Client *c, WebKitWebView *rv)
 		   "enable-frame-flattening", curconfig[FrameFlattening].val.b,
 		   "enable-html5-database", curconfig[DiskCache].val.b,
 		   "enable-html5-local-storage", curconfig[DiskCache].val.b,
+		   "enable-java", curconfig[Java].val.b,
 		   "enable-javascript", curconfig[JavaScript].val.b,
 		   "enable-plugins", curconfig[Plugins].val.b,
 		   "enable-accelerated-2d-canvas", curconfig[AcceleratedCanvas].val.b,
