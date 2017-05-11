@@ -1375,23 +1375,23 @@ loadfailedtls(WebKitWebView *v, gchar *uri, GTlsCertificate *cert,
 void
 loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 {
-	const char *title = geturi(c);
+	const char *uri = geturi(c);
 
 	switch (e) {
 	case WEBKIT_LOAD_STARTED:
-		setatom(c, AtomUri, title);
-		c->title = title;
+		setatom(c, AtomUri, uri);
+		c->title = uri;
 		c->https = c->insecure = 0;
-		seturiparameters(c, geturi(c));
+		seturiparameters(c, uri);
 		if (c->errorpage)
 			c->errorpage = 0;
 		else
 			g_clear_object(&c->failedcert);
 		break;
 	case WEBKIT_LOAD_REDIRECTED:
-		setatom(c, AtomUri, title);
-		c->title = title;
-		seturiparameters(c, geturi(c));
+		setatom(c, AtomUri, uri);
+		c->title = uri;
+		seturiparameters(c, uri);
 		break;
 	case WEBKIT_LOAD_COMMITTED:
 		c->https = webkit_web_view_get_tls_info(c->view, &c->cert,
