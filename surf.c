@@ -643,7 +643,7 @@ cookiepolicy_set(const WebKitCookieAcceptPolicy p)
 void
 seturiparameters(Client *c, const char *uri)
 {
-	Parameter *newconfig = NULL;
+	Parameter *config, *newconfig = NULL;
 	int i;
 
 	for (i = 0; i < LENGTH(uriparams); ++i) {
@@ -656,16 +656,26 @@ seturiparameters(Client *c, const char *uri)
 
 	if (!newconfig)
 		newconfig = defconfig;
-	if (newconfig == curconfig)
-		return;
 
 	for (i = 0; i < ParameterLast; ++i) {
-		if (defconfig[i].force)
-			continue;
-		if (newconfig[i].force)
-			setparameter(c, 0, i, &newconfig[i].val);
-		else if (curconfig[i].force)
-			setparameter(c, 0, i, &defconfig[i].val);
+		switch(i) {
+		case Certificate:
+		case CookiePolicies:
+		case Style:
+			config = defconfig[i].force ? defconfig :
+			         newconfig[i].force ? newconfig :
+			         defconfig;
+			break;
+		default:
+			if (newconfig == curconfig || defconfig[i].force)
+				continue;
+			config = newconfig[i].force ? newconfig :
+			         curconfig[i].force ? defconfig :
+			         NULL;
+		}
+
+		if (config)
+			setparameter(c, 0, i, &config[i].val);
 	}
 
 	curconfig = newconfig;
