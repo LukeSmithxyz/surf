@@ -782,11 +782,10 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 		    WEBKIT_TLS_ERRORS_POLICY_IGNORE);
 		break;
 	case Style:
+		webkit_user_content_manager_remove_all_style_sheets(
+		    webkit_web_view_get_user_content_manager(c->view));
 		if (a->b)
 			setstyle(c, getstyle(geturi(c)));
-		else
-			webkit_user_content_manager_remove_all_style_sheets(
-			    webkit_web_view_get_user_content_manager(c->view));
 		refresh = 0;
 		break;
 	case ZoomLevel:
