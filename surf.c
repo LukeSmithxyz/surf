@@ -92,7 +92,7 @@ typedef enum {
 	StrictTLS,
 	Style,
 	ZoomLevel,
-	ParameterLast,
+	ParameterLast
 } ParamName;
 
 typedef union {
@@ -170,7 +170,7 @@ static void gettogglestats(Client *c);
 static void getpagestats(Client *c);
 static WebKitCookieAcceptPolicy cookiepolicy_get(void);
 static char cookiepolicy_set(const WebKitCookieAcceptPolicy p);
-static void seturiparameters(Client *c, const char *uri);
+static void seturiparameters(Client *c, const char *uri, ParamName *params);
 static void setparameter(Client *c, int refresh, ParamName p, const Arg *a);
 static const char *getcert(const char *uri);
 static void setcert(Client *c, const char *file);
@@ -255,6 +255,50 @@ static char *stylefile;
 static const char *useragent;
 static Parameter *curconfig;
 char *argv0;
+
+static ParamName loadtransient[] = {
+	Certificate,
+	CookiePolicies,
+	DiskCache,
+	DNSPrefetch,
+	FileURLsCrossAccess,
+	JavaScript,
+	LoadImages,
+	PreferredLanguages,
+	ShowIndicators,
+	StrictTLS,
+	ParameterLast
+};
+
+static ParamName loadcommitted[] = {
+	AcceleratedCanvas,
+//	AccessMicrophone,
+//	AccessWebcam,
+	CaretBrowsing,
+	DefaultCharset,
+	FontSize,
+	FrameFlattening,
+	Geolocation,
+	HideBackground,
+	Inspector,
+	Java,
+//	KioskMode,
+	MediaManualPlay,
+	Plugins,
+	RunInFullscreen,
+	ScrollBars,
+	SiteQuirks,
+	SmoothScrolling,
+	SpellChecking,
+	SpellLanguages,
+	Style,
+	ZoomLevel,
+	ParameterLast
+};
+
+static ParamName loadfinished[] = {
+	ParameterLast
+};
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -641,10 +685,10 @@ cookiepolicy_set(const WebKitCookieAcceptPolicy p)
 }
 
 void
-seturiparameters(Client *c, const char *uri)
+seturiparameters(Client *c, const char *uri, ParamName *params)
 {
 	Parameter *config, *newconfig = NULL;
-	int i;
+	int i, p;
 
 	for (i = 0; i < LENGTH(uriparams); ++i) {
 		if (uriparams[i].uri &&
@@ -657,25 +701,25 @@ seturiparameters(Client *c, const char *uri)
 	if (!newconfig)
 		newconfig = defconfig;
 
-	for (i = 0; i < ParameterLast; ++i) {
-		switch(i) {
+	for (i = 0; (p = params[i]) != ParameterLast; ++i) {
+		switch(p) {
 		case Certificate:
 		case CookiePolicies:
 		case Style:
-			config = defconfig[i].force ? defconfig :
-			         newconfig[i].force ? newconfig :
+			config = defconfig[p].force ? defconfig :
+			         newconfig[p].force ? newconfig :
 			         defconfig;
 			break;
 		default:
-			if (newconfig == curconfig || defconfig[i].force)
+			if (defconfig[p].force)
 				continue;
-			config = newconfig[i].force ? newconfig :
-			         curconfig[i].force ? defconfig :
+			config = newconfig[p].force ? newconfig :
+			         curconfig[p].force ? defconfig :
 			         NULL;
 		}
 
 		if (config)
-			setparameter(c, 0, i, &config[i].val);
+			setparameter(c, 0, p, &config[p].val);
 	}
 
 	curconfig = newconfig;
@@ -1405,7 +1449,7 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 		setatom(c, AtomUri, uri);
 		c->title = uri;
 		c->https = c->insecure = 0;
-		seturiparameters(c, uri);
+		seturiparameters(c, uri, loadtransient);
 		if (c->errorpage)
 			c->errorpage = 0;
 		else
@@ -1414,13 +1458,15 @@ loadchanged(WebKitWebView *v, WebKitLoadEvent e, Client *c)
 	case WEBKIT_LOAD_REDIRECTED:
 		setatom(c, AtomUri, uri);
 		c->title = uri;
-		seturiparameters(c, uri);
+		seturiparameters(c, uri, loadtransient);
 		break;
 	case WEBKIT_LOAD_COMMITTED:
+		seturiparameters(c, uri, loadcommitted);
 		c->https = webkit_web_view_get_tls_info(c->view, &c->cert,
 		                                        &c->tlserr);
 		break;
 	case WEBKIT_LOAD_FINISHED:
+		seturiparameters(c, uri, loadfinished);
 		/* Disabled until we write some WebKitWebExtension for
 		 * manipulating the DOM directly.
 		evalscript(c, "document.documentElement.style.overflow = '%s'",
