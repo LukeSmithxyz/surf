@@ -10,6 +10,8 @@ static char *cookiefile     = "~/.surf/cookies.txt";
 /* Webkit default features */
 static Parameter defconfig[ParameterLast] = {
 	SETB(AcceleratedCanvas,  1),
+	SETB(AccessMicrophone,   0),
+	SETB(AccessWebcam,       0),
 	SETB(Certificate,        0),
 	SETB(CaretBrowsing,      0),
 	SETV(CookiePolicies,     "@Aa"),

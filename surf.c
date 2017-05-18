@@ -61,6 +61,8 @@ enum {
 
 typedef enum {
 	AcceleratedCanvas,
+	AccessMicrophone,
+	AccessWebcam,
 	CaretBrowsing,
 	Certificate,
 	CookiePolicies,
@@ -678,6 +680,10 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 	case AcceleratedCanvas:
 		webkit_settings_set_enable_accelerated_2d_canvas(s, a->b);
 		break;
+	case AccessMicrophone:
+		return; /* do nothing */
+	case AccessWebcam:
+		return; /* do nothing */
 	case CaretBrowsing:
 		webkit_settings_set_enable_caret_browsing(s, a->b);
 		refresh = 0;
@@ -1450,15 +1456,27 @@ mousetargetchanged(WebKitWebView *v, WebKitHitTestResult *h, guint modifiers,
 gboolean
 permissionrequested(WebKitWebView *v, WebKitPermissionRequest *r, Client *c)
 {
+	ParamName param = ParameterLast;
+
 	if (WEBKIT_IS_GEOLOCATION_PERMISSION_REQUEST(r)) {
-		if (curconfig[Geolocation].val.b)
-			webkit_permission_request_allow(r);
-		else
-			webkit_permission_request_deny(r);
-		return TRUE;
+		param = Geolocation;
+	} else if (WEBKIT_IS_USER_MEDIA_PERMISSION_REQUEST(r)) {
+		if (webkit_user_media_permission_is_for_audio_device(
+		    WEBKIT_USER_MEDIA_PERMISSION_REQUEST(r)))
+			param = AccessMicrophone;
+		else if (webkit_user_media_permission_is_for_video_device(
+		         WEBKIT_USER_MEDIA_PERMISSION_REQUEST(r)))
+			param = AccessWebcam;
+	} else {
+		return FALSE;
 	}
 
-	return FALSE;
+	if (curconfig[param].val.b)
+		webkit_permission_request_allow(r);
+	else
+		webkit_permission_request_deny(r);
+
+	return TRUE;
 }
 
 gboolean
