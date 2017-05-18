@@ -69,6 +69,7 @@ typedef enum {
 	DiskCache,
 	DefaultCharset,
 	DNSPrefetch,
+	FileURLsCrossAccess,
 	FontSize,
 	FrameFlattening,
 	Geolocation,
@@ -711,6 +712,10 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 	case DNSPrefetch:
 		webkit_settings_set_enable_dns_prefetching(s, a->b);
 		return; /* do not update */
+	case FileURLsCrossAccess:
+		webkit_settings_set_allow_file_access_from_file_urls(s, a->b);
+		webkit_settings_set_allow_universal_access_from_file_urls(s, a->b);
+		return; /* do not update */
 	case FontSize:
 		webkit_settings_set_default_font_size(s, a->i);
 		return; /* do not update */
@@ -1026,6 +1031,8 @@ newview(Client *c, WebKitWebView *rv)
 		    webkit_web_view_new_with_related_view(rv));
 	} else {
 		settings = webkit_settings_new_with_settings(
+		   "allow-file-access-from-file-urls", curconfig[FileURLsCrossAccess].val.b,
+		   "allow-universal-access-from-file-urls", curconfig[FileURLsCrossAccess].val.b,
 		   "auto-load-images", curconfig[LoadImages].val.b,
 		   "default-charset", curconfig[DefaultCharset].val.v,
 		   "default-font-size", curconfig[FontSize].val.i,

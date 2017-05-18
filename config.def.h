@@ -18,6 +18,7 @@ static Parameter defconfig[ParameterLast] = {
 	SETV(DefaultCharset,     "UTF-8"),
 	SETB(DiskCache,          1),
 	SETB(DNSPrefetch,        0),
+	SETB(FileURLsCrossAccess,0),
 	SETI(FontSize,           12),
 	SETB(FrameFlattening,    0),
 	SETB(Geolocation,        0),
