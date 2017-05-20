@@ -33,18 +33,6 @@
 
 #define LENGTH(x)               (sizeof(x) / sizeof(x[0]))
 #define CLEANMASK(mask)         (mask & (MODKEY|GDK_SHIFT_MASK))
-#define SETB(p, s)              [p] = { { .b = s }, }
-#define SETI(p, s)              [p] = { { .i = s }, }
-#define SETV(p, s)              [p] = { { .v = s }, }
-#define SETF(p, s)              [p] = { { .f = s }, }
-#define FSETB(p, s)             [p] = { { .b = s }, 1 }
-#define FSETI(p, s)             [p] = { { .i = s }, 1 }
-#define FSETV(p, s)             [p] = { { .v = s }, 1 }
-#define FSETF(p, s)             [p] = { { .f = s }, 1 }
-#define CSETB(p, s)             [p] = (Parameter){ { .b = s }, 1 }
-#define CSETI(p, s)             [p] = (Parameter){ { .i = s }, 1 }
-#define CSETV(p, s)             [p] = (Parameter){ { .v = s }, 1 }
-#define CSETF(p, s)             [p] = (Parameter){ { .f = s }, 1 }
 
 enum { AtomFind, AtomGo, AtomUri, AtomLast };
 
@@ -1925,13 +1913,16 @@ main(int argc, char *argv[])
 	/* command line args */
 	ARGBEGIN {
 	case 'a':
-		defconfig CSETV(CookiePolicies, EARGF(usage()));
+		defconfig[CookiePolicies].val.v = EARGF(usage());
+		defconfig[CookiePolicies].force = 1;
 		break;
 	case 'b':
-		defconfig CSETB(ScrollBars, 0);
+		defconfig[ScrollBars].val.i = 0;
+		defconfig[ScrollBars].force = 1;
 		break;
 	case 'B':
-		defconfig CSETB(ScrollBars, 1);
+		defconfig[ScrollBars].val.i = 1;
+		defconfig[ScrollBars].force = 1;
 		break;
 	case 'c':
 		cookiefile = EARGF(usage());
@@ -1940,70 +1931,90 @@ main(int argc, char *argv[])
 		stylefile = EARGF(usage());
 		break;
 	case 'd':
-		defconfig CSETB(DiskCache, 0);
+		defconfig[DiskCache].val.i = 0;
+		defconfig[DiskCache].force = 1;
 		break;
 	case 'D':
-		defconfig CSETB(DiskCache, 1);
+		defconfig[DiskCache].val.i = 1;
+		defconfig[DiskCache].force = 1;
 		break;
 	case 'e':
 		embed = strtol(EARGF(usage()), NULL, 0);
 		break;
 	case 'f':
-		defconfig CSETB(RunInFullscreen, 0);
+		defconfig[RunInFullscreen].val.i = 0;
+		defconfig[RunInFullscreen].force = 1;
 		break;
 	case 'F':
-		defconfig CSETB(RunInFullscreen, 1);
+		defconfig[RunInFullscreen].val.i = 1;
+		defconfig[RunInFullscreen].force = 1;
 		break;
 	case 'g':
-		defconfig CSETB(Geolocation, 0);
+		defconfig[Geolocation].val.i = 0;
+		defconfig[Geolocation].force = 1;
 		break;
 	case 'G':
-		defconfig CSETB(Geolocation, 1);
+		defconfig[Geolocation].val.i = 1;
+		defconfig[Geolocation].force = 1;
 		break;
 	case 'i':
-		defconfig CSETB(LoadImages, 0);
+		defconfig[LoadImages].val.i = 0;
+		defconfig[LoadImages].force = 1;
 		break;
 	case 'I':
-		defconfig CSETB(LoadImages, 1);
+		defconfig[LoadImages].val.i = 1;
+		defconfig[LoadImages].force = 1;
 		break;
 	case 'k':
-		defconfig CSETB(KioskMode, 0);
+		defconfig[KioskMode].val.i = 0;
+		defconfig[KioskMode].force = 1;
 		break;
 	case 'K':
-		defconfig CSETB(KioskMode, 1);
+		defconfig[KioskMode].val.i = 1;
+		defconfig[KioskMode].force = 1;
 		break;
 	case 'm':
-		defconfig CSETB(Style, 0);
+		defconfig[Style].val.i = 0;
+		defconfig[Style].force = 1;
 		break;
 	case 'M':
-		defconfig CSETB(Style, 1);
+		defconfig[Style].val.i = 1;
+		defconfig[Style].force = 1;
 		break;
 	case 'n':
-		defconfig CSETB(Inspector, 0);
+		defconfig[Inspector].val.i = 0;
+		defconfig[Inspector].force = 1;
 		break;
 	case 'N':
-		defconfig CSETB(Inspector, 1);
+		defconfig[Inspector].val.i = 1;
+		defconfig[Inspector].force = 1;
 		break;
 	case 'p':
-		defconfig CSETB(Plugins, 0);
+		defconfig[Plugins].val.i = 0;
+		defconfig[Plugins].force = 1;
 		break;
 	case 'P':
-		defconfig CSETB(Plugins, 1);
+		defconfig[Plugins].val.i = 1;
+		defconfig[Plugins].force = 1;
 		break;
 	case 'r':
 		scriptfile = EARGF(usage());
 		break;
 	case 's':
-		defconfig CSETB(JavaScript, 0);
+		defconfig[JavaScript].val.i = 0;
+		defconfig[JavaScript].force = 1;
 		break;
 	case 'S':
-		defconfig CSETB(JavaScript, 1);
+		defconfig[JavaScript].val.i = 1;
+		defconfig[JavaScript].force = 1;
 		break;
 	case 't':
-		defconfig CSETB(StrictTLS, 0);
+		defconfig[StrictTLS].val.i = 0;
+		defconfig[StrictTLS].force = 1;
 		break;
 	case 'T':
-		defconfig CSETB(StrictTLS, 1);
+		defconfig[StrictTLS].val.i = 1;
+		defconfig[StrictTLS].force = 1;
 		break;
 	case 'u':
 		fulluseragent = EARGF(usage());
@@ -2014,13 +2025,16 @@ main(int argc, char *argv[])
 		showxid = 1;
 		break;
 	case 'x':
-		defconfig CSETB(Certificate, 0);
+		defconfig[Certificate].val.i = 0;
+		defconfig[Certificate].force = 1;
 		break;
 	case 'X':
-		defconfig CSETB(Certificate, 1);
+		defconfig[Certificate].val.i = 1;
+		defconfig[Certificate].force = 1;
 		break;
 	case 'z':
-		defconfig CSETF(ZoomLevel, strtof(EARGF(usage()), NULL));
+		defconfig[ZoomLevel].val.f = strtof(EARGF(usage()), NULL);
+		defconfig[ZoomLevel].force = 1;
 		break;
 	default:
 		usage();
