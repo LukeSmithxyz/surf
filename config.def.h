@@ -130,8 +130,8 @@ static Key keys[] = {
 	{ 0,                     GDK_KEY_Escape, stop,       { 0 } },
 	{ MODKEY,                GDK_KEY_c,      stop,       { 0 } },
 
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_r,      reload,     { .b = 1 } },
-	{ MODKEY,                GDK_KEY_r,      reload,     { .b = 0 } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_r,      reload,     { .i = 1 } },
+	{ MODKEY,                GDK_KEY_r,      reload,     { .i = 0 } },
 
 	{ MODKEY,                GDK_KEY_l,      navigate,   { .i = +1 } },
 	{ MODKEY,                GDK_KEY_h,      navigate,   { .i = -1 } },
@@ -153,8 +153,8 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_minus,  zoom,       { .i = -1 } },
 	{ MODKEY,                GDK_KEY_plus,   zoom,       { .i = +1 } },
 
-	{ MODKEY,                GDK_KEY_p,      clipboard,  { .b = 1 } },
-	{ MODKEY,                GDK_KEY_y,      clipboard,  { .b = 0 } },
+	{ MODKEY,                GDK_KEY_p,      clipboard,  { .i = 1 } },
+	{ MODKEY,                GDK_KEY_y,      clipboard,  { .i = 0 } },
 
 	{ MODKEY,                GDK_KEY_n,      find,       { .i = +1 } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_n,      find,       { .i = -1 } },
@@ -181,9 +181,9 @@ static Key keys[] = {
 /* target can be OnDoc, OnLink, OnImg, OnMedia, OnEdit, OnBar, OnSel, OnAny */
 static Button buttons[] = {
 	/* target       event mask      button  function        argument        stop event */
-	{ OnLink,       0,              2,      clicknewwindow, { .b = 0 },     1 },
-	{ OnLink,       MODKEY,         2,      clicknewwindow, { .b = 1 },     1 },
-	{ OnLink,       MODKEY,         1,      clicknewwindow, { .b = 1 },     1 },
+	{ OnLink,       0,              2,      clicknewwindow, { .i = 0 },     1 },
+	{ OnLink,       MODKEY,         2,      clicknewwindow, { .i = 1 },     1 },
+	{ OnLink,       MODKEY,         1,      clicknewwindow, { .i = 1 },     1 },
 	{ OnAny,        0,              8,      clicknavigate,  { .i = -1 },    1 },
 	{ OnAny,        0,              9,      clicknavigate,  { .i = +1 },    1 },
 	{ OnMedia,      MODKEY,         1,      clickexternplayer, { 0 },       1 },
