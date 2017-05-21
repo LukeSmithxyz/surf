@@ -91,7 +91,7 @@ typedef union {
 
 typedef struct {
 	Arg val;
-	int force;
+	int prio;
 } Parameter;
 
 typedef struct Client {
@@ -372,19 +372,18 @@ setup(void)
 	}
 
 	for (i = 0; i < LENGTH(uriparams); ++i) {
-		if (!regcomp(&(uriparams[i].re), uriparams[i].uri,
+		if (regcomp(&(uriparams[i].re), uriparams[i].uri,
 		    REG_EXTENDED)) {
-			/* copy default parameters if they are not already set
-			 * or if they are forced */
-			for (j = 0; j < ParameterLast; ++j) {
-				if (!uriparams[i].config[j].force ||
-				    defconfig[j].force)
-					uriparams[i].config[j] = defconfig[j];
-			}
-		} else {
 			fprintf(stderr, "Could not compile regex: %s\n",
 			        uriparams[i].uri);
 			uriparams[i].uri = NULL;
+			continue;
+		}
+
+		/* copy default parameters with higher priority */
+		for (j = 0; j < ParameterLast; ++j) {
+			if (defconfig[j].prio >= uriparams[i].config[j].prio)
+				uriparams[i].config[j] = defconfig[j];
 		}
 	}
 }
@@ -693,20 +692,19 @@ seturiparameters(Client *c, const char *uri, ParamName *params)
 		case Certificate:
 		case CookiePolicies:
 		case Style:
-			config = defconfig[p].force ? defconfig :
-			         newconfig[p].force ? newconfig :
-			         defconfig;
+			config = (newconfig[p].prio > defconfig[p].prio) ?
+			         newconfig : defconfig;
 			break;
 		default:
-			if (defconfig[p].force)
+			if (newconfig[p].prio > defconfig[p].prio)
+				config = newconfig;
+			else if (curconfig[p].prio > defconfig[p].prio)
+				config = defconfig;
+			else
 				continue;
-			config = newconfig[p].force ? newconfig :
-			         curconfig[p].force ? defconfig :
-			         NULL;
 		}
 
-		if (config)
-			setparameter(c, 0, p, &config[p].val);
+		setparameter(c, 0, p, &config[p].val);
 	}
 
 	curconfig = newconfig;
@@ -1914,15 +1912,15 @@ main(int argc, char *argv[])
 	ARGBEGIN {
 	case 'a':
 		defconfig[CookiePolicies].val.v = EARGF(usage());
-		defconfig[CookiePolicies].force = 1;
+		defconfig[CookiePolicies].prio = 2;
 		break;
 	case 'b':
 		defconfig[ScrollBars].val.i = 0;
-		defconfig[ScrollBars].force = 1;
+		defconfig[ScrollBars].prio = 2;
 		break;
 	case 'B':
 		defconfig[ScrollBars].val.i = 1;
-		defconfig[ScrollBars].force = 1;
+		defconfig[ScrollBars].prio = 2;
 		break;
 	case 'c':
 		cookiefile = EARGF(usage());
@@ -1932,89 +1930,89 @@ main(int argc, char *argv[])
 		break;
 	case 'd':
 		defconfig[DiskCache].val.i = 0;
-		defconfig[DiskCache].force = 1;
+		defconfig[DiskCache].prio = 2;
 		break;
 	case 'D':
 		defconfig[DiskCache].val.i = 1;
-		defconfig[DiskCache].force = 1;
+		defconfig[DiskCache].prio = 2;
 		break;
 	case 'e':
 		embed = strtol(EARGF(usage()), NULL, 0);
 		break;
 	case 'f':
 		defconfig[RunInFullscreen].val.i = 0;
-		defconfig[RunInFullscreen].force = 1;
+		defconfig[RunInFullscreen].prio = 2;
 		break;
 	case 'F':
 		defconfig[RunInFullscreen].val.i = 1;
-		defconfig[RunInFullscreen].force = 1;
+		defconfig[RunInFullscreen].prio = 2;
 		break;
 	case 'g':
 		defconfig[Geolocation].val.i = 0;
-		defconfig[Geolocation].force = 1;
+		defconfig[Geolocation].prio = 2;
 		break;
 	case 'G':
 		defconfig[Geolocation].val.i = 1;
-		defconfig[Geolocation].force = 1;
+		defconfig[Geolocation].prio = 2;
 		break;
 	case 'i':
 		defconfig[LoadImages].val.i = 0;
-		defconfig[LoadImages].force = 1;
+		defconfig[LoadImages].prio = 2;
 		break;
 	case 'I':
 		defconfig[LoadImages].val.i = 1;
-		defconfig[LoadImages].force = 1;
+		defconfig[LoadImages].prio = 2;
 		break;
 	case 'k':
 		defconfig[KioskMode].val.i = 0;
-		defconfig[KioskMode].force = 1;
+		defconfig[KioskMode].prio = 2;
 		break;
 	case 'K':
 		defconfig[KioskMode].val.i = 1;
-		defconfig[KioskMode].force = 1;
+		defconfig[KioskMode].prio = 2;
 		break;
 	case 'm':
 		defconfig[Style].val.i = 0;
-		defconfig[Style].force = 1;
+		defconfig[Style].prio = 2;
 		break;
 	case 'M':
 		defconfig[Style].val.i = 1;
-		defconfig[Style].force = 1;
+		defconfig[Style].prio = 2;
 		break;
 	case 'n':
 		defconfig[Inspector].val.i = 0;
-		defconfig[Inspector].force = 1;
+		defconfig[Inspector].prio = 2;
 		break;
 	case 'N':
 		defconfig[Inspector].val.i = 1;
-		defconfig[Inspector].force = 1;
+		defconfig[Inspector].prio = 2;
 		break;
 	case 'p':
 		defconfig[Plugins].val.i = 0;
-		defconfig[Plugins].force = 1;
+		defconfig[Plugins].prio = 2;
 		break;
 	case 'P':
 		defconfig[Plugins].val.i = 1;
-		defconfig[Plugins].force = 1;
+		defconfig[Plugins].prio = 2;
 		break;
 	case 'r':
 		scriptfile = EARGF(usage());
 		break;
 	case 's':
 		defconfig[JavaScript].val.i = 0;
-		defconfig[JavaScript].force = 1;
+		defconfig[JavaScript].prio = 2;
 		break;
 	case 'S':
 		defconfig[JavaScript].val.i = 1;
-		defconfig[JavaScript].force = 1;
+		defconfig[JavaScript].prio = 2;
 		break;
 	case 't':
 		defconfig[StrictTLS].val.i = 0;
-		defconfig[StrictTLS].force = 1;
+		defconfig[StrictTLS].prio = 2;
 		break;
 	case 'T':
 		defconfig[StrictTLS].val.i = 1;
-		defconfig[StrictTLS].force = 1;
+		defconfig[StrictTLS].prio = 2;
 		break;
 	case 'u':
 		fulluseragent = EARGF(usage());
@@ -2026,15 +2024,15 @@ main(int argc, char *argv[])
 		break;
 	case 'x':
 		defconfig[Certificate].val.i = 0;
-		defconfig[Certificate].force = 1;
+		defconfig[Certificate].prio = 2;
 		break;
 	case 'X':
 		defconfig[Certificate].val.i = 1;
-		defconfig[Certificate].force = 1;
+		defconfig[Certificate].prio = 2;
 		break;
 	case 'z':
 		defconfig[ZoomLevel].val.f = strtof(EARGF(usage()), NULL);
-		defconfig[ZoomLevel].force = 1;
+		defconfig[ZoomLevel].prio = 2;
 		break;
 	default:
 		usage();

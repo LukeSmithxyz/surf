@@ -8,8 +8,13 @@ static char *cachedir       = "~/.surf/cache/";
 static char *cookiefile     = "~/.surf/cookies.txt";
 
 /* Webkit default features */
+/* Highest priority value will be used.
+ * Default parameters are priority 0
+ * Per-uri parameters are priority 1
+ * Command parameters are priority 2
+ */
 static Parameter defconfig[ParameterLast] = {
-	/*   parameter                  Arg value       force? */
+	/* parameter                    Arg value       priority */
 	[AcceleratedCanvas]   =       { { .i = 1 },     },
 	[AccessMicrophone]    =       { { .i = 0 },     },
 	[AccessWebcam]        =       { { .i = 0 },     },
