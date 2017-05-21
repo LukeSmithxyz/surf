@@ -241,6 +241,7 @@ static GdkDevice *gdkkb;
 static char *stylefile;
 static const char *useragent;
 static Parameter *curconfig;
+static int modparams[ParameterLast];
 char *argv0;
 
 static ParamName loadtransient[] = {
@@ -673,41 +674,31 @@ cookiepolicy_set(const WebKitCookieAcceptPolicy p)
 void
 seturiparameters(Client *c, const char *uri, ParamName *params)
 {
-	Parameter *config, *newconfig = NULL;
+	Parameter *config, *uriconfig = NULL;
 	int i, p;
 
 	for (i = 0; i < LENGTH(uriparams); ++i) {
 		if (uriparams[i].uri &&
 		    !regexec(&(uriparams[i].re), uri, 0, NULL, 0)) {
-			newconfig = uriparams[i].config;
+			uriconfig = uriparams[i].config;
 			break;
 		}
 	}
 
-	if (!newconfig)
-		newconfig = defconfig;
+	curconfig = uriconfig ? uriconfig : defconfig;
 
 	for (i = 0; (p = params[i]) != ParameterLast; ++i) {
 		switch(p) {
+		default: /* FALLTHROUGH */
+			if (!(defconfig[p].prio < curconfig[p].prio ||
+			    defconfig[p].prio < modparams[p]))
+				continue;
 		case Certificate:
 		case CookiePolicies:
 		case Style:
-			config = (newconfig[p].prio > defconfig[p].prio) ?
-			         newconfig : defconfig;
-			break;
-		default:
-			if (newconfig[p].prio > defconfig[p].prio)
-				config = newconfig;
-			else if (curconfig[p].prio > defconfig[p].prio)
-				config = defconfig;
-			else
-				continue;
+			setparameter(c, 0, p, &curconfig[p].val);
 		}
-
-		setparameter(c, 0, p, &config[p].val);
 	}
-
-	curconfig = newconfig;
 }
 
 void
@@ -715,6 +706,8 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 {
 	GdkRGBA bgcolor = { 0 };
 	WebKitSettings *s = webkit_web_view_get_settings(c->view);
+
+	modparams[p] = curconfig[p].prio;
 
 	switch (p) {
 	case AcceleratedCanvas:
