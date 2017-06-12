@@ -15,7 +15,6 @@
 typedef struct Page {
 	guint64 id;
 	WebKitWebPage *webpage;
-	WebKitDOMDOMWindow *view;
 	struct Page *next;
 } Page;
 
@@ -63,6 +62,7 @@ readpipe(GIOChannel *s, GIOCondition c, gpointer unused)
 {
 	char msg[MSGBUFSZ];
 	gsize msgsz;
+	WebKitDOMDOMWindow *view;
 	GError *gerr = NULL;
 	glong wh, ww;
 	Page *p;
@@ -80,18 +80,19 @@ readpipe(GIOChannel *s, GIOCondition c, gpointer unused)
 		if (p->id == msg[0])
 			break;
 	}
-	if (!p || !p->view)
+	if (!p || !(view = webkit_dom_document_get_default_view(
+	            webkit_web_page_get_dom_document(p->webpage))))
 		return TRUE;
 
 	switch (msg[1]) {
 	case 'h':
-		ww = webkit_dom_dom_window_get_inner_width(p->view);
-		webkit_dom_dom_window_scroll_by(p->view,
+		ww = webkit_dom_dom_window_get_inner_width(view);
+		webkit_dom_dom_window_scroll_by(view,
 		                                (ww / 100) * msg[2], 0);
 		break;
 	case 'v':
-		wh = webkit_dom_dom_window_get_inner_height(p->view);
-		webkit_dom_dom_window_scroll_by(p->view,
+		wh = webkit_dom_dom_window_get_inner_height(view);
+		webkit_dom_dom_window_scroll_by(view,
 		                                0, (wh / 100) * msg[2]);
 		break;
 	}
@@ -100,18 +101,9 @@ readpipe(GIOChannel *s, GIOCondition c, gpointer unused)
 }
 
 static void
-documentloaded(WebKitWebPage *wp, Page *p)
-{
-	p->view = webkit_dom_document_get_default_view(
-	          webkit_web_page_get_dom_document(wp));
-}
-
-static void
 webpagecreated(WebKitWebExtension *e, WebKitWebPage *wp, gpointer unused)
 {
 	Page *p = newpage(wp);
-
-	g_signal_connect(wp, "document-loaded", G_CALLBACK(documentloaded), p);
 }
 
 G_MODULE_EXPORT void
