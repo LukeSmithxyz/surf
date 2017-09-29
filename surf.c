@@ -79,6 +79,7 @@ typedef enum {
 	SpellLanguages,
 	StrictTLS,
 	Style,
+	WebGL,
 	ZoomLevel,
 	ParameterLast
 } ParamName;
@@ -820,6 +821,9 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 			setstyle(c, getstyle(geturi(c)));
 		refresh = 0;
 		break;
+	case WebGL:
+		webkit_settings_set_enable_webgl(s, a->i);
+		break;
 	case ZoomLevel:
 		webkit_web_view_set_zoom_level(c->view, a->f);
 		return; /* do not update */
@@ -1079,6 +1083,7 @@ newview(Client *c, WebKitWebView *rv)
 		   "enable-accelerated-2d-canvas", curconfig[AcceleratedCanvas].val.i,
 		   "enable-site-specific-quirks", curconfig[SiteQuirks].val.i,
 		   "enable-smooth-scrolling", curconfig[SmoothScrolling].val.i,
+		   "enable-webgl", curconfig[WebGL].val.i,
 		   "media-playback-requires-user-gesture", curconfig[MediaManualPlay].val.i,
 		   NULL);
 /* For more interesting settings, have a look at
