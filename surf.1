@@ -306,6 +306,9 @@ string.
 .TP
 .B http_proxy
 If this variable is set and not empty upon startup, surf will use it as the http proxy.
+.SH SIGNALS
+Surf will reload the current page on
+.BR SIGHUP .
 .SH PLUGINS
 For using plugins in surf, first determine your running architecture. Then get
 the appropriate plugin for that architecture and copy it to
