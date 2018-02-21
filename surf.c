@@ -921,7 +921,7 @@ runscript(Client *c)
 	gsize l;
 
 	if (g_file_get_contents(scriptfile, &script, &l, NULL) && l)
-		evalscript(c, script);
+		evalscript(c, "%s", script);
 	g_free(script);
 }
 
