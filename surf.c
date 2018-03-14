@@ -146,6 +146,7 @@ static void sigchld(int unused);
 static void sighup(int unused);
 static char *buildfile(const char *path);
 static char *buildpath(const char *path);
+static char *untildepath(const char *path);
 static const char *getuserhomedir(const char *user);
 static const char *getcurrentuserhomedir(void);
 static Client *newclient(Client *c);
@@ -470,26 +471,12 @@ getcurrentuserhomedir(void)
 char *
 buildpath(const char *path)
 {
-	char *apath, *name, *p, *fpath;
-	const char *homedir;
+	char *apath, *fpath;
 
-	if (path[0] == '~') {
-		if (path[1] == '/' || path[1] == '\0') {
-			p = (char *)&path[1];
-			homedir = getcurrentuserhomedir();
-		} else {
-			if ((p = strchr(path, '/')))
-				name = g_strndup(&path[1], --p - path);
-			else
-				name = g_strdup(&path[1]);
-
-			homedir = getuserhomedir(name);
-			g_free(name);
-		}
-		apath = g_build_filename(homedir, p, NULL);
-	} else {
+	if (path[0] == '~')
+		apath = untildepath(path);
+	else
 		apath = g_strdup(path);
-	}
 
 	/* creating directory */
 	if (g_mkdir_with_parents(apath, 0700) < 0)
@@ -499,6 +486,28 @@ buildpath(const char *path)
 	g_free(apath);
 
 	return fpath;
+}
+
+char *
+untildepath(const char *path)
+{
+       char *apath, *name, *p;
+       const char *homedir;
+
+       if (path[1] == '/' || path[1] == '\0') {
+               p = (char *)&path[1];
+               homedir = getcurrentuserhomedir();
+       } else {
+               if ((p = strchr(path, '/')))
+                       name = g_strndup(&path[1], p - (path + 1));
+               else
+                       name = g_strdup(&path[1]);
+
+               homedir = getuserhomedir(name);
+               g_free(name);
+       }
+       apath = g_build_filename(homedir, p, NULL);
+       return apath;
 }
 
 Client *
@@ -522,7 +531,7 @@ void
 loaduri(Client *c, const Arg *a)
 {
 	struct stat st;
-	char *url, *path;
+	char *url, *path, *apath;
 	const char *uri = a->v;
 
 	if (g_strcmp0(uri, "") == 0)
@@ -533,11 +542,19 @@ loaduri(Client *c, const Arg *a)
 	    g_str_has_prefix(uri, "file://")  ||
 	    g_str_has_prefix(uri, "about:")) {
 		url = g_strdup(uri);
-	} else if (!stat(uri, &st) && (path = realpath(uri, NULL))) {
-		url = g_strdup_printf("file://%s", path);
-		free(path);
 	} else {
-		url = g_strdup_printf("http://%s", uri);
+		if (uri[0] == '~')
+			apath = untildepath(uri);
+		else
+			apath = (char *)uri;
+		if (!stat(apath, &st) && (path = realpath(apath, NULL))) {
+			url = g_strdup_printf("file://%s", path);
+			free(path);
+		} else {
+			url = g_strdup_printf("http://%s", uri);
+		}
+		if (apath != uri)
+			free(apath);
 	}
 
 	setatom(c, AtomUri, url);
