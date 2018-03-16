@@ -206,6 +206,9 @@ static void downloadstarted(WebKitWebContext *wc, WebKitDownload *d,
                             Client *c);
 static void responsereceived(WebKitDownload *d, GParamSpec *ps, Client *c);
 static void download(Client *c, WebKitURIResponse *r);
+static void webprocessterminated(WebKitWebView *v,
+                                 WebKitWebProcessTerminationReason r,
+                                 Client *c);
 static void closeview(WebKitWebView *v, Client *c);
 static void destroywin(GtkWidget* w, Client *c);
 
@@ -1187,6 +1190,8 @@ newview(Client *c, WebKitWebView *rv)
 			 G_CALLBACK(permissionrequested), c);
 	g_signal_connect(G_OBJECT(v), "ready-to-show",
 			 G_CALLBACK(showview), c);
+	g_signal_connect(G_OBJECT(v), "web-process-terminated",
+			 G_CALLBACK(webprocessterminated), c);
 
 	return v;
 }
@@ -1689,6 +1694,15 @@ download(Client *c, WebKitURIResponse *r)
 {
 	Arg a = (Arg)DOWNLOAD(webkit_uri_response_get_uri(r), geturi(c));
 	spawn(c, &a);
+}
+
+void
+webprocessterminated(WebKitWebView *v, WebKitWebProcessTerminationReason r,
+                     Client *c)
+{
+	fprintf(stderr, "web process terminated: %s\n",
+	        r == WEBKIT_WEB_PROCESS_CRASHED ? "crashed" : "no memory");
+	closeview(v, c);
 }
 
 void
