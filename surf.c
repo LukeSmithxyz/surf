@@ -1079,6 +1079,7 @@ newview(Client *c, WebKitWebView *rv)
 	WebKitSettings *settings;
 	WebKitUserContentManager *contentmanager;
 	WebKitWebContext *context;
+	WebKitCookieManager *cookiemanager;
 
 	/* Webview */
 	if (rv) {
@@ -1125,6 +1126,8 @@ newview(Client *c, WebKitWebView *rv)
 		          "base-data-directory", cachedir,
 		          NULL));
 
+		cookiemanager = webkit_web_context_get_cookie_manager(context);
+
 		/* rendering process model, can be a shared unique one
 		 * or one for each view */
 		webkit_web_context_set_process_model(context,
@@ -1139,12 +1142,10 @@ newview(Client *c, WebKitWebView *rv)
 		    WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
 
 		/* Currently only works with text file to be compatible with curl */
-		webkit_cookie_manager_set_persistent_storage(
-		    webkit_web_context_get_cookie_manager(context), cookiefile,
-		    WEBKIT_COOKIE_PERSISTENT_STORAGE_TEXT);
+		webkit_cookie_manager_set_persistent_storage(cookiemanager,
+		    cookiefile, WEBKIT_COOKIE_PERSISTENT_STORAGE_TEXT);
 		/* cookie policy */
-		webkit_cookie_manager_set_accept_policy(
-		    webkit_web_context_get_cookie_manager(context),
+		webkit_cookie_manager_set_accept_policy(cookiemanager,
 		    cookiepolicy_get());
 		/* languages */
 		webkit_web_context_set_preferred_languages(context,
