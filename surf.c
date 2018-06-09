@@ -1315,6 +1315,7 @@ showview(WebKitWebView *v, Client *c)
 	if (showxid) {
 		gdk_display_sync(gtk_widget_get_display(c->win));
 		puts(winid);
+		fflush(stdout);
 	}
 
 	if (curconfig[HideBackground].val.i)
