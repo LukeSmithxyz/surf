@@ -55,9 +55,9 @@ install: all
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
 	cp -f surf $(DESTDIR)$(PREFIX)/bin
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/surf
-	mkdir -p $(DESTDIR)$(WEBEXTDIR)
-	cp -f libsurf-webext.so $(DESTDIR)$(WEBEXTDIR)
-	chmod 644 $(DESTDIR)$(PREFIX)/bin/surf
+	mkdir -p $(DESTDIR)$(LIBDIR)
+	cp -f libsurf-webext.so $(DESTDIR)$(LIBDIR)
+	chmod 644 $(DESTDIR)$(LIBDIR)/bin/libsurf-webext.so
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
 	sed "s/VERSION/$(VERSION)/g" < surf.1 > $(DESTDIR)$(MANPREFIX)/man1/surf.1
 	chmod 644 $(DESTDIR)$(MANPREFIX)/man1/surf.1
@@ -65,8 +65,8 @@ install: all
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/surf
 	rm -f $(DESTDIR)$(MANPREFIX)/man1/surf.1
-	rm -f $(DESTDIR)$(WEBEXTDIR)/libsurf-webext.so
-	- rmdir $(DESTDIR)$(WEBEXTDIR)
+	rm -f $(DESTDIR)$(LIBDIR)/libsurf-webext.so
+	- rmdir $(DESTDIR)$(LIBDIR)
 
 .SUFFIXES: .so .o .c
 .PHONY: all options clean-dist clean dist install uninstall
