@@ -57,7 +57,7 @@ install: all
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/surf
 	mkdir -p $(DESTDIR)$(LIBDIR)
 	cp -f libsurf-webext.so $(DESTDIR)$(LIBDIR)
-	chmod 644 $(DESTDIR)$(LIBDIR)/bin/libsurf-webext.so
+	chmod 644 $(DESTDIR)$(LIBDIR)/libsurf-webext.so
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
 	sed "s/VERSION/$(VERSION)/g" < surf.1 > $(DESTDIR)$(MANPREFIX)/man1/surf.1
 	chmod 644 $(DESTDIR)$(MANPREFIX)/man1/surf.1
