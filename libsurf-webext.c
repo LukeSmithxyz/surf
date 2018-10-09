@@ -41,59 +41,64 @@ newpage(WebKitWebPage *page)
 static void
 msgsurf(Page *p, const char *s)
 {
-	char msg[MSGBUFSZ];
+	static char msg[MSGBUFSZ];
+	size_t sln = strlen(s);
 	int ret;
 
-	msg[0] = p ? p->id : 0;
-	ret = snprintf(&msg[1], sizeof(msg) - 1, "%s", s);
-	if (ret >= sizeof(msg)) {
+	if ((ret = snprintf(msg, sizeof(msg), "%c%c%s",
+	                    2 + sln, p ? p->id : 0, s))
+	    >= sizeof(msg)) {
 		fprintf(stderr, "webext: message too long: %d\n", ret);
 		return;
 	}
 
-	if (pipeout) {
-		if (write(pipeout, msg, sizeof(msg)) < 0)
-			fprintf(stderr, "webext: error sending: %s\n", msg);
-	}
+	if (pipeout && write(pipeout, msg, sizeof(msg)) < 0)
+		fprintf(stderr, "webext: error sending: %.*s\n", ret-2, msg+2);
 }
 
 static gboolean
 readpipe(GIOChannel *s, GIOCondition c, gpointer unused)
 {
-	char msg[MSGBUFSZ];
-	gsize msgsz;
+	static char msg[MSGBUFSZ], msgsz;
 	WebKitDOMDOMWindow *view;
 	GError *gerr = NULL;
 	glong wh, ww;
 	Page *p;
 
-	if (g_io_channel_read_chars(s, msg, LENGTH(msg), &msgsz, &gerr) !=
+	if (g_io_channel_read_chars(s, msg, LENGTH(msg), NULL, &gerr) !=
 	    G_IO_STATUS_NORMAL) {
 		fprintf(stderr, "webext: error reading pipe: %s\n",
 		        gerr->message);
 		g_error_free(gerr);
 		return TRUE;
 	}
-	msg[msgsz] = '\0';
+	if ((msgsz = msg[0]) < 3) {
+		fprintf(stderr, "webext: message too short: %d\n", msgsz);
+		return TRUE;
+	}
 
 	for (p = pages; p; p = p->next) {
-		if (p->id == msg[0])
+		if (p->id == msg[1])
 			break;
 	}
 	if (!p || !(view = webkit_dom_document_get_default_view(
 	            webkit_web_page_get_dom_document(p->webpage))))
 		return TRUE;
 
-	switch (msg[1]) {
+	switch (msg[2]) {
 	case 'h':
+		if (msgsz != 4)
+			return TRUE;
 		ww = webkit_dom_dom_window_get_inner_width(view);
 		webkit_dom_dom_window_scroll_by(view,
-		                                (ww / 100) * msg[2], 0);
+		                                (ww / 100) * msg[3], 0);
 		break;
 	case 'v':
+		if (msgsz != 4)
+			return TRUE;
 		wh = webkit_dom_dom_window_get_inner_height(view);
 		webkit_dom_dom_window_scroll_by(view,
-		                                0, (wh / 100) * msg[2]);
+		                                0, (wh / 100) * msg[3]);
 		break;
 	}
 

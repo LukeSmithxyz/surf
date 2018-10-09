@@ -1209,20 +1209,22 @@ newview(Client *c, WebKitWebView *rv)
 static gboolean
 readpipe(GIOChannel *s, GIOCondition ioc, gpointer unused)
 {
-	char msg[MSGBUFSZ];
-	gsize msgsz;
+	static char msg[MSGBUFSZ], msgsz;
 	GError *gerr = NULL;
 
-	if (g_io_channel_read_chars(s, msg, sizeof(msg), &msgsz, &gerr) !=
+	if (g_io_channel_read_chars(s, msg, sizeof(msg), NULL, &gerr) !=
 	    G_IO_STATUS_NORMAL) {
 		fprintf(stderr, "surf: error reading pipe: %s\n",
 		        gerr->message);
 		g_error_free(gerr);
 		return TRUE;
 	}
-	msg[msgsz] = '\0';
+	if ((msgsz = msg[0]) < 3) {
+		fprintf(stderr, "surf: message too short: %d\n", msgsz);
+		return TRUE;
+	}
 
-	switch (msg[1]) {
+	switch (msg[2]) {
 	case 'i':
 		close(pipein[1]);
 		close(pipeout[0]);
@@ -1843,12 +1845,18 @@ zoom(Client *c, const Arg *a)
 static void
 msgext(Client *c, char type, const Arg *a)
 {
-	char msg[MSGBUFSZ] = { c->pageid, type, a->i, '\0' };
+	static char msg[MSGBUFSZ];
+	int ret;
 
-	if (pipeout[1]) {
-		if (write(pipeout[1], msg, sizeof(msg)) < 0)
-			fprintf(stderr, "surf: error sending: %s\n", msg);
+	if ((ret = snprintf(msg, sizeof(msg), "%c%c%c%c",
+	                    4, c->pageid, type, a->i))
+	    >= sizeof(msg)) {
+		fprintf(stderr, "surf: message too long: %d\n", ret);
+		return;
 	}
+
+	if (pipeout[1] && write(pipeout[1], msg, sizeof(msg)) < 0)
+		fprintf(stderr, "surf: error sending: %.*s\n", ret-2, msg+2);
 }
 
 void

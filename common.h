@@ -1,3 +1,3 @@
-#define MSGBUFSZ 32
+#define MSGBUFSZ 8
 
 void die(char *, ...);
