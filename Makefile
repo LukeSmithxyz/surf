@@ -24,9 +24,9 @@ options:
 config.h:
 	cp config.def.h $@
 
-$(OBJ): config.h config.mk
+$(OBJ): config.h common.h config.mk
 
-$(WEBEXTOBJ): config.h config.mk
+$(WEBEXTOBJ): $(WEBEXTSRC) config.h common.h config.mk
 	$(CC) $(WEBEXTCFLAGS) $(CFLAGS) -c $(WEBEXTSRC)
 
 libsurf-webext.so: $(WEBEXTOBJ)
