@@ -33,7 +33,7 @@ libsurf-webext.so: $(WEBEXTOBJ)
 	$(CC) -shared -Wl,-soname,$@ $(LDFLAGS) -o $@ $< $(WEBEXTLIBS) -lc
 
 surf: $(OBJ)
-	$(CC) $(SURFLDLAGS) $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
+	$(CC) $(SURFLDFLAGS) $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
 
 clean:
 	rm -f surf $(OBJ)
