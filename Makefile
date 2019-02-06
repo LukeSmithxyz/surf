@@ -4,9 +4,11 @@
 
 include config.mk
 
-SRC = surf.c common.c
-OBJ = $(SRC:.c=.o)
+SRC = surf.c
+CSRC = common.c
 WEBEXTSRC = libsurf-webext.c
+OBJ = $(SRC:.c=.o)
+COBJ = $(CSRC:.c=.o)
 WEBEXTOBJ = $(WEBEXTSRC:.c=.o)
 
 all: options libsurf-webext.so surf
@@ -25,18 +27,21 @@ config.h:
 	cp config.def.h $@
 
 $(OBJ): config.h common.h config.mk
+$(COBJ): config.h common.h config.mk
+$(WEBEXTOBJ): config.h common.h config.mk
 
-$(WEBEXTOBJ): $(WEBEXTSRC) config.h common.h config.mk
+$(WEBEXTOBJ): $(WEBEXTSRC)
 	$(CC) $(WEBEXTCFLAGS) $(CFLAGS) -c $(WEBEXTSRC)
 
-libsurf-webext.so: $(WEBEXTOBJ)
-	$(CC) -shared -Wl,-soname,$@ $(LDFLAGS) -o $@ $< $(WEBEXTLIBS) -lc
+libsurf-webext.so: $(WEBEXTOBJ) $(COBJ)
+	$(CC) -shared -Wl,-soname,$@ $(LDFLAGS) -o $@ \
+	    $(WEBEXTOBJ) $(COBJ) $(WEBEXTLIBS)
 
-surf: $(OBJ)
-	$(CC) $(SURFLDFLAGS) $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
+surf: $(OBJ) $(COBJ)
+	$(CC) $(SURFLDFLAGS) $(LDFLAGS) -o $@ $(OBJ) $(COBJ) $(LIBS)
 
 clean:
-	rm -f surf $(OBJ)
+	rm -f surf $(OBJ) $(OBJ)
 	rm -f libsurf-webext.so $(WEBEXTOBJ)
 
 distclean: clean
