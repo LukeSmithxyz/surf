@@ -102,6 +102,14 @@ static WebKitFindOptions findopts = WEBKIT_FIND_OPTIONS_CASE_INSENSITIVE |
         } \
 }
 
+/* Passes the current url to mpv */
+#define MPV { \
+        .v = (char *[]){ "/bin/sh", "-c", \
+             "mpv $(xprop -id $0 _SURF_URI | cut -d \\\" -f 2)", \
+             winid, NULL \
+        } \
+}
+
 /* styles */
 /*
  * The iteration will stop at the first match, beginning at the beginning of
@@ -130,57 +138,60 @@ static SiteSpecific certs[] = {
  */
 static Key keys[] = {
 	/* modifier              keyval          function    arg */
-	{ 0,                     GDK_KEY_g,      spawn,      SETPROP("_SURF_URI", "_SURF_GO", PROMPT_GO) },
-	{ 0,                     GDK_KEY_f,      spawn,      SETPROP("_SURF_FIND", "_SURF_FIND", PROMPT_FIND) },
-	{ 0,                     GDK_KEY_slash,  spawn,      SETPROP("_SURF_FIND", "_SURF_FIND", PROMPT_FIND) },
+	{ 0,			GDK_KEY_g,	spawn,	SETPROP("_SURF_URI", "_SURF_GO", PROMPT_GO) },
+	{ 0,			GDK_KEY_f,	spawn,	SETPROP("_SURF_FIND", "_SURF_FIND", PROMPT_FIND) },
+	{ 0,			GDK_KEY_slash,	spawn,	SETPROP("_SURF_FIND", "_SURF_FIND", PROMPT_FIND) },
+	{ 0,			GDK_KEY_w,	spawn,	MPV },
 
-	{ 0,                     GDK_KEY_i,      insert,     { .i = 1 } },
-	{ 0,                     GDK_KEY_Escape, insert,     { .i = 0 } },
+	{ 0,			GDK_KEY_i,	insert,     { .i = 1 } },
+	{ 0,			GDK_KEY_Escape,	insert,     { .i = 0 } },
 
-	{ 0,                     GDK_KEY_c,      stop,       { 0 } },
+	{ 0,			GDK_KEY_c,	stop,       { 0 } },
 
-	{ MODKEY,                GDK_KEY_r,      reload,     { .i = 1 } },
-	{ 0,                     GDK_KEY_r,      reload,     { .i = 0 } },
+	{ MODKEY,		GDK_KEY_r,	reload,     { .i = 1 } },
+	{ 0,			GDK_KEY_r,	reload,     { .i = 0 } },
 
-	{ 0,                     GDK_KEY_l,      navigate,   { .i = +1 } },
-	{ 0,                     GDK_KEY_h,      navigate,   { .i = -1 } },
+	{ 0,			GDK_KEY_l,	navigate,   { .i = +1 } },
+	{ 0,			GDK_KEY_h,	navigate,   { .i = -1 } },
 
 	/* vertical and horizontal scrolling, in viewport percentage */
-	{ 0,                     GDK_KEY_j,      scrollv,    { .i = +10 } },
-	{ 0,                     GDK_KEY_k,      scrollv,    { .i = -10 } },
-	{ 0,                     GDK_KEY_u,      scrollv,    { .i = -50 } },
-	{ 0,                     GDK_KEY_d,      scrollh,    { .i = -50 } },
+	{ 0,			GDK_KEY_j,	scrollv,    { .i = +10 } },
+	{ 0,			GDK_KEY_k,	scrollv,    { .i = -10 } },
+	{ 0,			GDK_KEY_u,	scrollv,    { .i = -50 } },
+	{ 0,			GDK_KEY_d,	scrollv,    { .i = +50 } },
 
-	{ 0|GDK_SHIFT_MASK,      GDK_KEY_j,      zoom,       { .i = -1 } },
-	{ 0|GDK_SHIFT_MASK,      GDK_KEY_k,      zoom,       { .i = +1 } },
-	{ 0|GDK_SHIFT_MASK,      GDK_KEY_q,      zoom,       { .i = 0  } },
-	{ 0,                     GDK_KEY_minus,  zoom,       { .i = -1 } },
-	{ 0|GDK_SHIFT_MASK,      GDK_KEY_plus,   zoom,       { .i = +1 } },
-	{ 0,                     GDK_KEY_equal,  zoom,       { .i = 0  } },
+	{ 0|GDK_SHIFT_MASK,	GDK_KEY_j,	zoom,       { .i = -1 } },
+	{ 0|GDK_SHIFT_MASK,	GDK_KEY_k,	zoom,       { .i = +1 } },
+	{ 0|GDK_SHIFT_MASK,	GDK_KEY_q,	zoom,       { .i = 0  } },
+	{ 0,			GDK_KEY_minus,	zoom,       { .i = -1 } },
+	{ 0|GDK_SHIFT_MASK,	GDK_KEY_plus,	zoom,       { .i = +1 } },
+	{ 0,			GDK_KEY_equal,	zoom,       { .i = 0  } },
 
-	{ 0,                     GDK_KEY_p,      clipboard,  { .i = 1 } },
-	{ 0,                     GDK_KEY_y,      clipboard,  { .i = 0 } },
+	{ 0,			GDK_KEY_p,	clipboard,  { .i = 1 } },
+	{ 0,			GDK_KEY_y,	clipboard,  { .i = 0 } },
 
-	{ 0,                     GDK_KEY_n,      find,       { .i = +1 } },
-	{ 0|GDK_SHIFT_MASK,      GDK_KEY_n,      find,       { .i = -1 } },
+	{ 0,			GDK_KEY_n,	find,       { .i = +1 } },
+	{ 0|GDK_SHIFT_MASK,	GDK_KEY_n,	find,       { .i = -1 } },
 
-	{ MODKEY,                GDK_KEY_p,      print,      { 0 } },
-	{ MODKEY,                GDK_KEY_t,      showcert,   { 0 } },
+	{ MODKEY,		GDK_KEY_p,	print,      { 0 } },
+	{ MODKEY,		GDK_KEY_t,	showcert,   { 0 } },
 
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_a,      togglecookiepolicy, { 0 } },
-	{ 0,                     GDK_KEY_F11,    togglefullscreen, { 0 } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_o,      toggleinspector, { 0 } },
+	{ MODKEY|GDK_SHIFT_MASK,	GDK_KEY_a,	togglecookiepolicy, { 0 } },
+	{ 0,			GDK_KEY_F11,	togglefullscreen, { 0 } },
+	{ MODKEY|GDK_SHIFT_MASK,	GDK_KEY_o,	toggleinspector, { 0 } },
 
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_c,      toggle,     { .i = CaretBrowsing } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_f,      toggle,     { .i = FrameFlattening } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_g,      toggle,     { .i = Geolocation } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_s,      toggle,     { .i = JavaScript } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_i,      toggle,     { .i = LoadImages } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_v,      toggle,     { .i = Plugins } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_b,      toggle,     { .i = ScrollBars } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_t,      toggle,     { .i = StrictTLS } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_m,      toggle,     { .i = Style } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_c,	toggle,     { .i = CaretBrowsing } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_f,	toggle,     { .i = FrameFlattening } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_g,	toggle,     { .i = Geolocation } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_s,	toggle,     { .i = JavaScript } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_i,	toggle,     { .i = LoadImages } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_v,	toggle,     { .i = Plugins } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_b,	toggle,     { .i = ScrollBars } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_t,	toggle,     { .i = StrictTLS } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_m,	toggle,     { .i = Style } },
 };
+
+static char *searchengine = "https://duckduckgo.com/?q=";
 
 /* button definitions */
 /* target can be OnDoc, OnLink, OnImg, OnMedia, OnEdit, OnBar, OnSel, OnAny */

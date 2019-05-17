@@ -561,7 +561,15 @@ loaduri(Client *c, const Arg *a)
 			url = g_strdup_printf("file://%s", path);
 			free(path);
 		} else {
-			url = g_strdup_printf("http://%s", uri);
+			regex_t urlregex;
+			int urlcheck;
+			urlcheck = regcomp(&urlregex, "^\S+\.[A-Za-z]+$", REG_EXTENDED);
+			urlcheck = regexec(&urlregex, uri, 0, NULL, 0);
+			if (!urlcheck)
+				url = g_strdup_printf("http://%s", uri);
+			else
+				url = g_strdup_printf("%s%s", searchengine, uri);
+			regfree(&urlregex);
 		}
 		if (apath != uri)
 			free(apath);
