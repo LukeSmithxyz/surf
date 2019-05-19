@@ -563,7 +563,7 @@ loaduri(Client *c, const Arg *a)
 		} else {
 			regex_t urlregex;
 			int urlcheck;
-			urlcheck = regcomp(&urlregex, "^[a-z0-9-].[a-z.]+$", REG_EXTENDED | REG_ICASE);
+			urlcheck = regcomp(&urlregex, "^[a-z0-9-]+[.][a-z.]+[^[:space:]]*$", REG_EXTENDED | REG_ICASE);
 			urlcheck = regexec(&urlregex, uri, 0, NULL, 0);
 			if (!urlcheck)
 				url = g_strdup_printf("http://%s", uri);
