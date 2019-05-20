@@ -7,6 +7,19 @@ static char *certdir        = "~/.config/surf/certificates/";
 static char *cachedir       = "~/.config/surf/cache/";
 static char *cookiefile     = "~/.config/surf/cookies.txt";
 
+static char *searchengine = "https://duckduckgo.com/?q=";
+
+static SearchEngine searchengines[] = {
+	{ "lib",	"http://gen.lib.rus.ec/search.php?req=%s&lg_topic=libgen&open=0&view=simple&res=25&phrase=0&column=def"   },
+	{ "osm",	"https://www.openstreetmap.org/search?query=%s" },
+	{ "i",		"https://duckduckgo.com/?q=%s&atb=v1-1&t=h_&iar=images" },
+	{ "tpb",	"https://pirateproxy.app/s/?q=%s&=on&page=0&orderby=99" },
+	{ "eb",		"https://www.ebay.com/sch/i.html?_from=R40&_trksid=m570.l1313&_nkw=%s&_sacat=0" },
+	{ "wt",		"https://www.wiktionary.org/search-redirect.php?family=wiktionary&language=en&search=%s&go=Go" },
+	{ "w",		"https://www.wikipedia.org/search-redirect.php?family=wikipedia&language=en&search=%s&language=en&go=Go" },
+	{ "yt",		"https://www.youtube.com/results?search_query=%s" },
+};
+
 /* Webkit default features */
 /* Highest priority value will be used.
  * Default parameters are priority 0
@@ -190,8 +203,6 @@ static Key keys[] = {
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_t,	toggle,     { .i = StrictTLS } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_m,	toggle,     { .i = Style } },
 };
-
-static char *searchengine = "https://duckduckgo.com/?q=";
 
 /* button definitions */
 /* target can be OnDoc, OnLink, OnImg, OnMedia, OnEdit, OnBar, OnSel, OnAny */
