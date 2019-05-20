@@ -40,6 +40,8 @@ surf: $(OBJ) $(COBJ)
 clean:
 	rm -f surf $(OBJ) $(COBJ)
 	rm -f libsurf-webext.so $(WEBEXTOBJ)
+	rm -f *.rej
+	rm -f *.orig
 
 distclean: clean
 	rm -f config.h surf-$(VERSION).tar.gz
