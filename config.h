@@ -11,6 +11,8 @@ static char *searchengine = "https://duckduckgo.com/?q=";
 
 static SearchEngine searchengines[] = {
 	{ "lib",	"http://gen.lib.rus.ec/search.php?req=%s&lg_topic=libgen&open=0&view=simple&res=25&phrase=0&column=def"   },
+	{ "aw",		"https://wiki.archlinux.org/index.php?search=%s&title=Special%3ASearch" },
+	{ "vw",		"https://wiki.voidlinux.org/index.php?search=%s&title=Special%3ASearch&go=Go" },
 	{ "osm",	"https://www.openstreetmap.org/search?query=%s" },
 	{ "i",		"https://duckduckgo.com/?q=%s&atb=v1-1&t=h_&iar=images" },
 	{ "tpb",	"https://pirateproxy.app/s/?q=%s&=on&page=0&orderby=99" },
