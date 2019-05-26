@@ -1,6 +1,6 @@
 .TH SURF 1 surf\-VERSION
 .SH NAME
-surf \- simple webkit-based browser
+surf \- simple webkit-based browser (Luke Smith (https://lukesmith.xyz)'s build)
 .SH SYNOPSIS
 .B surf
 .RB [-bBdDfFgGiIkKmMnNpPsStTvwxX]
@@ -138,66 +138,72 @@ Specify the
 which surf should use.
 .SH USAGE
 .B Escape
+Enter normal mode. All following keybindings only work when in normal mode.
+.TP
+.B i
+Enter insert mode.
+.TP
+.B c
 Stops loading current page or stops download.
 .TP
-.B Ctrl\-h
+.B h
 Walks back the history.
 .TP
-.B Ctrl\-l
+.B l
 Walks forward the history.
 .TP
-.B Ctrl\-k
+.B k
 Scrolls page upwards.
 .TP
-.B Ctrl\-j
+.B j
 Scrolls page downwards.
 .TP
-.B Ctrl\-b
+.B u
 Scroll up one whole page view.
 .TP
-.B Ctrl\-Space
+.B d
 Scroll down one whole page view.
 .TP
-.B Ctrl\-i
+.B NO KEYBINDING
 Scroll horizontally to the right.
 .TP
-.B Ctrl\-u
+.B NO KEYBINDING
 Scroll horizontally to the left.
 .TP
-.B Ctrl\-Shift\-k or Ctrl\-+
+.B Shift\-k or +
 Zooms page in.
 .TP
-.B Ctrl\-Shift\-j or Ctrl\--
+.B Shift\-j or -
 Zooms page out.
 .TP
-.B Ctrl\-Shift\-q
+.B Shift\-q or =
 Resets Zoom.
 .TP
-.B Ctrl\-f and Ctrl\-/
+.B f or /
 Opens the search-bar.
 .TP
-.B Ctrl\-n
+.B n
 Go to next search result.
 .TP
-.B Ctrl\-Shift\-n
+.B Shift\-n
 Go to previous search result.
 .TP
-.B Ctrl\-g
+.B g
 Opens the URL-bar (requires dmenu installed).
 .TP
-.B Ctrl\-p
+.B p
 Loads URI from primary selection.
 .TP
-.B Ctrl\-Shift\-p
+.B Ctrl\-p
 Calls Printpage Dialog.
 .TP
-.B Ctrl\-r
+.B r
 Reloads the website.
 .TP
-.B Ctrl\-Shift\-r
+.B Shift\-r
 Reloads the website without using the cache.
 .TP
-.B Ctrl\-y
+.B y
 Copies current URI to primary selection.
 .TP
 .B Ctrl\-t
